@@ -1,5 +1,6 @@
 wwwroot\css\atender.css
 wwwroot\css\site.css
+wwwroot\css\tecnico-painel.css
 wwwroot\favicon.ico
 wwwroot\images\logo.png
 wwwroot\js\site.js
@@ -61,4 +62,3 @@ wwwroot\lib\jquery\dist\jquery.js
 wwwroot\lib\jquery\dist\jquery.min.js
 wwwroot\lib\jquery\dist\jquery.min.map
 wwwroot\lib\jquery\LICENSE.txt
-wwwroot\css\tecnico-painel.css

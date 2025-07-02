@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PortalHelpdeskTI.Models;
 
 public class ChamadosController : Controller
 {
@@ -10,144 +11,75 @@ public class ChamadosController : Controller
         _context = context;
     }
 
-    public IActionResult Index()
-    {
-        var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-        if (usuarioId == null)
-        {
-            return RedirectToAction("Login", "Account");
-        }
-
-        var chamados = _context.Chamados
-            .Include(c => c.Usuario)
-            .Where(c => c.UsuarioId == usuarioId.Value)
-            .ToList();
-
-        return View(chamados);
-    }
-
+    [HttpGet]
     public IActionResult Novo()
     {
+        ViewBag.Tipos = _context.TipoChamado.OrderBy(t => t.Nome).ToList();
+        ViewBag.Categorias = _context.CategoriaChamado.OrderBy(c => c.Nome).ToList();
+        ViewBag.Subcategorias = _context.SubcategoriaChamado.ToList();
         return View();
     }
 
     [HttpPost]
     public IActionResult Novo(Chamado chamado)
     {
-        var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-        if (usuarioId == null)
+        if (ModelState.IsValid)
         {
-            return RedirectToAction("Login", "Account");
+            chamado.DataAbertura = DateTime.Now;
+            chamado.Status = "Aberto";
+
+            var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
+            if (usuarioId == null)
+            {
+                ModelState.AddModelError("", "Usuário não autenticado.");
+                ViewBag.Tipos = _context.TipoChamado.ToList();
+                ViewBag.Categorias = _context.CategoriaChamado.ToList();
+                ViewBag.Subcategorias = _context.SubcategoriaChamado.ToList();
+                return View(chamado);
+            }
+
+            chamado.UsuarioId = usuarioId.Value;
+
+            _context.Chamados.Add(chamado);
+            _context.SaveChanges();
+
+            return RedirectToAction("TecnicoPainel"); // Ou a action desejada após sucesso
         }
 
-        chamado.DataAbertura = DateTime.Now;
-        chamado.Status = "Aberto";
-        chamado.UsuarioId = usuarioId.Value;
+        // Se inválido, repopula os drop-downs
+        ViewBag.Tipos = _context.TipoChamado.ToList();
+        ViewBag.Categorias = _context.CategoriaChamado.ToList();
+        ViewBag.Subcategorias = _context.SubcategoriaChamado.ToList();
 
-        _context.Chamados.Add(chamado);
-        _context.SaveChanges();
-
-        return RedirectToAction("Index");
+        return View(chamado);
     }
 
+    // Exemplo para popular subcategorias via Ajax
+    public IActionResult SubcategoriasPorCategoria(int categoriaId)
+    {
+        var subcategorias = _context.SubcategoriaChamado
+            .Where(s => s.CategoriaId == categoriaId)
+            .Select(s => new { s.Id, s.Nome })
+            .ToList();
+        return Json(subcategorias);
+    }
     public IActionResult TecnicoPainel()
     {
         var chamados = _context.Chamados
+    .Include(c => c.Usuario)
+    .Include(c => c.Tecnico)
+    .Where(c => c.Status != "Concluído")
+    .ToList();
+
+        return View(chamados);
+    }
+    public IActionResult Index()
+    {
+        var chamados = _context.Chamados
             .Include(c => c.Usuario)
-            .Where(c => c.Status != "Concluído")
             .ToList();
 
         return View(chamados);
     }
 
-    public IActionResult Atender(int id)
-    {
-        var chamado = _context.Chamados
-            .Include(c => c.Usuario)
-            .Include(c => c.Interacoes)
-            .ThenInclude(i => i.Usuario)
-            .FirstOrDefault(c => c.Id == id);
-
-        if (chamado == null) return NotFound();
-
-        var tecnicos = _context.Usuarios
-            .Where(u => u.Perfil == "Tecnico" || u.Perfil == "Técnico")
-            .Select(u => new { u.Id, u.Nome })
-            .ToList();
-
-        ViewBag.Tecnicos = tecnicos;
-
-        return View(chamado);
-    }
-
-
-    [HttpPost]
-    public IActionResult Atender(int id, string novoStatus, string interacaoMensagem, int? tecnicoResponsavelId)
-    {
-        var chamado = _context.Chamados.FirstOrDefault(c => c.Id == id);
-        if (chamado == null) return NotFound();
-
-        var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-        if (usuarioId == null)
-        {
-            return RedirectToAction("Login", "Account");
-        }
-
-        chamado.Status = novoStatus;
-
-        if (tecnicoResponsavelId.HasValue && _context.Usuarios.Any(u => u.Id == tecnicoResponsavelId.Value))
-        {
-            chamado.TecnicoId = tecnicoResponsavelId.Value;
-        }
-        else
-        {
-            chamado.TecnicoId = null; // Evita conflito com FK
-        }
-
-        if (!string.IsNullOrWhiteSpace(interacaoMensagem))
-        {
-            _context.Interacoes.Add(new Interacao
-            {
-                ChamadoId = id,
-                UsuarioId = usuarioId.Value,
-                Data = DateTime.Now,
-                Mensagem = interacaoMensagem
-            });
-        }
-
-        _context.SaveChanges();
-
-        return RedirectToAction("Atender", new { id = id });
-    }
-
-
-    [HttpPost]
-    public IActionResult Assumir(int id)
-    {
-        var chamado = _context.Chamados.FirstOrDefault(c => c.Id == id);
-        if (chamado == null) return NotFound();
-
-        var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
-        if (usuarioId != null)
-        {
-            chamado.TecnicoId = usuarioId.Value;
-            chamado.Status = "Em Atendimento";
-            _context.SaveChanges();
-        }
-
-        return RedirectToAction("Atender", new { id = id });
-    }
-
-    public IActionResult Detalhes(int id)
-    {
-        var chamado = _context.Chamados
-            .Include(c => c.Usuario)
-            .Include(c => c.Interacoes)
-            .ThenInclude(i => i.Usuario)
-            .FirstOrDefault(c => c.Id == id);
-
-        if (chamado == null) return NotFound();
-
-        return View(chamado);
-    }
 }

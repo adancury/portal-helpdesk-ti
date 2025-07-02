@@ -1,4 +1,5 @@
-﻿public class Interacao
+﻿using PortalHelpdeskTI.Models;
+public class Interacao
 {
     public int Id { get; set; }
     public int ChamadoId { get; set; }

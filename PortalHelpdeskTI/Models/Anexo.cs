@@ -1,4 +1,5 @@
-﻿public class Anexo
+﻿using PortalHelpdeskTI.Models;
+public class Anexo
 {
     public int Id { get; set; }
     public int ChamadoId { get; set; }

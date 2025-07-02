@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PortalHelpdeskTI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ad41bfad4f395a852aa4894e297dc3d3331625d7")]
 [assembly: System.Reflection.AssemblyProductAttribute("PortalHelpdeskTI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PortalHelpdeskTI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

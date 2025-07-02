@@ -1,19 +1,18 @@
-﻿@model IEnumerable<Chamado>
+﻿@using PortalHelpdeskTI.Models
+@model IEnumerable<Chamado>
 
 @{
     ViewData["Title"] = "Painel Técnico";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<link rel="stylesheet" href="~/css/tecnico-painel.css" />
-
 <div class="container mt-4">
-    <h2 class="painel-titulo mb-4">Painel Técnico</h2>
+    <h2>Painel Técnico</h2>
 
     @if (Model != null && Model.Any())
     {
-        <div class="table-responsive shadow-sm rounded">
-            <table class="table table-painel align-middle">
+        <div class="table-responsive">
+            <table class="table" id="tabela-painel">
                 <thead>
                     <tr>
                         <th>Título</th>
@@ -27,7 +26,7 @@
                     @foreach (var chamado in Model)
                     {
                         <tr>
-                            <td class="fw-bold">@chamado.Titulo</td>
+                            <td>@chamado.Titulo</td>
                             <td>@chamado.Prioridade</td>
                             <td>
                                 <span class="badge @GetStatusBadgeClass(chamado.Status)">
@@ -36,7 +35,7 @@
                             </td>
                             <td>@chamado.DataAbertura.ToString("dd/MM/yyyy HH:mm")</td>
                             <td class="text-center">
-                                <a href="/Chamados/Atender/@chamado.Id" class="btn btn-sm btn-painel">
+                                <a href="/Chamados/Atender/@chamado.Id" class="btn btn-sm btn-primary">
                                     Atender
                                 </a>
                             </td>

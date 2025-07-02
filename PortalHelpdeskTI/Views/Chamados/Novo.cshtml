@@ -1,15 +1,77 @@
-﻿@{
+﻿@model PortalHelpdeskTI.Models.Chamado
+
+@{
+    ViewData["Title"] = "Abrir Chamado";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
-<h2>Novo Chamado</h2>
-<form method="post">
-    <label>Título:</label><input type="text" name="Titulo" required />
-    <label>Descrição:</label><textarea name="Descricao" required></textarea>
-    <label>Prioridade:</label>
-    <select name="Prioridade">
+
+<div class="container mt-4">
+    <h2>Abrir Chamado</h2>
+    <form asp-action="Novo" method="post">
+        <select asp-for="TipoChamadoId" class="form-select">
+            <option value="">Selecione...</option>
+            @foreach (var tipo in (IEnumerable<PortalHelpdeskTI.Models.TipoChamado>)ViewBag.Tipos)
+            {
+                <option value="@tipo.Id">@tipo.Nome</option>
+            }
+        </select>
+        <select asp-for="CategoriaId" class="form-select" id="categoriaSelect">
+            <option value="">Selecione...</option>
+            @foreach (var categoria in (IEnumerable<PortalHelpdeskTI.Models.CategoriaChamado>)ViewBag.Categorias)
+            {
+                <option value="@categoria.Id">@categoria.Nome</option>
+            }
+        </select>
+        <select asp-for="SubcategoriaId" class="form-select">
+            <option value="">Selecione...</option>
+            @foreach (var sub in (IEnumerable<PortalHelpdeskTI.Models.SubcategoriaChamado>)ViewBag.Subcategorias)
+            {
+                <option value="@sub.Id">@sub.Nome</option>
+            }
+        </select>
+
+    <input asp-for="Titulo" class="form-control" />
+    <textarea asp-for="Descricao" class="form-control"></textarea>
+
+    <select asp-for="Prioridade" class="form-select">
+        <option value="">Selecione...</option>
         <option>Baixa</option>
         <option>Média</option>
         <option>Alta</option>
+        <option>Crítica</option>
     </select>
-    <button type="submit">Abrir</button>
+
+    <button type="submit" class="btn btn-primary">Abrir Chamado</button>
 </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById("categoriaSelect").addEventListener("change", function () {
+            const categoriaId = this.value;
+            const subSelect = document.getElementById("subcategoriaSelect");
+            subSelect.innerHTML = '<option>Carregando...</option>';
+
+            if (categoriaId) {
+                fetch(`/Chamados/SubcategoriasPorCategoria?categoriaId=${categoriaId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        subSelect.innerHTML = '<option value="">Selecione...</option>';
+                        data.forEach(sub => {
+                            const option = document.createElement("option");
+                            option.value = sub.id;
+                            option.textContent = sub.nome;
+                            subSelect.appendChild(option);
+                        });
+                    })
+                    .catch(() => {
+                        subSelect.innerHTML = '<option>Erro ao carregar</option>';
+                    });
+            } else {
+                subSelect.innerHTML = '<option>Selecione uma categoria primeiro</option>';
+            }
+        });
+    </script>
+}

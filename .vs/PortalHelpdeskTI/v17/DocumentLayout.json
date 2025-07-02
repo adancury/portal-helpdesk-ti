@@ -3,12 +3,32 @@
   "WorkspaceRootPath": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|c:\\users\\adan.cury\\source\\repos\\portalhelpdeskti\\portalhelpdeskti\\wwwroot\\css\\tecnico-painel.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
-      "RelativeMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|solutionrelative:portalhelpdeskti\\wwwroot\\css\\tecnico-painel.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+      "AbsoluteMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|c:\\users\\adan.cury\\source\\repos\\portalhelpdeskti\\portalhelpdeskti\\controllers\\chamadoscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|solutionrelative:portalhelpdeskti\\controllers\\chamadoscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|c:\\users\\adan.cury\\source\\repos\\portalhelpdeskti\\portalhelpdeskti\\models\\chamado.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|solutionrelative:portalhelpdeskti\\models\\chamado.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|c:\\users\\adan.cury\\source\\repos\\portalhelpdeskti\\portalhelpdeskti\\models\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|solutionrelative:portalhelpdeskti\\models\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|c:\\users\\adan.cury\\source\\repos\\portalhelpdeskti\\portalhelpdeskti\\views\\chamados\\tecnicopainel.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|solutionrelative:portalhelpdeskti\\views\\chamados\\tecnicopainel.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|c:\\users\\adan.cury\\source\\repos\\portalhelpdeskti\\portalhelpdeskti\\views\\chamados\\novo.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|solutionrelative:portalhelpdeskti\\views\\chamados\\novo.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|c:\\users\\adan.cury\\source\\repos\\portalhelpdeskti\\portalhelpdeskti\\models\\usuario.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|solutionrelative:portalhelpdeskti\\models\\usuario.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|c:\\users\\adan.cury\\source\\repos\\portalhelpdeskti\\portalhelpdeskti\\views\\chamados\\atender.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}|PortalHelpdeskTI\\PortalHelpdeskTI.csproj|solutionrelative:portalhelpdeskti\\views\\chamados\\atender.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     }
   ],
   "DocumentGroupContainers": [
@@ -18,32 +38,97 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "tecnico-painel.css",
-              "DocumentMoniker": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\wwwroot\\css\\tecnico-painel.css",
-              "RelativeDocumentMoniker": "PortalHelpdeskTI\\wwwroot\\css\\tecnico-painel.css",
-              "ToolTip": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\wwwroot\\css\\tecnico-painel.css",
-              "RelativeToolTip": "PortalHelpdeskTI\\wwwroot\\css\\tecnico-painel.css",
-              "ViewState": "AgIAABIAAAAAAAAAAAAAAB8AAAAJAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
-              "WhenOpened": "2025-07-02T13:16:29.621Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "TecnicoPainel.cshtml",
               "DocumentMoniker": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Views\\Chamados\\TecnicoPainel.cshtml",
               "RelativeDocumentMoniker": "PortalHelpdeskTI\\Views\\Chamados\\TecnicoPainel.cshtml",
               "ToolTip": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Views\\Chamados\\TecnicoPainel.cshtml",
               "RelativeToolTip": "PortalHelpdeskTI\\Views\\Chamados\\TecnicoPainel.cshtml",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAVAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-07-02T12:04:40.455Z",
+              "WhenOpened": "2025-07-02T17:52:23.058Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "Atender.cshtml",
+              "DocumentMoniker": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Views\\Chamados\\Atender.cshtml",
+              "RelativeDocumentMoniker": "PortalHelpdeskTI\\Views\\Chamados\\Atender.cshtml",
+              "ToolTip": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Views\\Chamados\\Atender.cshtml",
+              "RelativeToolTip": "PortalHelpdeskTI\\Views\\Chamados\\Atender.cshtml",
+              "ViewState": "AgIAACMAAAAAAAAAAAAjwCoAAAADAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-07-02T17:36:32.581Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Usuario.cs",
+              "DocumentMoniker": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Models\\Usuario.cs",
+              "RelativeDocumentMoniker": "PortalHelpdeskTI\\Models\\Usuario.cs",
+              "ToolTip": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Models\\Usuario.cs",
+              "RelativeToolTip": "PortalHelpdeskTI\\Models\\Usuario.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAA9AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-02T17:29:33.25Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "AppDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Models\\AppDbContext.cs",
+              "RelativeDocumentMoniker": "PortalHelpdeskTI\\Models\\AppDbContext.cs",
+              "ToolTip": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Models\\AppDbContext.cs",
+              "RelativeToolTip": "PortalHelpdeskTI\\Models\\AppDbContext.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAIwCUAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-02T17:26:46.204Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Novo.cshtml",
+              "DocumentMoniker": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Views\\Chamados\\Novo.cshtml",
+              "RelativeDocumentMoniker": "PortalHelpdeskTI\\Views\\Chamados\\Novo.cshtml",
+              "ToolTip": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Views\\Chamados\\Novo.cshtml",
+              "RelativeToolTip": "PortalHelpdeskTI\\Views\\Chamados\\Novo.cshtml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAmAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-07-02T17:26:16.241Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "ChamadosController.cs",
+              "DocumentMoniker": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Controllers\\ChamadosController.cs",
+              "RelativeDocumentMoniker": "PortalHelpdeskTI\\Controllers\\ChamadosController.cs",
+              "ToolTip": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Controllers\\ChamadosController.cs",
+              "RelativeToolTip": "PortalHelpdeskTI\\Controllers\\ChamadosController.cs",
+              "ViewState": "AgIAAD4AAAAAAAAAAAAIwEMAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-02T17:26:02.01Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Chamado.cs",
+              "DocumentMoniker": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Models\\Chamado.cs",
+              "RelativeDocumentMoniker": "PortalHelpdeskTI\\Models\\Chamado.cs",
+              "ToolTip": "C:\\Users\\adan.cury\\source\\repos\\PortalHelpdeskTI\\PortalHelpdeskTI\\Models\\Chamado.cs",
+              "RelativeToolTip": "PortalHelpdeskTI\\Models\\Chamado.cs",
+              "ViewState": "AgIAABIAAAAAAAAAAAAgwCoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-02T17:25:44.442Z",
               "EditorCaption": ""
             }
           ]

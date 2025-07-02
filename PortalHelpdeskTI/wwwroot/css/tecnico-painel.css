@@ -1,43 +1,71 @@
-﻿.painel-titulo {
+﻿/* Título do painel */
+h2 {
     color: #004A80;
     font-weight: bold;
 }
+#tabela-painel2 {
+    border-collapse: separate;
+    border-spacing: 1;
+}
 
-.table-painel {
+    /* Cabeçalho da tabela */
+    #tabela-painel2 thead {
+        background-color: #F37021;
+        border-bottom: 2px solid #004A80;
+    }
+    #tabela-painel2 th {
+        font-weight: 600;
+        color: #004A80;
+        padding: 0.75rem;
+        border: none;
+    }
+/* Tabela geral */
+#tabela-painel {
     border-collapse: separate;
     border-spacing: 0;
 }
 
-    .table-painel thead {
+    /* Cabeçalho da tabela */
+    #tabela-painel thead {
         background-color: #f8f9fa;
         border-bottom: 2px solid #004A80;
     }
 
-    .table-painel th {
+    #tabela-painel th {
         font-weight: 600;
+        color: #004A80;
+        padding: 0.75rem;
         border: none;
     }
 
-    .table-painel td {
+    /* Corpo da tabela */
+    #tabela-painel td {
+        padding: 0.75rem;
+        vertical-align: middle;
         border: none;
     }
 
-    .table-painel tbody tr {
-        background-color: #fff;
-        transition: background-color 0.2s ease-in-out;
+    /* Linhas alternadas */
+    #tabela-painel tbody tr:nth-child(odd) {
+        background-color: #ffffff;
     }
-        .table-painel tbody tr:hover {
-            background-color: #e9ecef !important;
-            transition: background-color 0.2s ease-in-out;
+
+    #tabela-painel tbody tr:nth-child(even) {
+        background-color: #f2f6fa;
+    }
+
+    /* Hover nas linhas */
+    #tabela-painel tbody tr:hover {
+        background-color: #e9ecef !important;
+    }
+
+    /* Botão Atender */
+    #tabela-painel .btn-primary {
+        background-color: #004A80;
+        border-color: #004A80;
+    }
+
+        #tabela-painel .btn-primary:hover {
+            background-color: #0066aa;
+            border-color: #0066aa;
         }
-
-.btn-painel {
-    background-color: #004A80;
-    border-color: #004A80;
-    color: #fff;
-}
-
-    .btn-painel:hover {
-        background-color: #0066aa;
-        border-color: #0066aa;
-    }
