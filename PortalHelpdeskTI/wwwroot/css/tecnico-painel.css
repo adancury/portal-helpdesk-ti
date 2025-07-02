@@ -1,0 +1,43 @@
+﻿.painel-titulo {
+    color: #004A80;
+    font-weight: bold;
+}
+
+.table-painel {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+    .table-painel thead {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #004A80;
+    }
+
+    .table-painel th {
+        font-weight: 600;
+        border: none;
+    }
+
+    .table-painel td {
+        border: none;
+    }
+
+    .table-painel tbody tr {
+        background-color: #fff;
+        transition: background-color 0.2s ease-in-out;
+    }
+        .table-painel tbody tr:hover {
+            background-color: #e9ecef !important;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+.btn-painel {
+    background-color: #004A80;
+    border-color: #004A80;
+    color: #fff;
+}
+
+    .btn-painel:hover {
+        background-color: #0066aa;
+        border-color: #0066aa;
+    }

@@ -1,0 +1,16 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Meus Chamados</h2>
+<table>
+    <tr><th>Título</th><th>Status</th><th>Abertura</th></tr>
+    @foreach (var c in Model)
+    {
+        <tr>
+            <td><a href="/Chamados/Detalhes/@c.Id">@c.Titulo</a></td>
+            <td>@c.Status</td>
+            <td>@c.DataAbertura</td>
+        </tr>
+    }
+</table>

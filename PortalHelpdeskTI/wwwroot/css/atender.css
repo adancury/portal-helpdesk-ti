@@ -1,0 +1,56 @@
+﻿.atender-container {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 30px;
+    background: #f4f4f4;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+    .atender-container h2 {
+        text-align: center;
+        color: #003366;
+    }
+
+    .atender-container label {
+        font-weight: bold;
+        color: #003366;
+        display: block;
+        margin-top: 10px;
+    }
+
+    .atender-container select,
+    .atender-container textarea {
+        width: 100%;
+        padding: 8px;
+        margin-top: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    .atender-container button {
+        background-color: #003366;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        margin-top: 15px;
+        width: 100%;
+        font-size: 16px;
+    }
+
+        .atender-container button:hover {
+            background-color: #0055a5;
+        }
+
+.interacoes {
+    margin-top: 20px;
+}
+
+    .interacoes ul {
+        padding-left: 20px;
+    }
+
+    .interacoes li {
+        margin-bottom: 5px;
+    }

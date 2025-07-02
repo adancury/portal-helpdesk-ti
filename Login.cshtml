@@ -1,0 +1,7 @@
+<h2>Login</h2>
+<form method="post">
+    <label>Email:</label><input type="email" name="email" required />
+    <label>Senha:</label><input type="password" name="senha" required />
+    <button type="submit">Entrar</button>
+    @if (ViewBag.Erro != null) { <div>@ViewBag.Erro</div> }
+</form>

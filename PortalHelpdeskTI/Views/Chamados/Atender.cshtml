@@ -1,0 +1,63 @@
+﻿@model Chamado
+
+@{
+    ViewData["Title"] = "Atender Chamado";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link rel="stylesheet" href="~/css/atender.css" />
+
+<div class="atender-container">
+    <h2>Atender Chamado</h2>
+
+    <p><strong>Título:</strong> @Model.Titulo</p>
+    <p><strong>Descrição:</strong> @Model.Descricao</p>
+    <p><strong>Status atual:</strong> @Model.Status</p>
+    <p><strong>Usuário:</strong> @Model.Usuario?.Nome</p>
+
+    <form method="post">
+        <label for="novoStatus">Novo status:</label>
+        <select name="novoStatus" id="novoStatus">
+            <option selected>@Model.Status</option>
+            <option>Em Atendimento</option>
+            <option>Aguardando</option>
+            <option>Concluído</option>
+        </select>
+
+        <label for="tecnicoResponsavelId">Técnico Responsável:</label>
+        <select name="tecnicoResponsavelId" id="tecnicoResponsavelId">
+            <option value="">-- Selecione --</option>
+            @foreach (var tecnico in (IEnumerable<dynamic>)ViewBag.Tecnicos)
+            {
+                <option value="@tecnico.Id" @(Model.TecnicoId == tecnico.Id ? "selected" : "")>@tecnico.Nome</option>
+            }
+        </select>
+
+        <label for="interacaoMensagem">Interação (opcional):</label>
+        <textarea name="interacaoMensagem" id="interacaoMensagem"></textarea>
+
+        <button type="submit">Atualizar Chamado</button>
+    </form>
+
+    <div class="interacoes">
+        <h3>Histórico de Interações</h3>
+        @if (Model.Interacoes != null && Model.Interacoes.Any())
+        {
+            <ul>
+                @foreach (var i in Model.Interacoes.OrderBy(x => x.Data))
+                {
+                    <li>
+                        <strong>@i.Data.ToString("dd/MM/yyyy HH:mm")</strong> -
+                        @i.Mensagem (por @i.Usuario?.Nome)
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p>Sem interações ainda.</p>
+        }
+    </div>
+
+    <a href="/Chamados/TecnicoPainel">Voltar ao Painel Técnico</a>
+</div>

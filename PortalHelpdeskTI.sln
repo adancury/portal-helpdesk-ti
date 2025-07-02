@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36221.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PortalHelpdeskTI", "PortalHelpdeskTI\PortalHelpdeskTI.csproj", "{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F88595BB-2F12-4DD0-BD7C-AB9A1F254289}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7AE57F14-A582-4314-9DA0-8004349E5E98}
+	EndGlobalSection
+EndGlobal

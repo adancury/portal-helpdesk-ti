@@ -1,0 +1,15 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<h2>Novo Chamado</h2>
+<form method="post">
+    <label>Título:</label><input type="text" name="Titulo" required />
+    <label>Descrição:</label><textarea name="Descricao" required></textarea>
+    <label>Prioridade:</label>
+    <select name="Prioridade">
+        <option>Baixa</option>
+        <option>Média</option>
+        <option>Alta</option>
+    </select>
+    <button type="submit">Abrir</button>
+</form>

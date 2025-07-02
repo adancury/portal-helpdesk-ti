@@ -1,0 +1,55 @@
+﻿@model IEnumerable<Chamado>
+
+@{
+    ViewData["Title"] = "Página Inicial";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Bem-vindo, @ViewBag.Nome!</h2>
+
+<form method="get" style="margin-bottom: 20px;">
+    <label for="statusFiltro">Filtrar por status:</label>
+    <select name="statusFiltro" id="statusFiltro">
+        <option value="">-- Todos --</option>
+        <option value="Aberto" @(ViewBag.StatusFiltro == "Aberto" ? "selected" : "")>Aberto</option>
+        <option value="Em Atendimento" @(ViewBag.StatusFiltro == "Em Atendimento" ? "selected" : "")>Em Atendimento</option>
+        <option value="Aguardando" @(ViewBag.StatusFiltro == "Aguardando" ? "selected" : "")>Aguardando</option>
+        <option value="Concluído" @(ViewBag.StatusFiltro == "Concluído" ? "selected" : "")>Concluído</option>
+    </select>
+    <button type="submit">Filtrar</button>
+</form>
+
+<table>
+    <thead>
+        <tr>
+            <th>Título</th>
+            <th>Status</th>
+            <th>Prioridade</th>
+            <th>Data de Abertura</th>
+            <th>Ação</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model != null && Model.Any())
+        {
+            foreach (var chamado in Model)
+            {
+                <tr>
+                    <td>@chamado.Titulo</td>
+                    <td>@chamado.Status</td>
+                    <td>@chamado.Prioridade</td>
+                    <td>@chamado.DataAbertura.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>
+                        <a href="/Chamados/Detalhes/@chamado.Id">Detalhes</a>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="5">Nenhum chamado encontrado para o filtro selecionado.</td>
+            </tr>
+        }
+    </tbody>
+</table>

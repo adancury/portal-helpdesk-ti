@@ -1,0 +1,12 @@
+﻿@model Chamado
+
+<h2>Detalhes do Chamado</h2>
+
+<p><strong>Título:</strong> @Model.Titulo</p>
+<p><strong>Descrição:</strong> @Model.Descricao</p>
+<p><strong>Status:</strong> @Model.Status</p>
+<p><strong>Prioridade:</strong> @Model.Prioridade</p>
+<p><strong>Data de Abertura:</strong> @Model.DataAbertura</p>
+<p><strong>Usuário:</strong> @Model.Usuario?.Nome</p>
+
+<a href="/Chamados/Index">Voltar</a>

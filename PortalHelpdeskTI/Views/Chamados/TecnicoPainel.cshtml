@@ -1,0 +1,67 @@
+﻿@model IEnumerable<Chamado>
+
+@{
+    ViewData["Title"] = "Painel Técnico";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link rel="stylesheet" href="~/css/tecnico-painel.css" />
+
+<div class="container mt-4">
+    <h2 class="painel-titulo mb-4">Painel Técnico</h2>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="table-responsive shadow-sm rounded">
+            <table class="table table-painel align-middle">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Prioridade</th>
+                        <th>Status</th>
+                        <th>Data Abertura</th>
+                        <th class="text-center">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var chamado in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold">@chamado.Titulo</td>
+                            <td>@chamado.Prioridade</td>
+                            <td>
+                                <span class="badge @GetStatusBadgeClass(chamado.Status)">
+                                    @chamado.Status
+                                </span>
+                            </td>
+                            <td>@chamado.DataAbertura.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-center">
+                                <a href="/Chamados/Atender/@chamado.Id" class="btn btn-sm btn-painel">
+                                    Atender
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">Nenhum chamado em aberto no momento.</div>
+    }
+</div>
+
+@functions {
+    public string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Aberto" => "bg-secondary",
+            "Em Atendimento" => "bg-warning text-dark",
+            "Aguardando" => "bg-info text-dark",
+            "Concluído" => "bg-success",
+            _ => "bg-light text-dark"
+        };
+    }
+}
