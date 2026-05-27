@@ -1,0 +1,601 @@
+﻿@model PortalHelpdeskTI.Models.Comissoes.ResumoComissaoVm
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Comissões - Resumo";
+    var periodos = ViewBag.Periodos as List<SelectListItem> ?? new();
+    var periodoSelecionado = (string?)ViewBag.PeriodoSelecionado; // vamos usar no redirect
+    var linhas = Model?.Linhas ?? new List<PortalHelpdeskTI.Models.Comissoes.ResumoComissaoLinhaVm>();
+
+    decimal ValorReceberCorreto(PortalHelpdeskTI.Models.Comissoes.ResumoComissaoLinhaVm x)
+    {
+        // REGRA FINAL:
+        // Comissão Bruta = vendas - devoluções
+        // Comissão Líquida = Comissão Bruta - descontos
+        // IR = 1,5% sobre Comissão Bruta
+        // Valor a Receber = Comissão Líquida - IR
+        var ir = x.IR != 0m ? x.IR : x.Tributos;
+        var valor = (x.ComissaoBruta - x.Descontos) - ir;
+        return valor;
+    }
+
+    var totalPagar = 0m;
+
+    bool IsRep(string? t)
+    {
+        var v = (t ?? "").Trim().ToUpperInvariant();
+        return v == "REPRESENTANTE" || v == "REP";
+    }
+
+    totalPagar = linhas.Sum(x => ValorReceberCorreto(x));
+
+    var totalRep = linhas
+        .Where(x => IsRep(x.TipoVendedor))
+        .Sum(x => ValorReceberCorreto(x));
+
+    var totalIE = linhas
+        .Where(x => !IsRep(x.TipoVendedor))
+        .Sum(x => ValorReceberCorreto(x));
+}
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <div>
+            <div class="fw-bold">Comissões – Resumo de Apuração</div>
+            <div class="text-muted small">
+                Apuração automática conforme tipo de vendedor e base de cálculo
+            </div>
+        </div>
+
+        @{
+            var periodo = periodoSelecionado ?? (Model != null ? $"{Model.Ano}-{Model.Mes}" : "");
+            var temPeriodo = !string.IsNullOrWhiteSpace(periodo);
+        }
+
+        <div class="d-flex gap-2">
+            @if (temPeriodo)
+            {
+                <form method="get"
+                      asp-action="ExportarResumoExcel"
+                      asp-controller="Comissoes"
+                      id="formExportarExcel"
+                      target="dlFrame"
+                      class="m-0">
+                    <input type="hidden" name="periodo" value="@periodo" />
+                    <input type="hidden" name="dlToken" id="dlToken" value="" />
+
+                    <button class="btn btn-outline-success btn-sm" type="submit" id="btnExportarExcel">
+                        <span class="btn-text">Exportar Excel</span>
+                        <span class="btn-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Gerando relatório...
+                        </span>
+                    </button>
+                </form>
+
+                <!-- NOVO: PDF consolidado (Resumo Geral) -->
+                <a class="btn btn-outline-danger btn-sm"
+                   asp-controller="Comissoes"
+                   asp-action="ResumoGeralPdf"
+                   asp-route-periodo="@periodo"
+                   target="dlFrame">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> PDF Resumo Geral
+                </a>
+            }
+
+            <a class="btn btn-outline-info btn-sm"
+               asp-controller="ComissaoVendedor"
+               asp-action="Index">
+                Manutenção de vendedores
+            </a>
+        </div>
+    </div>
+
+    <!-- =========================
+         MENSAGENS (OK / ERRO)
+         ========================= -->
+    @if (TempData["Ok"] != null)
+    {
+        <div class="alert alert-success m-3">@TempData["Ok"]</div>
+    }
+    @if (TempData["Erro"] != null)
+    {
+        <div class="alert alert-danger m-3">@TempData["Erro"]</div>
+    }
+
+    <!-- =========================
+         FILTRO DE PERÍODO
+         ========================= -->
+    <div class="card-body border-bottom">
+        <form id="formGerarResumo"
+              method="get"
+              asp-action="Resumo"
+              asp-controller="Comissoes"
+              class="row g-3 align-items-end">
+
+            @Html.AntiForgeryToken()
+
+            <!-- Período -->
+            <div class="col-md-4">
+                <label class="form-label">Período de apuração</label>
+                <select class="form-select" name="periodo" required>
+                    <option value="">Selecione...</option>
+                    @foreach (var p in periodos)
+                    {
+                        <option value="@p.Value"
+                                selected="@(Model != null && $"{Model.Ano}-{Model.Mes}" == p.Value)">
+                            @p.Text
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <!-- Botão Gerar -->
+            <div class="col-md-2 d-flex align-items-end gap-2">
+                <button class="btn btn-primary w-100" type="submit" id="btnGerarResumo">
+                    <span class="btn-text">Gerar</span>
+                    <span class="btn-loading d-none">
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        Gerando...
+                    </span>
+                </button>
+
+                <!-- Cronômetro -->
+                <div id="gerarTimer"
+                     class="text-muted small mb-1"
+                     style="min-width:50px; text-align:right; display:none;">
+                    00:00
+                </div>
+            </div>
+
+            <!-- Totalizador (alinhado ao botão Gerar) -->
+            <div class="col-md-6 text-end">
+                @if (Model != null && Model.Linhas.Any())
+                {
+                    <div class="d-inline-block text-end">
+                        <div class="text-muted small">Total a pagar</div>
+                        <div class="fw-bold fs-5">
+                            @totalPagar.ToString("C")
+                        </div>
+
+                        <div class="text-muted small mt-1">
+                            <span class="me-3">
+                                <strong>IE:</strong> @totalIE.ToString("C")
+                            </span>
+                            <span>
+                                <strong>REP:</strong> @totalRep.ToString("C")
+                            </span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </form>
+    </div>
+
+    <!-- =========================
+         GRID RESUMO
+         ========================= -->
+    @if (Model != null && Model.Linhas.Any())
+    {
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Vendedor</th>
+                            <th>Tipo</th>
+                            <th>Base</th>
+                            <th class="text-end">Receita Líquida</th>
+                            <th class="text-end">Comissão</th>
+                            <th class="text-end">Descontos</th>
+                            <th class="text-end">Valor a Receber</th>
+                            <th style="width:110px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in Model.Linhas)
+                        {
+                            var valorReceberLinha = ValorReceberCorreto(l);
+
+                            <tr>
+                                <td>@l.SlpName (@l.SlpCode)</td>
+                                <td>@l.TipoVendedor</td>
+                                <td>@l.BaseCalculo</td>
+                                <td class="text-end">@l.ReceitaLiquida.ToString("C")</td>
+                                <td class="text-end">@l.ComissaoBruta.ToString("C")</td>
+                                <td class="text-end text-danger">@l.Descontos.ToString("C")</td>
+                                <td class="text-end fw-bold">@valorReceberLinha.ToString("C")</td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       href="@Url.Action("RelatorioRef", "Comissoes",
+                                            new {
+                                                slpCode = l.SlpCode,
+                                                ano = Model.Ano,
+                                                mes = Model.Mes,
+                                                periodo = $"{Model.Ano}-{Model.Mes}"
+                                            })">
+                                        Detalhes
+                                    </a>
+
+                        </td>
+                    </tr>
+                                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+      <!-- =========================
+     AÇÕES GERAIS
+     ========================= -->
+    <div class="card-footer d-flex justify-content-end gap-2 align-items-center flex-wrap">
+    <!-- form dedicado para antiforgery do envio -->
+        <form id="formEnvioEmails" method="post" asp-action="EnviarEmailsStart" asp-controller="Comissoes" class="d-none">
+            @Html.AntiForgeryToken()
+        </form>
+
+        <!-- Seletor de grupo -->
+        <div style="min-width: 260px;">
+            <select class="form-select form-select-sm" id="envioGrupo">
+                <option value="IE" selected>Interno/Externo (apuração 26→25)</option>
+                <option value="REP">Representantes (mês cheio)</option>
+                <option value="FISCAL">Fiscal (Reenviar Resumo Geral)</option>
+            </select>
+        </div>
+
+        <button class="btn btn-success"
+                type="button"
+                id="btnEnviarEmails"
+                data-periodo="@($"{Model.Ano}-{Model.Mes}")">
+            <span class="btn-text">Enviar relatórios por e-mail</span>
+            <span class="btn-loading d-none">
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Enviando relatórios...
+            </span>
+        </button>
+    </div>
+
+    <div class="mt-3" id="envioBox" style="display:none;">
+        <div class="mb-2 d-flex justify-content-between">
+            <div class="fw-bold">Envio de e-mails</div>
+            <div class="text-muted small" id="envioStatusText"></div>
+        </div>
+
+        <div class="progress" style="height: 20px;">
+            <div class="progress-bar" role="progressbar" style="width: 0%;" id="envioProgressBar">
+                0%
+            </div>
+        </div>
+
+        <div class="d-flex gap-3 mt-2 small flex-wrap">
+            <div>Processados: <span id="cProcessados">0</span>/<span id="cTotal">0</span></div>
+            <div class="text-success">Enviados: <span id="cEnviados">0</span></div>
+            <div class="text-danger">Falhas: <span id="cFalhas">0</span></div>
+            <div class="text-warning">Sem e-mail: <span id="cSemEmail">0</span></div>
+        </div>
+
+        <div class="mt-2 small text-danger" id="envioErroMsg" style="display:none;"></div>
+
+        <div class="mt-3" id="falhasBox" style="display:none;">
+            <div class="fw-bold mb-2">Falhas no envio</div>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Vendedor</th>
+                            <th>E-mail</th>
+                            <th>Erro</th>
+                        </tr>
+                    </thead>
+                    <tbody id="falhasBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    }
+    else if (Model != null)
+    {
+        <div class="card-body">
+            <div class="alert alert-warning mb-0">
+                Nenhum dado encontrado para o período selecionado.
+            </div>
+        </div>
+    }
+</div>
+<iframe id="dlFrame" name="dlFrame" style="display:none;"></iframe>
+@section Scripts {
+    <script>
+        (function () {
+            const btn = document.getElementById("btnEnviarEmails");
+            if (!btn) return;
+
+            const ddlGrupo = document.getElementById("envioGrupo"); // ✅ dropdown IE/REP
+
+            const envioBox = document.getElementById("envioBox");
+            const statusText = document.getElementById("envioStatusText");
+            const bar = document.getElementById("envioProgressBar");
+
+            const cProcessados = document.getElementById("cProcessados");
+            const cTotal = document.getElementById("cTotal");
+            const cEnviados = document.getElementById("cEnviados");
+            const cFalhas = document.getElementById("cFalhas");
+            const cSemEmail = document.getElementById("cSemEmail");
+
+            const falhasBox = document.getElementById("falhasBox");
+            const falhasBody = document.getElementById("falhasBody");
+
+            const erroMsg = document.getElementById("envioErroMsg");
+
+            // antiforgery token do form dedicado
+            const tokenInput = document.querySelector('#formEnvioEmails input[name="__RequestVerificationToken"]');
+            const token = tokenInput ? tokenInput.value : "";
+
+            // loading do próprio botão
+            const btnText = btn.querySelector(".btn-text");
+            const btnLoading = btn.querySelector(".btn-loading");
+
+            function setBtnLoading(isLoading) {
+                btn.disabled = isLoading;
+                if (ddlGrupo) ddlGrupo.disabled = isLoading; // ✅ trava dropdown durante envio
+                if (btnText) btnText.classList.toggle("d-none", isLoading);
+                if (btnLoading) btnLoading.classList.toggle("d-none", !isLoading);
+            }
+
+            let polling = null;
+
+            function setProgress(processados, total) {
+                // No modo FISCAL o total costuma ser 0 -> mostra 100% para não parecer travado
+                if (!total || total <= 0) {
+                    bar.style.width = "100%";
+                    bar.textContent = "100%";
+                    return;
+                }
+                const pct = Math.round((processados / total) * 100);
+                bar.style.width = pct + "%";
+                bar.textContent = pct + "%";
+            }
+
+            function renderFalhas(itens) {
+                falhasBody.innerHTML = "";
+                if (!itens || itens.length === 0) return;
+
+                for (const f of itens) {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${(f.slpName || "")} (${f.slpCode || ""})</td>
+                        <td>${(f.email || "")}</td>
+                        <td>${(f.erro || "")}</td>
+                    `;
+                    falhasBody.appendChild(tr);
+                }
+            }
+
+            async function poll(jobId) {
+                const url = `@Url.Action("EnvioStatus", "Comissoes")?jobId=${encodeURIComponent(jobId)}`;
+                const r = await fetch(url, { cache: "no-store", credentials: "same-origin" });
+                if (!r.ok) return;
+
+                const s = await r.json();
+
+                envioBox.style.display = "block";
+                erroMsg.style.display = "none";
+                erroMsg.textContent = "";
+
+                cTotal.textContent = s.total ?? 0;
+                cProcessados.textContent = s.processados ?? 0;
+                cEnviados.textContent = s.enviados ?? 0;
+                cFalhas.textContent = s.falhas ?? 0;
+                cSemEmail.textContent = s.semEmail ?? 0;
+
+                setProgress(s.processados ?? 0, s.total ?? 0);
+                statusText.textContent = s.finished ? "Concluído" : (s.status || "Enviando...");
+
+                if (s.falhasItens && s.falhasItens.length > 0) {
+                    falhasBox.style.display = "block";
+                    renderFalhas(s.falhasItens);
+                } else {
+                    falhasBox.style.display = "none";
+                    falhasBody.innerHTML = "";
+                }
+
+                if (s.finished) {
+                    clearInterval(polling);
+                    polling = null;
+                    setBtnLoading(false);
+                }
+            }
+
+            btn.addEventListener("click", async function () {
+                const periodo = btn.getAttribute("data-periodo");
+                if (!periodo) return;
+
+                const grupo = ddlGrupo ? (ddlGrupo.value || "IE") : "IE"; // ✅ IE ou REP
+
+                setBtnLoading(true);
+
+                envioBox.style.display = "block";
+                falhasBox.style.display = "none";
+                falhasBody.innerHTML = "";
+                statusText.textContent =
+                    grupo === "REP" ? "Iniciando... (Representantes)" :
+                    grupo === "FISCAL" ? "Iniciando... (Fiscal - Resumo Geral)" :
+                    "Iniciando... (Interno/Externo)";
+                erroMsg.style.display = "none";
+                erroMsg.textContent = "";
+
+                const form = new URLSearchParams();
+                form.append("periodo", periodo);
+                form.append("grupo", grupo); // ✅ envia grupo para o backend
+                form.append("__RequestVerificationToken", token);
+
+                try {
+                    const r = await fetch("@Url.Action("EnviarEmailsStart", "Comissoes")", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: form.toString(),
+                        credentials: "same-origin"
+                    });
+
+                    const data = await r.json().catch(() => ({}));
+
+                    if (!r.ok) {
+                        const msg = data && data.error ? data.error : "Falha ao iniciar envio.";
+                        throw new Error(msg);
+                    }
+
+                    const jobId = data.jobId;
+                    if (!jobId) throw new Error("JobId não retornado pelo servidor.");
+
+                    // start polling
+                    await poll(jobId);
+                    polling = setInterval(() => poll(jobId), 1000);
+
+                } catch (e) {
+                    setBtnLoading(false);
+                    statusText.textContent = "Falha ao iniciar envio.";
+                    erroMsg.style.display = "block";
+                    erroMsg.textContent = e && e.message ? e.message : "Erro desconhecido.";
+                }
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            const form = document.getElementById("formGerarResumo");
+            const btn = document.getElementById("btnGerarResumo");
+            if (!form || !btn) return;
+
+            const textEl = btn.querySelector(".btn-text");
+            const loadingEl = btn.querySelector(".btn-loading");
+
+            form.addEventListener("submit", function (e) {
+                // mostra loading
+                btn.disabled = true;
+                if (textEl) textEl.classList.add("d-none");
+                if (loadingEl) loadingEl.classList.remove("d-none");
+
+                // opcional: segura um pouco para o usuário perceber
+                e.preventDefault();
+                setTimeout(() => form.submit(), 200);
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            const form = document.getElementById("formExportarExcel");
+            const btn = document.getElementById("btnExportarExcel");
+            const tokenInput = document.getElementById("dlToken");
+            if (!form || !btn || !tokenInput) return;
+
+            const textEl = btn.querySelector(".btn-text");
+            const loadingEl = btn.querySelector(".btn-loading");
+
+            function setLoading(isLoading) {
+                btn.disabled = isLoading;
+                if (textEl) textEl.classList.toggle("d-none", isLoading);
+                if (loadingEl) loadingEl.classList.toggle("d-none", !isLoading);
+            }
+
+            function newToken() {
+                // token simples e suficiente para cookie name
+                return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+            }
+
+            function hasCookie(name) {
+                return document.cookie.split(";").some(c => c.trim().startsWith(name + "="));
+            }
+
+            function deleteCookie(name) {
+                document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+            }
+
+            form.addEventListener("submit", function () {
+                const token = newToken();
+                tokenInput.value = token;
+
+                const cookieName = "dl_" + token;
+
+                setLoading(true);
+
+                const startedAt = Date.now();
+                const timeoutMs = 5 * 60 * 1000; // 5 minutos
+                const intervalMs = 500;
+
+                const timer = setInterval(() => {
+                    // Se o cookie apareceu, o servidor respondeu e o download foi iniciado
+                    if (hasCookie(cookieName)) {
+                        clearInterval(timer);
+                        deleteCookie(cookieName);
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Timeout de segurança (para não ficar preso pra sempre)
+                    if (Date.now() - startedAt > timeoutMs) {
+                        clearInterval(timer);
+                        setLoading(false);
+                        alert("A exportação está demorando mais do que o esperado. Tente novamente.");
+                    }
+                }, intervalMs);
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            const btn = document.getElementById("btnGerarResumo");
+            const timerEl = document.getElementById("gerarTimer");
+            if (!btn || !timerEl) return;
+
+            const STORAGE_KEY = "comissao_gerar_start";
+            let intervalId = null;
+
+            function formatMMSS(ms) {
+                const totalSec = Math.floor(ms / 1000);
+                const mm = String(Math.floor(totalSec / 60)).padStart(2, "0");
+                const ss = String(totalSec % 60).padStart(2, "0");
+                return `${mm}:${ss}`;
+            }
+
+            function startTimer(startMs) {
+                timerEl.style.display = "block";
+
+                function tick() {
+                    const now = Date.now();
+                    timerEl.textContent = formatMMSS(now - startMs);
+                }
+
+                tick();
+                intervalId = setInterval(tick, 1000);
+            }
+
+            function stopTimer() {
+                if (intervalId) clearInterval(intervalId);
+                intervalId = null;
+                sessionStorage.removeItem(STORAGE_KEY);
+            }
+
+            // ▶️ Clique em "Gerar"
+            btn.closest("form")?.addEventListener("submit", function () {
+                const startMs = Date.now();
+                sessionStorage.setItem(STORAGE_KEY, String(startMs));
+                startTimer(startMs);
+            });
+
+            // 🔁 Ao recarregar a página (resultado do GET)
+            const savedStart = sessionStorage.getItem(STORAGE_KEY);
+            if (savedStart) {
+                const startMs = parseInt(savedStart, 10);
+                if (!isNaN(startMs)) {
+                    startTimer(startMs);
+
+                    // para o timer após renderizar a página
+                    window.addEventListener("load", function () {
+                        stopTimer();
+                    });
+                } else {
+                    sessionStorage.removeItem(STORAGE_KEY);
+                }
+            }
+        })();
+    </script>
+}
+

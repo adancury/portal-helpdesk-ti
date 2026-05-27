@@ -5,6 +5,8 @@ namespace PortalHelpdeskTI.Models
     {
         public int Id { get; set; }
         public string Nome { get; set; }
+
+        public ICollection<CategoriaChamado> Categorias { get; set; } = new List<CategoriaChamado>();
     }
 }
 

@@ -1,0 +1,448 @@
+@model IEnumerable<PortalHelpdeskTI.Models.Usuario>
+
+<link rel="stylesheet" href="~/css/usuarios.css" />
+@{
+    if (ViewContext.HttpContext.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+    {
+        Layout = null;
+    }
+    else
+    {
+        Layout = "~/Views/Shared/_Layout.cshtml";
+    }
+}
+
+@Html.AntiForgeryToken()
+
+@if (TempData["Mensagem"] != null)
+{
+    <div id="alertMensagem" class="alert alert-success">
+        @TempData["Mensagem"]
+    </div>
+}
+
+<div class="card" style="margin-top: 0 !important;">
+    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-people-fill me-2"></i> Cadastro de Usuários</span>
+        <button id="btnNovoUsuario" type="button" class="btn btn-sm btn-light text-primary">
+            <i class="bi bi-plus"></i> Novo Usuário
+        </button>
+    </div>
+
+    <div class="card-body">
+        <form id="formBuscaUsuarios"
+              action="/Usuarios/ListarUsuario"
+              method="get"
+              class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+            <input type="text"
+                   name="filtro"
+                   class="form-control form-control-sm"
+                   placeholder="Filtrar usuários..."
+                   value="@Context.Request.Query["filtro"]"
+                   style="width: 250px;" />
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-search"></i> Buscar
+            </button>
+        </form>
+
+        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-bordered table-striped table-sm align-middle" id="usuarioTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Perfil</th>
+                        <th>Depart.</th>
+                        <th>Ramal</th>
+                        <th>Senha</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model)
+                    {
+                        <tr data-id="@u.Id" data-departamento-id="@(u.DepartamentoId?.ToString() ?? "0")">
+                            <td class="nome">@u.Nome</td>
+                            <td class="email">@u.Email</td>
+                            <td class="perfil">@u.Perfil</td>
+                            <td class="departamento">@((u.Departamento?.Nome) ?? "-")</td>
+                            <td class="ramal">@u.Ramal</td>
+                            <td class="senha">******</td>
+                            <td class="text-center">
+                                <div class="d-inline-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-warning btn-acao btn-editar" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-success btn-acao btn-salvar d-none" title="Salvar">
+                                        <i class="bi bi-check"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary btn-acao btn-cancelar d-none" title="Cancelar">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-sm btn-danger btn-acao btn-excluir"
+                                            data-id="@u.Id"
+                                            title="Excluir">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-responsive">
+            <form id="formImportarUsuarios"
+                  action="/Usuarios/ImportarUsuarios"
+                  method="post"
+                  enctype="multipart/form-data"
+                  class="mb-3 d-flex gap-2 flex-wrap">
+                @Html.AntiForgeryToken()
+                <input type="file" name="arquivoExcel" accept=".xlsx" class="form-control form-control-sm" required />
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-upload me-1"></i> Importar Excel
+                </button>
+                <a href="/xlsx/ImportarUsuario/Modelo_Importacao_Usuarios.xlsx" class="btn btn-sm btn-outline-secondary" download>
+                    <i class="bi bi-download me-1"></i> Baixar Modelo
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalExcluirUsuario" tabindex="-1" aria-labelledby="modalExcluirUsuarioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalExcluirUsuarioLabel">Remanejar Chamados e Excluir Usuário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="usuarioExclusaoId" />
+                <div class="mb-3">
+                    <label for="usuarioDestino" class="form-label">Selecione o usuário destino:</label>
+                    <select id="usuarioDestino" class="form-select form-select-sm">
+                        <option value="">Carregando...</option>
+                    </select>
+                </div>
+                <div id="erroExcluir" class="text-danger d-none">Selecione um usuário destino.</div>
+            </div>
+            <div class="modal-footer d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" title="Cancelar" data-bs-toggle="tooltip">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btnConfirmarExcluir" title="Excluir e Remanejar" data-bs-toggle="tooltip">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const usuariosUrl = "/Usuarios/ListarUsuario";
+        const departamentosUrl = "/Usuarios/ObterDepartamentos";
+
+        function host() {
+            return document.getElementById("conteudo-configuracoes") || document;
+        }
+
+        function token() {
+            return document.querySelector('input[name="__RequestVerificationToken"]')?.value || "";
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function headers(extra) {
+            return Object.assign({ "X-Requested-With": "XMLHttpRequest" }, extra || {});
+        }
+
+        async function responseMessage(response) {
+            const text = await response.text();
+            return text || `Falha HTTP ${response.status}`;
+        }
+
+        async function reloadUsuarios(url) {
+            const container = document.getElementById("conteudo-configuracoes");
+            if (!container) {
+                window.location.href = url || usuariosUrl;
+                return;
+            }
+
+            container.innerHTML = '<div class="text-center my-4"><div class="spinner-border" role="status"></div></div>';
+            const response = await fetch(url || usuariosUrl, { headers: headers() });
+            if (!response.ok) {
+                container.innerHTML = '<div class="alert alert-danger">Erro ao carregar usuários.</div>';
+                return;
+            }
+
+            container.innerHTML = await response.text();
+            window.ativarEventosUsuarios();
+        }
+
+        async function carregarDepartamentos(select, selectedId) {
+            const response = await fetch(departamentosUrl, { headers: headers() });
+            if (!response.ok) {
+                select.innerHTML = '<option value="">Erro ao carregar</option>';
+                return;
+            }
+
+            const departamentos = await response.json();
+            select.innerHTML = '<option value="">Selecione</option>';
+            departamentos.forEach(dep => {
+                const option = document.createElement("option");
+                option.value = dep.id;
+                option.textContent = dep.descricao;
+                option.selected = Number(dep.id) === Number(selectedId);
+                select.appendChild(option);
+            });
+        }
+
+        function criarLinhaNovo() {
+            const tbody = document.querySelector("#usuarioTable tbody");
+            if (!tbody) return;
+
+            const newRow = document.createElement("tr");
+            newRow.className = "linha-novo-usuario";
+            newRow.innerHTML =
+                '<td><input type="text" class="form-control form-control-sm" placeholder="Nome" /></td>' +
+                '<td><input type="email" class="form-control form-control-sm" placeholder="Email" /></td>' +
+                '<td><select class="form-select form-select-sm">' +
+                    '<option value="Usuario">Usuario</option>' +
+                    '<option value="Tecnico">Tecnico</option>' +
+                '</select></td>' +
+                '<td><select class="form-select form-select-sm departamento-select"><option value="">Carregando...</option></select></td>' +
+                '<td><input type="text" class="form-control form-control-sm" placeholder="Ramal" /></td>' +
+                '<td><input type="password" class="form-control form-control-sm" placeholder="Senha" /></td>' +
+                '<td class="text-center"><div class="d-inline-flex gap-1">' +
+                    '<button type="button" class="btn btn-sm btn-success btn-acao btn-salvar-novo" title="Salvar"><i class="bi bi-check"></i></button>' +
+                    '<button type="button" class="btn btn-sm btn-secondary btn-acao btn-cancelar-novo" title="Cancelar"><i class="bi bi-x"></i></button>' +
+                '</div></td>';
+
+            tbody.prepend(newRow);
+            carregarDepartamentos(newRow.querySelector(".departamento-select"), null);
+        }
+
+        function editarLinha(btn) {
+            const row = btn.closest("tr");
+            if (!row || row.classList.contains("editando")) return;
+
+            const nomeCell = row.querySelector(".nome");
+            const emailCell = row.querySelector(".email");
+            const perfilCell = row.querySelector(".perfil");
+            const departamentoCell = row.querySelector(".departamento");
+            const senhaCell = row.querySelector(".senha");
+            const ramalCell = row.querySelector(".ramal");
+            const perfilAtual = perfilCell.textContent.trim();
+            const departamentoIdAtual = row.getAttribute("data-departamento-id") || "";
+
+            row.classList.add("editando");
+            nomeCell.innerHTML = `<input type="text" class="form-control form-control-sm" value="${escapeHtml(nomeCell.textContent.trim())}" />`;
+            emailCell.innerHTML = `<input type="email" class="form-control form-control-sm" value="${escapeHtml(emailCell.textContent.trim())}" />`;
+            perfilCell.innerHTML =
+                '<select class="form-select form-select-sm">' +
+                    '<option value="Usuario">Usuario</option>' +
+                    '<option value="Tecnico">Tecnico</option>' +
+                '</select>';
+            perfilCell.querySelector("select").value = perfilAtual;
+            departamentoCell.innerHTML = '<select class="form-select form-select-sm"><option value="">Carregando...</option></select>';
+            carregarDepartamentos(departamentoCell.querySelector("select"), departamentoIdAtual);
+            senhaCell.innerHTML = '<input type="password" class="form-control form-control-sm" placeholder="Nova senha" />';
+            ramalCell.innerHTML = `<input type="text" class="form-control form-control-sm" value="${escapeHtml(ramalCell.textContent.trim())}" />`;
+
+            const btnContainer = btn.closest("div");
+            btnContainer.querySelector(".btn-editar").classList.add("d-none");
+            btnContainer.querySelector(".btn-salvar").classList.remove("d-none");
+            btnContainer.querySelector(".btn-cancelar").classList.remove("d-none");
+        }
+
+        async function salvarEdicao(btn) {
+            const row = btn.closest("tr");
+            const payload = {
+                id: Number(row.getAttribute("data-id")),
+                nome: row.querySelector(".nome input").value,
+                email: row.querySelector(".email input").value,
+                perfil: row.querySelector(".perfil select").value,
+                departamentoId: Number(row.querySelector(".departamento select").value),
+                ramal: row.querySelector(".ramal input").value,
+                senha: row.querySelector(".senha input").value
+            };
+
+            const response = await fetch("/Usuarios/SalvarEdicaoInline", {
+                method: "POST",
+                headers: headers({
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": token()
+                }),
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                alert(await responseMessage(response));
+                return;
+            }
+
+            await reloadUsuarios(usuariosUrl);
+        }
+
+        async function salvarNovo(btn) {
+            const row = btn.closest("tr");
+            const payload = {
+                nome: row.querySelector("td:nth-child(1) input").value,
+                email: row.querySelector("td:nth-child(2) input").value,
+                perfil: row.querySelector("td:nth-child(3) select").value,
+                departamentoId: Number(row.querySelector("td:nth-child(4) select").value),
+                ramal: row.querySelector("td:nth-child(5) input").value,
+                senha: row.querySelector("td:nth-child(6) input").value
+            };
+
+            const response = await fetch("/Usuarios/SalvarNovoInline", {
+                method: "POST",
+                headers: headers({
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": token()
+                }),
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                alert(await responseMessage(response));
+                return;
+            }
+
+            await reloadUsuarios(usuariosUrl);
+        }
+
+        async function abrirModalExclusao(btn) {
+            const id = btn.getAttribute("data-id");
+            document.getElementById("usuarioExclusaoId").value = id;
+
+            const select = document.getElementById("usuarioDestino");
+            select.innerHTML = '<option value="">Carregando...</option>';
+
+            const response = await fetch(`/Usuarios/ObterUsuariosDestino?idExclusao=${encodeURIComponent(id)}`, { headers: headers() });
+            const data = response.ok ? await response.json() : [];
+            select.innerHTML = data.length ? '<option value="">Selecione...</option>' : '<option value="">Nenhum usuário disponível</option>';
+            data.forEach(u => {
+                select.innerHTML += `<option value="${u.id}">${escapeHtml(u.nome)} (${escapeHtml(u.email)})</option>`;
+            });
+
+            bootstrap.Modal.getOrCreateInstance(document.getElementById("modalExcluirUsuario")).show();
+        }
+
+        async function confirmarExclusao() {
+            const idExclusao = Number(document.getElementById("usuarioExclusaoId").value);
+            const idDestino = Number(document.getElementById("usuarioDestino").value);
+            const erro = document.getElementById("erroExcluir");
+
+            if (!idDestino) {
+                erro.classList.remove("d-none");
+                return;
+            }
+
+            erro.classList.add("d-none");
+            const response = await fetch("/Usuarios/ExcluirRemanejar", {
+                method: "POST",
+                headers: headers({
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": token()
+                }),
+                body: JSON.stringify({ idExclusao, idDestino })
+            });
+
+            if (!response.ok) {
+                alert(await responseMessage(response));
+                return;
+            }
+
+            bootstrap.Modal.getOrCreateInstance(document.getElementById("modalExcluirUsuario")).hide();
+            await reloadUsuarios(usuariosUrl);
+        }
+
+        window.ativarEventosUsuarios = function () {
+            const root = host();
+            if (root.dataset && root.dataset.usuariosEventos === "1") {
+                inicializarTooltips(root);
+                return;
+            }
+
+            if (root.dataset) root.dataset.usuariosEventos = "1";
+
+            root.addEventListener("submit", async function (e) {
+                const busca = e.target.closest("#formBuscaUsuarios");
+                const importar = e.target.closest("#formImportarUsuarios");
+
+                if (busca) {
+                    e.preventDefault();
+                    const filtro = busca.querySelector("input[name='filtro']").value || "";
+                    await reloadUsuarios(`${usuariosUrl}?filtro=${encodeURIComponent(filtro)}`);
+                    return;
+                }
+
+                if (importar) {
+                    e.preventDefault();
+                    const response = await fetch(importar.action, {
+                        method: "POST",
+                        headers: headers({ "RequestVerificationToken": token() }),
+                        body: new FormData(importar)
+                    });
+
+                    if (!response.ok) {
+                        alert(await responseMessage(response));
+                        return;
+                    }
+
+                    await reloadUsuarios(usuariosUrl);
+                }
+            });
+
+            root.addEventListener("click", async function (e) {
+                const action = e.target.closest(
+                    "#btnNovoUsuario, .btn-editar, .btn-cancelar, .btn-salvar, .btn-salvar-novo, .btn-cancelar-novo, .btn-excluir, #btnConfirmarExcluir"
+                );
+
+                if (!action || (root !== document && !root.contains(action))) return;
+                e.preventDefault();
+
+                try {
+                    if (action.id === "btnNovoUsuario") criarLinhaNovo();
+                    else if (action.classList.contains("btn-editar")) editarLinha(action);
+                    else if (action.classList.contains("btn-cancelar")) await reloadUsuarios(usuariosUrl);
+                    else if (action.classList.contains("btn-salvar")) await salvarEdicao(action);
+                    else if (action.classList.contains("btn-salvar-novo")) await salvarNovo(action);
+                    else if (action.classList.contains("btn-cancelar-novo")) action.closest("tr").remove();
+                    else if (action.classList.contains("btn-excluir")) await abrirModalExclusao(action);
+                    else if (action.id === "btnConfirmarExcluir") await confirmarExclusao();
+                } catch (err) {
+                    console.error(err);
+                    alert("Erro ao processar a operação.");
+                }
+            });
+
+            inicializarTooltips(root);
+        };
+
+        function inicializarTooltips(root) {
+            if (!window.bootstrap) return;
+            root.querySelectorAll?.('[data-bs-toggle="tooltip"]').forEach(function (el) {
+                bootstrap.Tooltip.getOrCreateInstance(el);
+            });
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", window.ativarEventosUsuarios);
+        } else {
+            window.ativarEventosUsuarios();
+        }
+    })();
+</script>

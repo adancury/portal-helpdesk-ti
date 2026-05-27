@@ -1,0 +1,134 @@
+﻿@model PortalHelpdeskTI.Models.IntegracoesSL.MonitorSalesforceVm
+@using System.Text
+
+@functions {
+    public static string B64(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(s));
+    }
+
+    public static string Badge(int? st)
+    {
+        if (!st.HasValue) return "bg-secondary";
+        return st.Value switch
+        {
+            2 => "bg-success",
+            1 => "bg-warning text-dark",
+            0 => "bg-secondary",
+            _ => "bg-danger"
+        };
+    }
+
+    public static string StatusLabel(int? st) => st switch
+    {
+        2 => "Sucesso",
+        1 => "Alerta",
+        0 => "Info",
+        null => "—",
+        _ => $"Status {st}"
+    };
+
+    // ✅ NOVO: converte HHMM (int) para "HH:MM"
+    public static string Hora(int? hhmm)
+    {
+        if (!hhmm.HasValue) return "";
+        var v = hhmm.Value;
+        var h = v / 100;
+        var m = v % 100;
+        return $"{h:00}:{m:00}";
+    }
+}
+
+@{
+    var pageNum = Model.Page < 1 ? 1 : Model.Page;
+    var size = Model.PageSize <= 0 ? 50 : Model.PageSize;
+    var total = Model.Total < 0 ? 0 : Model.Total;
+
+    var pages = (int)Math.Ceiling(total / (double)size);
+    if (pages < 1) pages = 1;
+}
+
+<div class="card shadow-sm rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="min-width:160px">Integração</th>
+                        <th style="min-width:180px">Tipo Documento</th>
+                        <th style="min-width:140px">ID Doc</th>
+                        <th style="min-width:160px">Legado</th>
+                        <th style="min-width:130px">Status</th>
+                        <th style="min-width:160px">Retorno</th>
+                        <th>Mensagem</th>
+                        <th style="min-width:120px" class="text-center">Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.Logs == null || Model.Logs.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">Nenhum log encontrado.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var l in Model.Logs)
+                        {
+                            // ✅ DataIntegração se existir; senão usa CreateDate + CreateTime(HHMM)
+                            var dt = l.DataIntegracao?.ToString("dd/MM/yyyy HH:mm");
+                            if (string.IsNullOrWhiteSpace(dt))
+                            {
+                                var d = l.CreateDate?.ToString("dd/MM/yyyy") ?? "";
+                                var t = Hora(l.CreateTime);
+                                dt = string.IsNullOrWhiteSpace(t) ? d : $"{d} {t}";
+                            }
+
+                            <tr>
+                                <td>@dt</td>
+                                <td>@l.TipoDocumento</td>
+                                <td class="mono">@l.IdDocumento</td>
+                                <td class="mono">@l.IdDocumentoLegado</td>
+                                <td>
+                                    <span class="badge @Badge(l.Status)">
+                                        @StatusLabel(l.Status) (@l.Status)
+                                    </span>
+                                </td>
+                                <td class="mono">@l.IdRetorno</td>
+                                <td style="max-width:520px">
+                                    <div class="text-truncate" title="@l.Mensagem">@l.Mensagem</div>
+                                </td>
+                                <td class="text-center">
+                                    <a href="#"
+                                       class="btn btn-outline-primary btn-sm"
+                                       title="Ver JSON"
+                                       data-json-envio-b64="@B64(l.JsonEnvio)"
+                                       data-json-retorno-b64="@B64(l.JsonRetorno)">
+                                        JSON
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="small text-muted">
+            Total: <b>@total</b> — Página <b>@(pageNum)</b> / <b>@pages</b> — @size por página
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="#" class="btn btn-outline-secondary btn-sm @(pageNum <= 1 ? "disabled" : "")" data-page="@(pageNum - 1)">
+                Anterior
+            </a>
+            <a href="#" class="btn btn-outline-secondary btn-sm @(pageNum >= pages ? "disabled" : "")" data-page="@(pageNum + 1)">
+                Próxima
+            </a>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,766 @@
+@model PortalHelpdeskTI.Models.Relatorios.PrevisaoRupturaPage
+@using System.Globalization
+@using PortalHelpdeskTI.Models.Relatorios
+
+@{
+    ViewData["Title"] = "Previsão de Ruptura";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var total = Model.Total;
+    var curPage = Model.Page;
+    var pageSize = Model.PageSize;
+    var last = (int)Math.Ceiling(total / (double)pageSize);
+    var ptBR = new CultureInfo("pt-BR");
+    var resumoRuptura = ViewBag.RupturaResumo as RupturaResumoVM;
+    var ultimaAtualizacao = Model.UltimaAtualizacao;
+    var riscoAtual = (Model.RiscoFiltro ?? "").Trim().ToUpperInvariant();
+}
+<link rel="stylesheet" href="~/css/tecnico-painel.css" />
+<link rel="stylesheet" href="~/css/previsao-ruptura.css" />
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Previsão de Ruptura</h5>
+        <div class="d-flex align-items-center gap-3">
+            <div class="text-muted small">
+                Última atualização:
+                <strong>
+                    @(ultimaAtualizacao.HasValue
+                        ? ultimaAtualizacao.Value.ToString("dd/MM/yyyy HH:mm")
+                        : "não disponível")
+                </strong>
+            </div>
+            <button type="button"
+                    id="btn-atualizar-previsao"
+                    class="btn btn-sm btn-primary">
+                <i class="bi bi-arrow-clockwise"></i>
+                Atualizar previsão
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-light" onclick="history.back()">? Voltar</button>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <form id="form-atualizar-previsao" class="d-none">
+            @Html.AntiForgeryToken()
+        </form>
+
+        <div id="previsao-job-panel" class="previsao-job-panel d-none mb-3">
+            <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                <div id="previsao-job-msg" class="small fw-semibold">Aguardando execução.</div>
+                <div id="previsao-job-percent" class="small text-muted">0%</div>
+            </div>
+            <div class="progress previsao-job-progress" role="progressbar" aria-label="Progresso da atualização">
+                <div id="previsao-job-bar" class="progress-bar" style="width: 0%"></div>
+            </div>
+        </div>
+
+        @* ? NOVO: cards de resumo, iguais ao Painel Técnico *@
+        @if (resumoRuptura != null)
+        {
+            <div class="mb-3">
+                <div class="row row-cols-1 row-cols-md-5 g-2">
+                    <div class="col">
+                        <a class="ruptura-card-link"
+                           href="@Url.Action("PrevisaoRuptura", "Relatorios", new { item = Model.ItemFiltro, risco = "RUPTURADO", diasMax = Model.DiasMax, page = 1, pageSize })"
+                           aria-label="Filtrar itens rupturados"
+                           aria-current="@(riscoAtual == "RUPTURADO" ? "true" : null)">
+                            <div class="ruptura-card ruptura-rupturado card h-100 @(riscoAtual == "RUPTURADO" ? "ruptura-card-active" : "")">
+                                <div class="card-body py-2">
+                                    <div class="ruptura-card-content">
+                                        <div>
+                                            <div class="small text-muted">Rupturado</div>
+                                            <div class="fs-4 fw-bold">@resumoRuptura.QtdeRupturado</div>
+                                        </div>
+                                        <i class="bi bi-exclamation-octagon-fill ruptura-card-icon" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col">
+                        <a class="ruptura-card-link"
+                           href="@Url.Action("PrevisaoRuptura", "Relatorios", new { item = Model.ItemFiltro, risco = "ALTO", diasMax = Model.DiasMax, page = 1, pageSize })"
+                           aria-label="Filtrar itens de alto risco"
+                           aria-current="@(riscoAtual == "ALTO" ? "true" : null)">
+                            <div class="ruptura-card ruptura-alto card h-100 @(riscoAtual == "ALTO" ? "ruptura-card-active" : "")">
+                                <div class="card-body py-2">
+                                    <div class="ruptura-card-content">
+                                        <div>
+                                            <div class="small text-muted">Alto Risco</div>
+                                            <div class="fs-4 fw-bold">@resumoRuptura.QtdeAltoRisco</div>
+                                        </div>
+                                        <i class="bi bi-exclamation-triangle-fill ruptura-card-icon" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col">
+                        <a class="ruptura-card-link"
+                           href="@Url.Action("PrevisaoRuptura", "Relatorios", new { item = Model.ItemFiltro, risco = "MÉDIO", diasMax = Model.DiasMax, page = 1, pageSize })"
+                           aria-label="Filtrar itens de médio risco"
+                           aria-current="@(riscoAtual == "MÉDIO" ? "true" : null)">
+                            <div class="ruptura-card ruptura-medio card h-100 @(riscoAtual == "MÉDIO" ? "ruptura-card-active" : "")">
+                                <div class="card-body py-2">
+                                    <div class="ruptura-card-content">
+                                        <div>
+                                            <div class="small text-muted">Médio Risco</div>
+                                            <div class="fs-4 fw-bold">@resumoRuptura.QtdeMedioRisco</div>
+                                        </div>
+                                        <i class="bi bi-hourglass-split ruptura-card-icon" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col">
+                        <a class="ruptura-card-link"
+                           href="@Url.Action("PrevisaoRuptura", "Relatorios", new { item = Model.ItemFiltro, risco = "BAIXO", diasMax = Model.DiasMax, page = 1, pageSize })"
+                           aria-label="Filtrar itens de baixo risco"
+                           aria-current="@(riscoAtual == "BAIXO" ? "true" : null)">
+                            <div class="ruptura-card ruptura-baixo card h-100 @(riscoAtual == "BAIXO" ? "ruptura-card-active" : "")">
+                                <div class="card-body py-2">
+                                    <div class="ruptura-card-content">
+                                        <div>
+                                            <div class="small text-muted">Baixo Risco</div>
+                                            <div class="fs-4 fw-bold">@resumoRuptura.QtdeBaixoRisco</div>
+                                        </div>
+                                        <i class="bi bi-shield-check ruptura-card-icon" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col">
+                        <a class="ruptura-card-link"
+                           href="@Url.Action("PrevisaoRuptura", "Relatorios", new { item = Model.ItemFiltro, risco = "SEM RISCO", diasMax = Model.DiasMax, page = 1, pageSize })"
+                           aria-label="Filtrar itens sem risco"
+                           aria-current="@(riscoAtual == "SEM RISCO" ? "true" : null)">
+                            <div class="ruptura-card ruptura-ok card h-100 @(riscoAtual == "SEM RISCO" ? "ruptura-card-active" : "")">
+                                <div class="card-body py-2">
+                                    <div class="ruptura-card-content">
+                                        <div>
+                                            <div class="small text-muted">Sem Risco</div>
+                                            <div class="fs-4 fw-bold">@resumoRuptura.QtdeSemRisco</div>
+                                        </div>
+                                        <i class="bi bi-check-circle-fill ruptura-card-icon" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+        <div class="previsao-legenda small text-muted mb-3">
+            Relação composta por itens presentes na previsão, marcados para monitoramento de ruptura, vendáveis,
+            com tipo de material padrão, fora da classe 1 e fora dos grupos excluídos:
+            101, 102, 136, 144, 145, 167, 168, 169 e 174.
+        </div>
+        <form method="get" class="row g-2 mb-3">
+            <input type="hidden" name="page" value="1" />
+
+            <div class="col-md-3">
+                <label class="form-label mb-0">Item</label>
+                <input type="text"
+                       name="item"
+                       class="form-control form-control-sm"
+                       value="@Model.ItemFiltro"
+                       placeholder="Código do item">
+            </div>
+
+            @*<div class="col-md-2">
+                <label class="form-label mb-0">Depósito</label>
+                <input type="text"
+                       name="deposito"
+                       class="form-control form-control-sm"
+                       value="@Model.DepositoFiltro">
+            </div>*@
+
+            <div class="col-md-3">
+                <label class="form-label mb-0">Nível de risco</label>
+                <select name="risco" class="form-select form-select-sm">
+                    <option value="">(Todos)</option>
+
+                    @* RUPTURADO *@
+                    @if (Model.RiscoFiltro == "RUPTURADO")
+                    {
+                        <option value="RUPTURADO" selected>RUPTURADO</option>
+                    }
+                    else
+                    {
+                        <option value="RUPTURADO">RUPTURADO</option>
+                    }
+
+                    @* ALTO *@
+                    @if (Model.RiscoFiltro == "ALTO")
+                    {
+                        <option value="ALTO" selected>ALTO</option>
+                    }
+                    else
+                    {
+                        <option value="ALTO">ALTO</option>
+                    }
+
+                    @* MÉDIO *@
+                    @if (Model.RiscoFiltro == "MÉDIO")
+                    {
+                        <option value="MÉDIO" selected>MÉDIO</option>
+                    }
+                    else
+                    {
+                        <option value="MÉDIO">MÉDIO</option>
+                    }
+
+                    @* BAIXO *@
+                    @if (Model.RiscoFiltro == "BAIXO")
+                    {
+                        <option value="BAIXO" selected>BAIXO</option>
+                    }
+                    else
+                    {
+                        <option value="BAIXO">BAIXO</option>
+                    }
+
+                    @* SEM RISCO / OK *@
+                    @if (Model.RiscoFiltro == "SEM RISCO")
+                    {
+                        <option value="SEM RISCO" selected>SEM RISCO</option>
+                    }
+                    else
+                    {
+                        <option value="SEM RISCO">SEM RISCO</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label mb-0">Ruptura em até (dias)</label>
+                <input type="number"
+                       name="diasMax"
+                       class="form-control form-control-sm"
+                       value="@(Model.DiasMax?.ToString() ?? "")"
+                       min="0">
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+                <a class="btn btn-outline-secondary btn-sm"
+                   href="@Url.Action("PrevisaoRuptura", "Relatorios")">Limpar</a>
+            </div>
+        </form>
+
+        <div class="table-responsive previsao-ruptura-wrap">
+            <table class="table align-middle table-previsao-ruptura">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Posição de estoque</th>
+                        <th>Consumo e demanda</th>
+                        <th>Previsão</th>
+                        <th class="text-center">Risco</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Linhas?.Any() != true)
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">
+                                Nenhum registro encontrado.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var r in Model.Linhas)
+                        {
+                            var estaRupturado = r.DiasAteRuptura.HasValue && r.DiasAteRuptura.Value <= 0;
+                            var riscoTexto = estaRupturado ? "RUPTURADO" : r.NivelRisco;
+                            var riscoCss = estaRupturado ? "badge bg-dark" : r.NivelRisco switch
+                            {
+                                "ALTO" => "badge bg-danger",
+                                "MÉDIO" => "badge bg-warning text-dark",
+                                "BAIXO" => "badge bg-success",
+                                _ => "badge bg-secondary"
+                            };
+                            var curvaAbc = string.IsNullOrWhiteSpace(r.CurvaAbc) ? "C" : r.CurvaAbc.Trim().ToUpperInvariant();
+                            var curvaCss = curvaAbc switch
+                            {
+                                "A" => "previsao-curva-badge previsao-curva-a",
+                                "B" => "previsao-curva-badge previsao-curva-b",
+                                _ => "previsao-curva-badge previsao-curva-c"
+                            };
+
+                            <tr>
+                                <td class="previsao-item-cell">
+                                    <div class="previsao-item-head">
+                                        <div class="previsao-item-code">@r.ItemCode</div>
+                                        <span class="@curvaCss"
+                                              title="Curva ABC por faturamento líquido dos últimos 12 meses">
+                                            Curva @curvaAbc
+                                        </span>
+                                    </div>
+                                    <div class="previsao-item-name">@r.ItemName</div>
+                                </td>
+
+                                <td>
+                                    <div class="metric-grid metric-grid-estoque">
+                                        <div class="metric-block metric-primary">
+                                            <span class="metric-label">Atual</span>
+                                            <span class="metric-value">@r.EstoqueAtual.ToString("N0", ptBR)</span>
+                                        </div>
+                                        <div class="metric-block">
+                                            <span class="metric-label">Em trânsito</span>
+                                            <span class="metric-value">@r.EmTransito.ToString("N0", ptBR)</span>
+                                            @if (r.DataProximaCompra.HasValue)
+                                            {
+                                                <span class="metric-note">Chega em<br />@r.DataProximaCompra.Value.ToString("dd/MM/yyyy")</span>
+                                            }
+                                        </div>
+                                        <div class="metric-block">
+                                            <span class="metric-label">Comprometido</span>
+                                            <span class="metric-value">@r.Comprometido.ToString("N0", ptBR)</span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="metric-grid">
+                                        <div class="metric-block metric-primary">
+                                            <span class="metric-label">Consumo/dia</span>
+                                            <span class="metric-value">@r.ConsumoMedioDia.ToString("N2", ptBR)</span>
+                                        </div>
+                                        <div class="metric-block">
+                                            <span class="metric-label">Lead time</span>
+                                            <span class="metric-value">@r.LeadTimeDias <small>dias</small></span>
+                                        </div>
+                                        <div class="metric-block">
+                                            <span class="metric-label">Demanda LT</span>
+                                            <span class="metric-value">@r.DemandaLeadTime.ToString("N0", ptBR)</span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="previsao-status">
+                                        <div class="metric-block metric-primary">
+                                            <span class="metric-label">Estoque projetado</span>
+                                            <span class="metric-value">@r.EstoqueProjetado.ToString("N0", ptBR)</span>
+                                        </div>
+                                        <div class="previsao-status-row">
+                                            <span class="metric-label">Ruptura</span>
+                                            <span class="previsao-date">
+                                                @(estaRupturado ? "Em ruptura"
+                                                    : (r.DataRuptura.HasValue ? r.DataRuptura.Value.ToString("dd/MM/yyyy") : "Sem previsão"))
+                                            </span>
+                                        </div>
+                                        <div class="previsao-status-row">
+                                            <span class="metric-label">Prazo</span>
+                                            <span>
+                                                @(r.DiasAteRuptura.HasValue
+                                                    ? $"{r.DiasAteRuptura.Value.ToString("N1", ptBR)} dias"
+                                                    : "—")
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td class="text-center previsao-actions">
+                                    <div class="d-inline-flex flex-column align-items-center gap-2">
+                                        <span class="@riscoCss">@riscoTexto</span>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                title="Ver análise de consumo"
+                                                onclick="abrirAnaliseRuptura('@r.ItemCode')">
+                                            <i class="bi bi-graph-up"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+
+            <div class="d-flex justify-content-between align-items-center mt-2 small">
+                <div>
+                    Total: <strong>@total</strong>
+                </div>
+
+                <div>
+                    Página @curPage de @last
+                </div>
+
+                <div>
+                    <div class="btn-group">
+                        @{
+                            var rotaBase = new
+                            {
+                                item = Model.ItemFiltro,
+                                risco = Model.RiscoFiltro,
+                                diasMax = Model.DiasMax
+                            };
+                        }
+
+                        <a class="btn btn-sm btn-outline-light @(curPage <= 1 ? "disabled" : "")"
+                           href="@(curPage <= 1
+                                                           ? "#"
+                                                           : Url.Action("PrevisaoRuptura",
+                                                                 new { page = curPage - 1, pageSize, rotaBase.item, rotaBase.risco, rotaBase.diasMax }))">
+                            « Anterior
+                        </a>
+
+                        <a class="btn btn-sm btn-outline-light @(curPage >= last ? "disabled" : "")"
+                           href="@(curPage >= last
+                                                           ? "#"
+                                                           : Url.Action("PrevisaoRuptura",
+                                                                 new { page = curPage + 1, pageSize, rotaBase.item, rotaBase.risco, rotaBase.diasMax }))">
+                            Próxima »
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL FORA DA TABELA -->
+            <div class="modal fade" id="modal-analise-ruptura" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-md" style="max-width: 720px;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <div>
+                                <h5 class="modal-title mb-0">Análise de Consumo e Risco</h5>
+                                <div id="analise-titulo-item" class="small text-muted"></div>
+                            </div>
+
+                            <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="modal"
+                                    aria-label="Fechar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <canvas id="grafico-analise-ruptura"
+                                        height="140"
+                                        style="max-height:220px;"></canvas>
+                            </div>
+
+                            <hr class="my-3" />
+
+                            <div id="analise-texto" class="small"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Chart.js (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        let graficoAnalise = null;
+        let previsaoJobTimer = null;
+        let deveRecarregarAoFinalizarPrevisao = false;
+
+        function normalizarStatusPrevisao(status) {
+            return {
+                isRunning: status.isRunning ?? status.IsRunning ?? false,
+                percentual: status.percentual ?? status.Percentual ?? 0,
+                mensagem: status.mensagem ?? status.Mensagem ?? "",
+                lastRunSucceeded: status.lastRunSucceeded ?? status.LastRunSucceeded ?? false,
+                lastError: status.lastError ?? status.LastError ?? null
+            };
+        }
+
+        function aplicarStatusAtualizacaoPrevisao(rawStatus) {
+            const status = normalizarStatusPrevisao(rawStatus || {});
+            const panel = document.getElementById("previsao-job-panel");
+            const msg = document.getElementById("previsao-job-msg");
+            const percent = document.getElementById("previsao-job-percent");
+            const bar = document.getElementById("previsao-job-bar");
+            const btn = document.getElementById("btn-atualizar-previsao");
+
+            const valor = Math.max(0, Math.min(100, Number(status.percentual) || 0));
+
+            if (panel) {
+                panel.classList.toggle("d-none", !status.isRunning && valor === 0 && !status.lastError);
+            }
+
+            if (msg) {
+                msg.textContent = status.lastError || status.mensagem || "Atualizando previsão...";
+            }
+
+            if (percent) {
+                percent.textContent = `${valor}%`;
+            }
+
+            if (bar) {
+                bar.style.width = `${valor}%`;
+                bar.textContent = valor >= 12 ? `${valor}%` : "";
+                bar.classList.toggle("bg-danger", !!status.lastError);
+                bar.classList.toggle("bg-success", !status.lastError && valor === 100);
+            }
+
+            if (btn) {
+                btn.disabled = status.isRunning;
+                btn.innerHTML = status.isRunning
+                    ? '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Atualizando...'
+                    : '<i class="bi bi-arrow-clockwise"></i> Atualizar previsão';
+            }
+
+            return status;
+        }
+
+        function consultarStatusAtualizacaoPrevisao() {
+            fetch('@Url.Action("StatusAtualizacaoPrevisaoRuptura", "Relatorios")', {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+                .then(r => r.json())
+                .then(raw => {
+                    const status = aplicarStatusAtualizacaoPrevisao(raw);
+
+                    if (status.isRunning) {
+                        deveRecarregarAoFinalizarPrevisao = true;
+                        if (!previsaoJobTimer) {
+                            previsaoJobTimer = setInterval(consultarStatusAtualizacaoPrevisao, 3000);
+                        }
+                        return;
+                    }
+
+                    if (previsaoJobTimer) {
+                        clearInterval(previsaoJobTimer);
+                        previsaoJobTimer = null;
+                    }
+
+                    if (deveRecarregarAoFinalizarPrevisao && status.lastRunSucceeded && status.percentual === 100) {
+                        deveRecarregarAoFinalizarPrevisao = false;
+                        setTimeout(() => window.location.reload(), 1200);
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const btnAtualizar = document.getElementById("btn-atualizar-previsao");
+            const token = document.querySelector('#form-atualizar-previsao input[name="__RequestVerificationToken"]')?.value;
+
+            btnAtualizar?.addEventListener("click", function () {
+                if (!confirm("Deseja atualizar a previsão de ruptura agora? A tabela atual será recalculada.")) {
+                    return;
+                }
+
+                btnAtualizar.disabled = true;
+                deveRecarregarAoFinalizarPrevisao = true;
+                aplicarStatusAtualizacaoPrevisao({
+                    isRunning: true,
+                    percentual: 0,
+                    mensagem: "Solicitando atualização..."
+                });
+
+                fetch('@Url.Action("AtualizarPrevisaoRuptura", "Relatorios")', {
+                    method: "POST",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "RequestVerificationToken": token || ""
+                    }
+                })
+                    .then(r => r.json())
+                    .then(raw => {
+                        aplicarStatusAtualizacaoPrevisao(raw);
+                        consultarStatusAtualizacaoPrevisao();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        aplicarStatusAtualizacaoPrevisao({
+                            isRunning: false,
+                            percentual: 100,
+                            mensagem: "Não foi possível iniciar a atualização.",
+                            lastError: "Não foi possível iniciar a atualização."
+                        });
+                    });
+            });
+
+            consultarStatusAtualizacaoPrevisao();
+        });
+
+        function abrirAnaliseRuptura(itemCode) {
+            if (!itemCode) return;
+
+            fetch(`@Url.Action("AnaliseRuptura", "Relatorios")?item=${encodeURIComponent(itemCode)}`)
+                .then(r => {
+                    if (!r.ok) throw new Error("Falha ao buscar análise.");
+                    return r.json();
+                })
+                .then(d => {
+                    preencherModalAnalise(d);
+                    const modalEl = document.getElementById('modal-analise-ruptura');
+                    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modal.show();
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Não foi possível carregar a análise de ruptura.");
+                });
+        }
+
+        function preencherModalAnalise(d) {
+            // título
+            const tituloItem = document.getElementById('analise-titulo-item');
+            if (tituloItem) {
+                tituloItem.textContent = `${d.itemCode} - ${d.itemName}`;
+            }
+
+            // gráfico (Histórico x IA)
+            const ctx = document.getElementById('grafico-analise-ruptura');
+            if (graficoAnalise) {
+                graficoAnalise.destroy();
+            }
+
+            const labels = ["Histórico", "IA"];
+            const valores = [
+                d.consumoHistorico || 0,
+                d.consumoIa || 0
+            ];
+
+            graficoAnalise = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Consumo médio (un/dia)',
+                        data: valores,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return context.parsed.y.toLocaleString('pt-BR', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    }) + ' un/dia';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function (value) {
+                                    return value.toLocaleString('pt-BR');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // ==== TEXTO "FRIENDLY" ====
+            const divTexto = document.getElementById('analise-texto');
+            if (!divTexto) return;
+
+            const diasR = (d.diasRuptura != null)
+                ? d.diasRuptura.toFixed(1).replace('.', ',') + ' dias'
+                : 'sem ruptura prevista';
+
+            const dataR = d.dataRuptura || '—';
+
+            const consumoHist = (d.consumoHistorico || 0).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            const consumoIa = (d.consumoIa || 0).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            const demandaLead = (d.demandaLeadTime || 0).toLocaleString('pt-BR', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+            const estoqueProj = (d.estoqueProjetado || 0).toLocaleString('pt-BR', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+            const estoqueAtual = (d.estoqueAtual || 0).toLocaleString('pt-BR', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+            const emTransito = (d.emTransito || 0).toLocaleString('pt-BR', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+            const comprometido = (d.comprometido || 0).toLocaleString('pt-BR', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+
+            let riscoClass = "badge bg-secondary";
+            if (d.nivelRisco === "ALTO") riscoClass = "badge bg-danger";
+            else if (d.nivelRisco === "MÉDIO") riscoClass = "badge bg-warning text-dark";
+            else if (d.nivelRisco === "BAIXO") riscoClass = "badge bg-success";
+
+            divTexto.innerHTML = `
+                <!-- RESUMO RÁPIDO -->
+                <div class="mb-3">
+                    <span class="${riscoClass} me-2">${d.nivelRisco || "Sem risco"}</span>
+                    <span class="fw-semibold">
+                        ${d.diasRuptura != null
+                            ? `Ruptura prevista em <span class="text-warning">${diasR}</span> (${dataR}).`
+                            : "Sem previsão de ruptura com os dados atuais."}
+                    </span>
+                </div>
+
+                <!-- DOIS CARDS LADO A LADO -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="border rounded-3 p-3 bg-dark bg-opacity-25">
+                            <div class="fw-semibold mb-2">?? Situação do estoque</div>
+                            <ul class="list-unstyled mb-0 small">
+                                <li><b>Estoque atual:</b> ${estoqueAtual} un</li>
+                                <li><b>Em trânsito:</b> ${emTransito} un</li>
+                                <li><b>Comprometido:</b> ${comprometido} un</li>
+                                <li><b>Estoque projetado:</b> ${estoqueProj} un</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="border rounded-3 p-3 bg-dark bg-opacity-25">
+                            <div class="fw-semibold mb-2">?? Consumo & demanda</div>
+                            <ul class="list-unstyled mb-0 small">
+                                <li><b>Consumo histórico:</b> ${consumoHist} un/dia</li>
+                                <li><b>Consumo estimado pela IA:</b> ${consumoIa} un/dia</li>
+                                <li><b>Lead time:</b> ${d.leadTime} dias</li>
+                                <li><b>Demanda no lead time:</b> ${demandaLead} un</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                <!-- EXPLICAÇÕES -->
+                <div class="mb-3 small">
+                    <div class="fw-semibold mb-1">?? Por que o risco está assim?</div>
+                    <div>${d.motivoRisco || "Não foi possível determinar claramente o motivo do risco."}</div>
+                </div>
+
+                <div class="mb-0 small">
+                    <div class="fw-semibold mb-1">?? Como a IA chegou nesse consumo?</div>
+                    <div>${d.explicacaoIa || "A IA utilizou o histórico recente de vendas para estimar o consumo futuro deste item, ajustando tendências de crescimento e comportamento de demanda."}</div>
+                </div>
+            `;
+        }
+    </script>
+}

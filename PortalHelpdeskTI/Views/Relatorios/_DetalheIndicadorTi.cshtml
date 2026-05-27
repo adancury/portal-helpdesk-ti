@@ -1,0 +1,102 @@
+﻿@model PortalHelpdeskTI.Models.Relatorios.IndicadorTiDetalheVm
+
+@if (Model?.Consolidado == null)
+{
+    <div class="text-muted small">Sem dados para o mês selecionado.</div>
+    return;
+}
+
+@{
+    var c = Model.Consolidado;
+    string valDe = Context.Request.Query["de"];
+    string valAte = Context.Request.Query["ate"];
+    var exportUrl = Url.Action("IndicadorTiDetalheExcel", "Relatorios", new
+    {
+        mesRef = c!.MesRef.ToString("yyyy-MM-dd"),
+        de = valDe,
+        ate = valAte
+    });
+}
+
+<div class="mb-2">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <div class="fw-semibold">
+            <i class="bi bi-calendar3 me-1"></i> Detalhe do mês: @c!.MesRef.ToString("MM/yyyy")
+        </div>
+
+        <div class="ms-auto d-flex flex-wrap align-items-center gap-2">
+            <a class="btn btn-success btn-sm fw-semibold" href="@exportUrl">
+                <i class="bi bi-file-earmark-excel me-1"></i> Exportar Excel
+            </a>
+
+            @if (c.AtingiuMeta95)
+            {
+                <span class="badge bg-success">Meta 95% atingida</span>
+            }
+            else
+            {
+                <span class="badge bg-danger">Meta 95% não atingida</span>
+            }
+        </div>
+    </div>
+
+    <div class="row g-2 mt-1">
+        <div class="col-6 col-md-2"><div class="small text-muted">Chamados</div><div class="fw-semibold">@c.QtdeChamados</div></div>
+        <div class="col-6 col-md-2"><div class="small text-muted">Est. (h)</div><div class="fw-semibold">@c.HorasEstimadasTotal.ToString("N2")</div></div>
+        <div class="col-6 col-md-2"><div class="small text-muted">Real (h)</div><div class="fw-semibold">@c.HorasReaisTotal.ToString("N2")</div></div>
+        <div class="col-6 col-md-2"><div class="small text-muted">Perf. (cap110)</div><div class="fw-semibold">@c.PerformancePctCap110.ToString("N2")%</div></div>
+        <div class="col-6 col-md-2"><div class="small text-muted">Satisfação</div><div class="fw-semibold">@c.SatisfacaoPct.ToString("N2")%</div></div>
+        <div class="col-6 col-md-2"><div class="small text-muted">Final (80/20)</div><div class="fw-semibold">@c.IndicadorFinal.ToString("N2")%</div></div>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-sm table-striped table-hover mb-0">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Chamado</th>
+                <th>Solicitante</th>
+                <th>Técnico</th>
+                <th>Categoria</th>
+                <th>Fechado</th>
+                <th class="text-end">Est.(h)</th>
+                <th class="text-end">Real(h)</th>
+                <th class="text-end">Perf.(cap)</th>
+                <th class="text-end">Nota</th>
+                <th class="text-end">Satisf.</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Detalhes == null || Model.Detalhes.Count == 0)
+            {
+                <tr><td colspan="11" class="text-center text-muted p-3">Sem chamados</td></tr>
+            }
+            else
+            {
+                foreach (var d in Model.Detalhes)
+                {
+                    <tr>
+                        <td>@d.ChamadoId</td>
+                        <td>@d.Titulo</td>
+                        <td>@d.Solicitante</td>
+                        <td>@d.Tecnico</td>
+                        <td>
+                            @d.Categoria
+                            @if (!string.IsNullOrWhiteSpace(d.Subcategoria))
+                            {
+                                <div class="small text-muted">@d.Subcategoria</div>
+                            }
+                        </td>
+                        <td>@d.DataConclusao.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="text-end">@d.HorasEstimadas.ToString("N2")</td>
+                        <td class="text-end">@d.HorasReais.ToString("N2")</td>
+                        <td class="text-end">@d.PerformancePctCap110.ToString("N2")%</td>
+                        <td class="text-end">@d.Nota_1a5.ToString("N2")</td>
+                        <td class="text-end">@d.SatisfacaoPct.ToString("N2")%</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

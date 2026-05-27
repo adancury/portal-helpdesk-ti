@@ -1,0 +1,346 @@
+﻿@model List<PortalHelpdeskTI.Models.IntegracoesNotas>
+
+@{
+    ViewData["Title"] = "Monitoramento de Envio de Notas";
+
+    int pagina = ViewBag.Pagina ?? 1;
+    int tamanhoPagina = ViewBag.TamanhoPagina ?? 50;
+    int total = ViewBag.Total ?? 0;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+
+    DateTime? dataIni = ViewBag.DataIni as DateTime?;
+    DateTime? dataFim = ViewBag.DataFim as DateTime?;
+
+    string statusEnvio = ViewBag.StatusEnvio?.ToString() ?? "";
+    string docNum = ViewBag.DocNum?.ToString() ?? "";
+    string cardCode = ViewBag.CardCode?.ToString() ?? "";
+    string cardName = ViewBag.CardName?.ToString() ?? "";
+    string emailCliente = ViewBag.EmailCliente?.ToString() ?? "";
+    string chaveNf = ViewBag.ChaveNf?.ToString() ?? "";
+    bool somenteComErro = ViewBag.SomenteComErro != null && (bool)ViewBag.SomenteComErro;
+}
+@section Styles {
+    <style>
+        .integracoes-notas-card {
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+            .integracoes-notas-card .card-header,
+            .integracoes-notas-card .card-footer {
+                background: rgba(255,255,255,.03);
+                border-color: rgba(255,255,255,.08);
+            }
+
+        .integracoes-notas-filtros .form-label {
+            font-size: .85rem;
+            font-weight: 600;
+            margin-bottom: .35rem;
+        }
+
+        .integracoes-notas-filtros .form-control,
+        .integracoes-notas-filtros .form-select {
+            min-height: 40px;
+        }
+
+        .integracoes-notas-grid {
+            font-size: .92rem;
+        }
+
+            .integracoes-notas-grid thead th {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                background: #f8f9fa;
+                white-space: nowrap;
+                font-weight: 600;
+                border-bottom: 1px solid #dee2e6;
+            }
+
+            .integracoes-notas-grid tbody td {
+                vertical-align: middle;
+                white-space: nowrap;
+            }
+
+            .integracoes-notas-grid tbody tr:hover {
+                background-color: rgba(13, 110, 253, 0.04);
+            }
+
+            .integracoes-notas-grid .col-nome,
+            .integracoes-notas-grid .col-email,
+            .integracoes-notas-grid .col-chave,
+            .integracoes-notas-grid .col-erro {
+                white-space: normal !important;
+            }
+
+            .integracoes-notas-grid .col-nome {
+                min-width: 280px;
+            }
+
+            .integracoes-notas-grid .col-email {
+                min-width: 220px;
+            }
+
+            .integracoes-notas-grid .col-chave {
+                min-width: 260px;
+                word-break: break-all;
+            }
+
+            .integracoes-notas-grid .col-erro {
+                min-width: 320px;
+            }
+
+        .linha-erro {
+            background-color: #fff5f5 !important;
+        }
+
+            .linha-erro td:first-child {
+                box-shadow: inset 4px 0 0 #dc3545;
+            }
+
+        .status-badge {
+            font-size: .75rem;
+            padding: .35rem .55rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        .status-erro {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .status-sucesso {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .integracoes-notas-total {
+            font-size: .9rem;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+    </style>
+}
+<div class="container-fluid py-3">
+    <div class="card shadow-sm integracoes-notas-card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0">Monitoramento de Envio de Notas</h5>
+            <span class="integracoes-notas-total">Total de registros: @total</span>
+        </div>
+
+        <div class="card-body">
+            <form method="get" asp-controller="IntegracoesNotas" asp-action="Index" class="row g-3 integracoes-notas-filtros">
+                <div class="col-md-2">
+                    <label class="form-label">Data inicial</label>
+                    <input type="date" name="dataIni" class="form-control"
+                           value="@(dataIni?.ToString("yyyy-MM-dd"))" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Data final</label>
+                    <input type="date" name="dataFim" class="form-control"
+                           value="@(dataFim?.ToString("yyyy-MM-dd"))" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Status envio</label>
+                    <select name="statusEnvio" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="S" selected="@(statusEnvio == "S")">S</option>
+                        <option value="E" selected="@(statusEnvio == "E")">E</option>
+                        <option value="Sucesso" selected="@(statusEnvio == "Sucesso")">Sucesso</option>
+                        <option value="Erro" selected="@(statusEnvio == "Erro")">Erro</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">DocNum</label>
+                    <input type="text" name="docNum" class="form-control" value="@docNum" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Cliente</label>
+                    <input type="text" name="cardCode" class="form-control" value="@cardCode" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Nome cliente</label>
+                    <input type="text" name="cardName" class="form-control" value="@cardName" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">E-mail cliente</label>
+                    <input type="text" name="emailCliente" class="form-control" value="@emailCliente" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Chave NF-e</label>
+                    <input type="text" name="chaveNf" class="form-control" value="@chaveNf" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Itens por página</label>
+                    <select name="tamanhoPagina" class="form-select">
+                        <option value="25" selected="@(tamanhoPagina == 25)">25</option>
+                        <option value="50" selected="@(tamanhoPagina == 50)">50</option>
+                        <option value="100" selected="@(tamanhoPagina == 100)">100</option>
+                        <option value="200" selected="@(tamanhoPagina == 200)">200</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="somenteComErro" value="true" @(somenteComErro ? "checked" : "") />
+                        <label class="form-check-label">
+                            Somente com erro
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-12 d-flex gap-2 flex-wrap">
+                    <button type="submit" class="btn btn-primary">
+                        Buscar
+                    </button>
+
+                    <a asp-controller="IntegracoesNotas" asp-action="Index" class="btn btn-outline-secondary">
+                        Limpar
+                    </a>
+
+                    <a class="btn btn-success"
+                       asp-controller="IntegracoesNotas"
+                       asp-action="ExportarExcel"
+                       asp-route-dataIni="@(dataIni?.ToString("yyyy-MM-dd"))"
+                       asp-route-dataFim="@(dataFim?.ToString("yyyy-MM-dd"))"
+                       asp-route-statusEnvio="@statusEnvio"
+                       asp-route-docNum="@docNum"
+                       asp-route-cardCode="@cardCode"
+                       asp-route-cardName="@cardName"
+                       asp-route-emailCliente="@emailCliente"
+                       asp-route-chaveNf="@chaveNf"
+                       asp-route-somenteComErro="@somenteComErro">
+                        Exportar Excel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0 align-middle integracoes-notas-grid">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Envio</th>
+                            <th>Status</th>
+                            <th>DocEntry</th>
+                            <th>DocNum</th>
+                            <th>NF</th>
+                            <th>Série</th>
+                            <th>Cliente</th>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>Valor</th>
+                            <th>Dt. Documento</th>
+                            <th>Chave NF-e</th>
+                            <th>Status Doc.</th>
+                            <th>Erro Envio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var item in Model)
+                            {
+                                var linhaErro = item.StatusEnvio.Equals("Erro", StringComparison.OrdinalIgnoreCase)
+                                || item.StatusEnvio.Equals("E", StringComparison.OrdinalIgnoreCase)
+                                || !string.IsNullOrWhiteSpace(item.ErroEnvio);
+
+                                <tr class="@(linhaErro ? "linha-erro" : "")">
+                                    <td>@item.SentAt?.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                    <td>
+                                        @if (linhaErro)
+                                        {
+                                            <span class="status-badge status-erro">Erro</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="status-badge status-sucesso">Sucesso</span>
+                                        }
+                                    </td>
+                                    <td>@item.DocEntry</td>
+                                    <td>@item.DocNum</td>
+                                    <td>@item.NumNf</td>
+                                    <td>@item.SerieNF</td>
+                                    <td>@item.CardCode</td>
+                                    <td class="col-nome">@item.CardName</td>
+                                    <td class="col-email">@item.EmailCliente</td>
+                                    <td>@item.ValorNota.ToString("N2")</td>
+                                    <td>@item.DataDocumento?.ToString("dd/MM/yyyy")</td>
+                                    <td class="col-chave">@item.ChaveNf</td>
+                                    <td>@item.StatusDocumento</td>
+                                    <td class="col-erro">@item.ErroEnvio</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="14" class="text-center py-4 text-muted">
+                                    Nenhum registro encontrado.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                Página @pagina de @totalPaginas
+            </div>
+
+            <div class="d-flex gap-2">
+                @if (pagina > 1)
+                {
+                    <a class="btn btn-sm btn-outline-primary"
+                       asp-controller="IntegracoesNotas"
+                       asp-action="Index"
+                       asp-route-dataIni="@(dataIni?.ToString("yyyy-MM-dd"))"
+                       asp-route-dataFim="@(dataFim?.ToString("yyyy-MM-dd"))"
+                       asp-route-statusEnvio="@statusEnvio"
+                       asp-route-docNum="@docNum"
+                       asp-route-cardCode="@cardCode"
+                       asp-route-cardName="@cardName"
+                       asp-route-emailCliente="@emailCliente"
+                       asp-route-chaveNf="@chaveNf"
+                       asp-route-somenteComErro="@somenteComErro"
+                       asp-route-tamanhoPagina="@tamanhoPagina"
+                       asp-route-pagina="@(pagina - 1)">
+                        Anterior
+                    </a>
+                }
+
+                @if (pagina < totalPaginas)
+                {
+                    <a class="btn btn-sm btn-outline-primary"
+                       asp-controller="IntegracoesNotas"
+                       asp-action="Index"
+                       asp-route-dataIni="@(dataIni?.ToString("yyyy-MM-dd"))"
+                       asp-route-dataFim="@(dataFim?.ToString("yyyy-MM-dd"))"
+                       asp-route-statusEnvio="@statusEnvio"
+                       asp-route-docNum="@docNum"
+                       asp-route-cardCode="@cardCode"
+                       asp-route-cardName="@cardName"
+                       asp-route-emailCliente="@emailCliente"
+                       asp-route-chaveNf="@chaveNf"
+                       asp-route-somenteComErro="@somenteComErro"
+                       asp-route-tamanhoPagina="@tamanhoPagina"
+                       asp-route-pagina="@(pagina + 1)">
+                        Próxima
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>

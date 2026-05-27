@@ -1,0 +1,39 @@
+﻿@model List<PortalHelpdeskTI.ViewModels.Quizzes.QuizListItemVM>
+@{
+    ViewData["Title"] = "Admin – Quizzes";
+    if (ViewBag.Embed == true) { Layout = null; }
+}
+<div class="admin-quizzes">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Quizzes</h2>
+        <a class="btn btn-success" asp-controller="AdminQuizzes" asp-action="Novo" asp-route-embed="1">Novo</a>
+    </div>
+
+    <div class="section">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Título</th>
+                    <th>Categoria</th>
+                    <th>Questões</th>
+                    <th>Publicado</th>
+                    <th style="width:120px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var q in Model)
+                {
+                    <tr>
+                        <td>@q.Titulo</td>
+                        <td>@(string.IsNullOrWhiteSpace(q.Categoria) ? "-" : q.Categoria)</td>
+                        <td>@q.TotalQuestoes</td>
+                        <td>@(q.Publicado ? "Sim" : "Não")</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-primary" asp-controller="AdminQuizzes" asp-action="Editar" asp-route-id="@q.Id" asp-route-embed="1">Editar</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

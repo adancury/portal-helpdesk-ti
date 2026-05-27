@@ -1,0 +1,21 @@
+﻿@model RedefinirSenhaViewModel
+@{
+    ViewData["Title"] = "Nova Senha";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-5" style="max-width: 500px;">
+    <h3 class="text-center text-primary">Redefinir Senha</h3>
+
+    <form method="post" asp-action="SalvarNovaSenha">
+        <input type="hidden" name="Token" value="@Model.Token" />
+
+        <div class="mb-3">
+            <label class="form-label text-primary">Nova Senha:</label>
+            <input type="password" name="NovaSenha" class="form-control" required />
+        </div>
+
+        <button class="btn btn-primary w-100" type="submit">Salvar nova senha</button>
+
+    </form>
+</div>

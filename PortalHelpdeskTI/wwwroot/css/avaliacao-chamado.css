@@ -1,0 +1,182 @@
+﻿/* Wrapper com fundo coerente ao tema */
+.eva-wrap {
+    background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 94%, var(--bg) 6%), var(--bg));
+    min-height: 70vh;
+}
+
+/* Cartões */
+.eva-card {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 10px 24px -12px rgba(0,0,0,.25);
+}
+
+/* Títulos/subtítulos */
+.eva-title {
+    color: var(--heading-fg, var(--text));
+}
+
+.eva-subtitle {
+    color: var(--muted);
+}
+
+/* Badge “marca” */
+.eva-badge-brand {
+    background-color: color-mix(in oklab, var(--primary) 15%, var(--surface) 85%);
+    color: color-mix(in oklab, var(--primary) 85%, var(--surface) 15%);
+    border: 1px solid color-mix(in oklab, var(--primary) 40%, var(--border) 60%);
+    padding: .4rem .75rem;
+}
+
+/* Metadados */
+.eva-meta-label {
+    font-size: .85rem;
+    color: var(--muted);
+    margin-bottom: .15rem;
+}
+
+.eva-meta-value {
+    color: var(--text);
+    font-weight: 500;
+}
+
+/* Stars (usa seu esquema de <input type=radio> + <label>) */
+.eva-stars {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    gap: .35rem;
+}
+
+    .eva-stars input {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+        pointer-events: none;
+    }
+
+    .eva-stars label {
+        font-size: 2rem;
+        line-height: 1;
+        cursor: pointer;
+        color: var(--border);
+        margin: 0;
+        transition: transform .15s ease, color .15s ease;
+    }
+
+        .eva-stars label:hover,
+        .eva-stars label:hover ~ label,
+        .eva-stars input:checked ~ label {
+            /* usa a cor da marca/acento do portal */
+            color: var(--accent, #F37021);
+        }
+
+        .eva-stars label:hover {
+            transform: scale(1.06);
+        }
+
+/* Textarea integrada ao tema */
+.eva-textarea {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+    .eva-textarea::placeholder {
+        color: color-mix(in oklab, var(--muted) 85%, var(--surface) 15%);
+    }
+
+    .eva-textarea:focus {
+        border-color: color-mix(in oklab, var(--primary) 50%, var(--border) 50%);
+        box-shadow: 0 0 0 .2rem color-mix(in oklab, var(--primary) 25%, transparent);
+    }
+
+/* Botões seguem Bootstrap; a paleta vem do seu site.css (btn-primary) */
+/* =========================
+   DARK MODE TWEAKS (Bootstrap e/ou portal)
+   Suporta: [data-bs-theme="dark"] OU html.dark
+   ========================= */
+
+/* wrapper e cards um pouco mais “flat” no dark */
+[data-bs-theme="dark"] .eva-wrap,
+html.dark .eva-wrap {
+    background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 96%, var(--bg) 4%), var(--bg));
+}
+
+[data-bs-theme="dark"] .eva-card,
+html.dark .eva-card {
+    border-color: color-mix(in oklab, var(--border) 60%, #000 40%);
+    box-shadow: 0 8px 22px -12px rgba(0,0,0,.6);
+}
+
+/* título/subtítulo com contraste melhor */
+[data-bs-theme="dark"] .eva-title,
+html.dark .eva-title {
+    color: color-mix(in oklab, var(--text) 95%, #fff 5%);
+}
+
+[data-bs-theme="dark"] .eva-subtitle,
+html.dark .eva-subtitle {
+    color: color-mix(in oklab, var(--muted) 80%, #bbb 20%);
+}
+
+/* meta labels/values */
+[data-bs-theme="dark"] .eva-meta-label,
+html.dark .eva-meta-label {
+    color: color-mix(in oklab, var(--muted) 85%, #aaa 15%);
+}
+
+[data-bs-theme="dark"] .eva-meta-value,
+html.dark .eva-meta-value {
+    color: color-mix(in oklab, var(--text) 92%, #fff 8%);
+}
+
+/* 🔥 badge do número do chamado — foco do problema */
+[data-bs-theme="dark"] .eva-badge-brand,
+html.dark .eva-badge-brand {
+    /* fundo mais sólido e texto claro para alto contraste */
+    background-color: color-mix(in oklab, var(--primary) 45%, #111 55%);
+    color: #fff;
+    border-color: color-mix(in oklab, var(--primary) 55%, #222 45%);
+    /* um pouco mais de “peso” visual */
+    font-weight: 600;
+    letter-spacing: .15px;
+}
+
+/* estrelas: base mais visível no dark */
+[data-bs-theme="dark"] .eva-stars label,
+html.dark .eva-stars label {
+    color: color-mix(in oklab, var(--border) 70%, #888 30%); /* cinza um pouco mais claro */
+}
+
+    [data-bs-theme="dark"] .eva-stars label:hover,
+    [data-bs-theme="dark"] .eva-stars label:hover ~ label,
+    [data-bs-theme="dark"] .eva-stars input:checked ~ label,
+    html.dark .eva-stars label:hover,
+    html.dark .eva-stars label:hover ~ label,
+    html.dark .eva-stars input:checked ~ label {
+        color: var(--accent, #F37021); /* mantém seu acento */
+    }
+
+/* textarea e placeholder no dark */
+[data-bs-theme="dark"] .eva-textarea,
+html.dark .eva-textarea {
+    background: color-mix(in oklab, var(--surface) 90%, #111 10%);
+    color: var(--text);
+    border-color: color-mix(in oklab, var(--border) 70%, #333 30%);
+}
+
+    [data-bs-theme="dark"] .eva-textarea::placeholder,
+    html.dark .eva-textarea::placeholder {
+        color: color-mix(in oklab, var(--muted) 70%, #aaa 30%);
+    }
+
+/* legenda/contador em cinza mais claro no dark */
+[data-bs-theme="dark"] #notaLegenda,
+[data-bs-theme="dark"] #contador,
+html.dark #notaLegenda,
+html.dark #contador {
+    color: color-mix(in oklab, var(--muted) 75%, #c9c9c9 25%);
+}

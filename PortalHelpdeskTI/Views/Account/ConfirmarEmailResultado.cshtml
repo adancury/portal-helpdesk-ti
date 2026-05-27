@@ -1,0 +1,11 @@
+﻿@{
+    ViewData["Title"] = "Ativação de usuário";
+    //Layout = "~/Views/Shared/_Layout.cshtml";
+    Layout = "~/Views/Shared/_LayoutLimpo.cshtml";
+}
+<div class="container mt-4">
+    <div class="alert alert-info">
+        @Html.Raw(ViewBag.Mensagem ?? "Processo concluído.")
+    </div>
+    <a href="@Url.Action("Login", "Account")" class="btn btn-primary">Ir para Login</a>
+</div>

@@ -1,80 +1,155 @@
 ﻿@{
     ViewData["Title"] = "Login";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // vindo do server quando a conta não está ativada
+    var showActivation = (ViewBag.ShowAtivacao == true && (TempData["ShowLogin"] == null));
 }
 
-<style>
-    .login-container {
-        max-width: 400px;
-        margin: 60px auto;
-        padding: 30px;
-        background: #f4f4f4;
-        border-radius: 8px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
+<link rel="stylesheet" href="~/css/login.css" />
 
-    .login-container img {
-        display: block;
-        margin: 0 auto 20px auto;
-        max-width: 200px;
-    }
+<div class="auth-wrap">
+    <div class="auth-card">
+        <div class="auth-header">
+            <img src="~/images/logo.png" alt="Logo" class="brand" />
+            <h2 class="auth-title">Portal Helpdesk</h2>
+            <div class="auth-sub">Entre com suas credenciais</div>
+        </div>
 
-    .login-container h2 {
-        text-align: center;
-        color: #003366;
-    }
+        <div class="auth-body">
+            @if (TempData["Mensagem"] != null)
+            {
+                <div class="alert alert-info mb-3">@TempData["Mensagem"]</div>
+            }
 
-    .login-container label {
-        font-weight: bold;
-        color: #003366;
-    }
+            <!-- BLOCO: LOGIN -->
+            <div id="loginForm" class="@(showActivation ? "hidden" : "")">
+                <form method="post" asp-action="Login" asp-controller="Account" onsubmit="return lockButton(this)">
+                    @Html.AntiForgeryToken()
 
-    .login-container input {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 15px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-    }
+                    <div class="form-floating mb-3 position-relative">
+                        <input type="email" class="form-control" id="email" name="email" placeholder=" "
+                               required value="@((string)(ViewBag.Email ?? ""))" />
+                        <label for="email">E-mail</label>
+                    </div>
 
-    .login-container button {
-        width: 100%;
-        padding: 10px;
-        background-color: #003366;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 16px;
-    }
+                    <div class="form-floating mb-3 position-relative">
+                        <input type="password" class="form-control" id="senha" name="senha" placeholder=" " required />
+                        <label for="senha">Senha</label>
+                        <button type="button"
+                                class="btn-eye"
+                                aria-label="Mostrar senha"
+                                aria-pressed="false"
+                                onclick="togglePass('senha', this)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
 
-    .login-container button:hover {
-        background-color: #0055a5;
-    }
+                    <button type="submit" class="btn btn-brand" id="btnLogin">
+                        <span class="btn-text">Entrar</span>
+                        <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                    </button>
 
-    .erro-login {
-        color: red;
-        text-align: center;
-        margin-bottom: 10px;
-    }
-</style>
+                    @if (ViewBag.Erro != null && !(bool)(ViewBag.ShowAtivacao ?? false))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0" role="alert">@ViewBag.Erro</div>
+                    }
+                </form>
 
-<div class="login-container">
-    <img src="~/images/logo.png" alt="Logo da Empresa" />
+                <div class="auth-links">
+                    <a href="@Url.Action("EsqueciSenha", "Account")">Esqueci minha senha</a>
+                    <a href="@Url.Action("Registrar", "Account")">Criar conta</a>
+                </div>
 
-    <h2>Acesso ao Portal Helpdesk</h2>
+                <div class="divider"></div>
 
-    <form method="post">
-        <label>Email:</label>
-        <input type="email" name="email" required />
+                <div class="small-muted">Não recebeu o e-mail de ativação?</div>
+                <div class="mt-2">
+                    <button type="button" class="btn btn-link p-0" style="color: var(--brand);" onclick="showActivation()">
+                        Reenviar ativação
+                    </button>
+                </div>
+            </div>
 
-        <label>Senha:</label>
-        <input type="password" name="senha" required />
+            <!-- BLOCO: REENVIAR ATIVAÇÃO -->
+            <div id="activationForm" class="@(showActivation ? "" : "hidden")">
+                <form method="post" action="@Url.Action("ReenviarAtivacao","Account")" onsubmit="return lockButton(this)">
+                    @Html.AntiForgeryToken()
 
-        <button type="submit">Entrar</button>
+                    <div class="form-floating mb-3">
+                        <input type="email" class="form-control" id="emailAtiv" name="email" placeholder="seu e-mail"
+                               required value="@((string)(ViewBag.Email ?? ""))" />
+                        <label for="emailAtiv">Informe seu e-mail</label>
+                    </div>
 
-        @if (ViewBag.Erro != null)
-        {
-            <div class="erro-login">@ViewBag.Erro</div>
-        }
-    </form>
+                    <button type="submit" class="btn btn-brand" id="btnAtivar">
+                        <span class="btn-text">Reenviar ativação</span>
+                        <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                    </button>
+
+                    @if (ViewBag.Erro != null && (bool)(ViewBag.ShowAtivacao ?? false))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0" role="alert">@ViewBag.Erro</div>
+                    }
+                </form>
+
+                <div class="mt-3">
+                    <button type="button" class="btn btn-link p-0" style="color: var(--brand);" onclick="showLogin()">
+                        Voltar ao login
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+    function showActivation() {
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('activationForm').classList.remove('hidden');
+        setTimeout(() => document.getElementById('emailAtiv')?.focus(), 50);
+    }
+    function showLogin() {
+        document.getElementById('activationForm').classList.add('hidden');
+        document.getElementById('loginForm').classList.remove('hidden');
+        setTimeout(() => document.getElementById('email')?.focus(), 50);
+    }
+
+    // Alterna visibilidade da senha
+      function togglePass(inputId, btn){
+      const inp = document.getElementById(inputId);
+      if (!inp) return;
+
+      const isPwd = inp.type === 'password';
+      inp.type = isPwd ? 'text' : 'password';
+
+      // acessibilidade
+      btn.setAttribute('aria-pressed', String(isPwd));
+      btn.setAttribute('aria-label', isPwd ? 'Ocultar senha' : 'Mostrar senha');
+
+      // troca o ícone Bootstrap
+      const icon = btn.querySelector('i');
+      if (icon){
+        icon.classList.toggle('bi-eye', !isPwd);
+        icon.classList.toggle('bi-eye-slash', isPwd);
+      }
+    }
+
+    // Desabilita botão e mostra spinner para evitar duplo submit
+    function lockButton(form) {
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) {
+            btn.disabled = true;
+            const spin = btn.querySelector('.spinner-border');
+            if (spin) spin.classList.remove('d-none');
+        }
+        return true;
+    }
+
+    // Foco adequado ao abrir a página
+    (function init() {
+        const showActivation = @(showActivation.ToString().ToLower());
+        if (showActivation) setTimeout(() => document.getElementById('emailAtiv')?.focus(), 50);
+        else setTimeout(() => document.getElementById('email')?.focus(), 50);
+    })();
+</script>

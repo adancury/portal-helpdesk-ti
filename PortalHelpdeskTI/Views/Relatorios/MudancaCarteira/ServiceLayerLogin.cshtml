@@ -1,0 +1,222 @@
+﻿@model PortalHelpdeskTI.Models.Relatorios.SapLoginVM
+@{
+    ViewData["Title"] = "Login SAP - Mudança de Carteira (Service Layer)";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // se você quiser exibir "conectado como ..." futuramente, use sua Session atual
+    var sapUserSess = ViewContext.HttpContext.Session.GetString("SAP_SL_User");
+}
+
+<link rel="stylesheet" href="~/css/tecnico-painel.css" />
+
+<style>
+    /* --- Mesmo “gabarito” do login SL das Aprovações --- */
+    #slLoginCard {
+        width: 100%;
+        max-width: 560px;
+        margin-inline: auto;
+        border-radius: 1.25rem;
+    }
+
+        #slLoginCard .card-body {
+            padding: 2rem 2.25rem;
+        }
+
+        #slLoginCard .avatar-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bs-body-tertiary-bg, rgba(255,255,255,.06));
+        }
+
+            #slLoginCard .avatar-circle img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transform: scale(1.06);
+            }
+
+        #slLoginCard .form-floating > .form-control {
+            height: 56px;
+            padding-top: 1.25rem;
+            padding-bottom: .5rem;
+            font-size: 1rem;
+            border-radius: .7rem;
+        }
+
+        #slLoginCard .form-floating > label {
+            padding-top: .6rem;
+        }
+
+        #slLoginCard .btn-primary {
+            height: 52px;
+            font-weight: 600;
+            border-radius: .75rem;
+        }
+
+        #slLoginCard .login-title {
+            margin-top: .25rem;
+        }
+
+        #slLoginCard .login-subtitle {
+            margin-top: .25rem;
+            margin-bottom: 1rem;
+        }
+
+    /* Centraliza verticalmente com respiro */
+    #pageWrap {
+        min-height: 65vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+
+<div class="container mt-4">
+    @if (TempData["MensagemErro"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["MensagemErro"]
+        </div>
+    }
+
+    <div id="pageWrap">
+        <div id="slLoginCard" class="card shadow-sm rounded-4">
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="mx-auto mb-2 avatar-circle">
+                        <img src="/images/sapb1icone.png" alt="SAP Business One">
+                    </div>
+                    <h6 class="mb-0 login-title">SAP Business One</h6>
+                    <div class="text-body-secondary small login-subtitle">Acesso ao Service Layer</div>
+                </div>
+
+                <form asp-controller="MudancaCarteira"
+                      asp-action="ServiceLayerLogin"
+                      method="post"
+                      class="vstack gap-3"
+                      id="form-sl"
+                      autocomplete="off" autocapitalize="none" spellcheck="false">
+                    @Html.AntiForgeryToken()
+
+                    <!-- Campos “isca” para reduzir autofill indevido (mesmo padrão das Aprovações) -->
+                    <input type="text" name="fake_user" autocomplete="username" tabindex="-1"
+                           style="position:absolute; left:-9999px; width:1px; height:1px;">
+                    <input type="password" name="fake_pass" autocomplete="new-password" tabindex="-1"
+                           style="position:absolute; left:-9999px; width:1px; height:1px;">
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+
+                    <div class="form-floating">
+                        <input class="form-control"
+                               asp-for="SapUser"
+                               id="sapUser"
+                               placeholder="Usuário SAP"
+                               autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="text" />
+                        <label for="sapUser">Usuário SAP</label>
+                        <span class="text-danger small" asp-validation-for="SapUser"></span>
+                    </div>
+
+                    <div class="form-floating position-relative">
+                        <input class="form-control"
+                               asp-for="SapPassword"
+                               id="sapPassword"
+                               type="password"
+                               placeholder="Senha SAP"
+                               autocomplete="new-password" />
+                        <label for="sapPassword">Senha SAP</label>
+                        <span class="text-danger small" asp-validation-for="SapPassword"></span>
+
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
+                                id="togglePass" aria-label="Mostrar/ocultar senha">
+                            <span id="eyeText">Mostrar</span>
+                        </button>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="true" id="lembrarUser">
+                            <label class="form-check-label small" for="lembrarUser">Lembrar usuário</label>
+                        </div>
+
+                        <a class="small text-body-secondary"
+                           asp-controller="MudancaCarteira"
+                           asp-action="ServiceLayer">Voltar</a>
+                    </div>
+
+                    <button class="btn btn-primary w-100" type="submit" id="btnSubmit">
+                        <span class="spinner-border spinner-border-sm me-2 d-none"
+                              role="status" aria-hidden="true" id="btnSpinner"></span>
+                        Entrar no Service Layer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Toggle mostrar/ocultar senha (mesmo padrão Aprovações)
+        (function () {
+            const input = document.getElementById('sapPassword');
+            const btn = document.getElementById('togglePass');
+            const txt = document.getElementById('eyeText');
+            if (!input || !btn || !txt) return;
+
+            btn.addEventListener('click', function () {
+                const show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                txt.textContent = show ? 'Ocultar' : 'Mostrar';
+                input.focus();
+            });
+        })();
+    </script>
+
+    <script>
+        // Lembrar usuário (localStorage) + spinner no submit (mesmo padrão Aprovações)
+        (function () {
+            const key = 'sl_last_user_mudanca_carteira';
+            const form = document.getElementById('form-sl');
+            const user = document.getElementById('sapUser');
+            const chk = document.getElementById('lembrarUser');
+            const btn = document.getElementById('btnSubmit');
+            const spn = document.getElementById('btnSpinner');
+
+            if (user && chk) {
+                const saved = localStorage.getItem(key);
+                if (saved) {
+                    user.value = saved;
+                    chk.checked = true;
+                }
+
+                user.addEventListener('change', () => {
+                    if (chk.checked) localStorage.setItem(key, user.value || '');
+                });
+
+                chk.addEventListener('change', () => {
+                    if (chk.checked) localStorage.setItem(key, user.value || '');
+                    else localStorage.removeItem(key);
+                });
+            }
+
+            if (form && btn && spn) {
+                form.addEventListener('submit', function () {
+                    btn.disabled = true;
+                    spn.classList.remove('d-none');
+                });
+            }
+
+            // evita senha “pré-preenchida” por autofill
+            const pass = document.getElementById('sapPassword');
+            if (pass) pass.value = '';
+        })();
+    </script>
+}

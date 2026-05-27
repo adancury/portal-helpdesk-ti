@@ -1,0 +1,43 @@
+﻿@model List<PortalHelpdeskTI.ViewModels.Redistribuicao.ClienteRedistribuicaoVm>
+
+<div class="table-responsive">
+    <table class="table table-sm mb-0">
+        <thead>
+            <tr>
+                <th>CodPN</th>
+                <th>Nome</th>
+                <th>Estado</th>
+                <th>Última Venda</th>
+                <th>Status</th>
+                <th>Kpi TkM</th>
+                <th class="text-center">Vendedor Atual</th>
+                <th>Ativo</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model == null || Model.Count == 0)
+            {
+                <tr><td colspan="8" class="text-muted p-3">Nenhum cliente elegível.</td></tr>
+            }
+            else
+            {
+                foreach (var x in Model)
+                {
+                    <tr>
+                        <td>@x.CodPN</td>
+                        <td>@x.NomeFantasia</td>
+                        <td>@x.Estado</td>
+                        <td>@(x.UltimaVenda?.ToString("yyyy-MM-dd") ?? "")</td>
+                        <td>@x.Status</td>
+                        <td>@x.KpiTkm</td>
+                        <td class="text-center">
+                            @x.VendedorAtualNome
+                            <small class="text-muted d-block">(@x.SlpCodeAtual)</small>
+                        </td>
+                        <td>@x.Ativo</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

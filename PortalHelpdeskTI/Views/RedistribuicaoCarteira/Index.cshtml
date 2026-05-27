@@ -1,0 +1,640 @@
+﻿@model PortalHelpdeskTI.ViewModels.Redistribuicao.RedistribuicaoCarteiraResultadoVm
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "Redistribuição de Carteira (Leads/Inativos)";
+}
+
+@functions {
+    private static int OrdemEmailVendas(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return int.MaxValue;
+
+        email = email.Trim().ToLowerInvariant();
+        var user = email.Split('@')[0];
+        var digits = new string(user.Where(char.IsDigit).ToArray());
+
+        return int.TryParse(digits, out var n) ? n : int.MaxValue;
+    }
+}
+
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+<input type="hidden" id="afToken" value="@(Antiforgery.GetAndStoreTokens(Context).RequestToken)" />
+
+<div class="container-fluid">
+    <h2 class="mb-3">@ViewData["Title"]</h2>
+
+    @if (TempData["Erro"] is string err && !string.IsNullOrWhiteSpace(err))
+    {
+        <div class="alert alert-danger">
+            <pre style="white-space: pre-wrap; margin:0;">@err</pre>
+        </div>
+    }
+
+    @if (TempData["Sucesso"] is string ok && !string.IsNullOrWhiteSpace(ok))
+    {
+        <div class="alert alert-success">@ok</div>
+    }
+
+    <!-- FILTROS -->
+    <form asp-action="Buscar" method="post" class="card shadow-sm mb-3" id="formRedistribuicao">
+        <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <strong>Filtros</strong>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-primary btn-sm" type="submit" id="btnBuscarRedistribuicao">Buscar</button>
+
+                <button class="btn btn-success btn-sm" type="submit" formaction="@Url.Action("Simular")" id="btnSimularRedistribuicao">
+                    Simular redistribuição
+                </button>
+
+                <button type="button" class="btn btn-outline-primary btn-sm"
+                        id="btnResumoRedistribuicao"
+                        data-bs-toggle="modal" data-bs-target="#modalResumoRedistribuicao"
+                        @(Model?.Resumo == null || Model.Resumo.Count == 0 ? "disabled" : "")>
+                    Ver resumo (Popup)
+                </button>
+            </div>
+        </div>
+
+        <div class="card-body row g-3">
+            @Html.AntiForgeryToken()
+
+            <div class="col-12 col-md-3">
+                <label class="form-label">Lead: meses desde cadastro</label>
+                <input asp-for="Filtros.MesesLead" class="form-control form-control-sm" />
+            </div>
+
+            <div class="col-12 col-md-3">
+                <label class="form-label">Inativo: dias sem compra</label>
+                <input asp-for="Filtros.DiasInativo" class="form-control form-control-sm" />
+            </div>
+
+            <div class="col-12 col-md-3">
+                <label class="form-label">Janela TkM (meses)</label>
+                <input asp-for="Filtros.JanelaTkmMeses" class="form-control form-control-sm" />
+            </div>
+
+            <div class="col-12 col-md-3 d-flex align-items-end">
+                <div class="form-check">
+                    <input asp-for="Filtros.IncluirSomenteAtivos" class="form-check-input" />
+                    <label class="form-check-label">Somente clientes Ativos (OCRD.validFor = Y)</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer small text-muted">
+            Pendentes: <strong>@Model.TotalPendentes</strong> |
+            Elegíveis: <strong>@Model.TotalElegiveis</strong>
+        </div>
+    </form>
+
+    <!-- CARD: PENDÊNCIAS -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <div>
+                <strong>Cadastro pendente (não entram na redistribuição)</strong>
+                <span class="text-muted small ms-2">Corrigir UF no endereço (ShipTo/BillTo) no SAP</span>
+            </div>
+
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    data-bs-toggle="collapse" data-bs-target="#cardPendentesBody"
+                    aria-expanded="true" aria-controls="cardPendentesBody">
+                Recolher / Expandir
+            </button>
+        </div>
+
+        <div id="cardPendentesBody" class="collapse show">
+            <div class="card-body p-0 card-grid-scroll">
+                @await Html.PartialAsync("_GridPendencias", Model.Pendentes)
+            </div>
+        </div>
+    </div>
+
+    <!-- CARD ÚNICO: CARTEIRA (Elegíveis + Simulação) -->
+    <div class="card shadow-sm">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <div>
+                <strong>Carteira (Elegíveis + Simulação)</strong>
+                <span class="text-muted small ms-2">
+                    @((Model?.Simulacao != null && Model.Simulacao.Count > 0)
+                                        ? "Simulação gerada: veja Novo Vendedor"
+                                        : "Sem simulação: mostrando Vendedor Atual")
+                </span>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+
+                <form asp-action="ExportarCarteiraExcel" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" name="MesesLead" value="@Model.Filtros.MesesLead" />
+                    <input type="hidden" name="DiasInativo" value="@Model.Filtros.DiasInativo" />
+                    <input type="hidden" name="MesesInativo" value="@Model.Filtros.MesesInativo" />
+                    <input type="hidden" name="JanelaTkmMeses" value="@Model.Filtros.JanelaTkmMeses" />
+                    <input type="hidden" name="IncluirSomenteAtivos" value="@(Model.Filtros.IncluirSomenteAtivos ? "true" : "false")" />
+                    <input type="hidden" name="comSimulacao" value="@((Model?.Simulacao != null && Model.Simulacao.Count > 0) ? "true" : "false")" />
+
+                    <button type="submit" class="btn btn-success btn-sm">
+                        Exportar Excel
+                    </button>
+                </form>
+
+                @if (ViewBag.PodeAplicar is not true)
+                {
+                    <span class="badge text-bg-secondary"
+                          title="Você pode simular e exportar, mas não pode aplicar no SAP">
+                        Sem permissão para aplicar
+                    </span>
+                }
+
+                @if (ViewBag.PodeAplicar is true)
+                {
+                    <button type="button"
+                            class="btn btn-warning btn-sm"
+                            id="btnAplicarRedistribuicao"
+                            @(Model?.Simulacao == null || Model.Simulacao.Count == 0 ? "disabled" : "")>
+                        Aplicar no SAP
+                    </button>
+                }
+
+                <button type="button" class="btn btn-outline-secondary btn-sm"
+                        data-bs-toggle="collapse" data-bs-target="#cardCarteiraBody"
+                        aria-expanded="true" aria-controls="cardCarteiraBody">
+                    Recolher / Expandir
+                </button>
+            </div>
+        </div>
+
+        <div id="cardCarteiraBody" class="collapse show">
+            <div class="card-body p-0 card-grid-scroll">
+                @await Html.PartialAsync("_GridCarteira", Model)
+            </div>
+        </div>
+    </div>
+
+    <!-- JSON da Simulação (camelCase garantido) -->
+    <script id="simulacaoJson" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(
+            Model?.Simulacao ?? new List<PortalHelpdeskTI.ViewModels.Redistribuicao.ClienteRedistribuicaoSimuladoVm>(),
+                        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+                ))
+    </script>
+
+    <!-- MODAL RESUMO -->
+    <div class="modal fade" id="modalResumoRedistribuicao" tabindex="-1" aria-labelledby="modalResumoRedistribuicaoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalResumoRedistribuicaoLabel">Resumo da Redistribuição (Simulação)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+
+                <div class="modal-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-end">Cód.</th>
+                                    <th>Vendedor</th>
+                                    <th>E-mail</th>
+                                    <th class="text-end">Qde. Cliente</th>
+                                    <th class="text-end">TKT Médio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model?.Resumo == null || Model.Resumo.Count == 0)
+                                {
+                                    <tr><td colspan="5" class="text-muted p-3">Nenhuma simulação executada.</td></tr>
+                                }
+                                else
+                                {
+                                    var totalQtd = Model.Resumo.Sum(x => x.QtdClientes);
+                                    var totalSoma = Model.Resumo.Sum(x => x.SomaKpiTkm);
+
+                                    foreach (var r in Model.Resumo.OrderBy(x => OrdemEmailVendas(x.Email)))
+                                    {
+                                        <tr>
+                                            <td class="text-end">@r.SlpCode</td>
+                                            <td>@r.SlpName</td>
+                                            <td title="@r.Email">@r.Email</td>
+                                            <td class="text-end">@r.QtdClientes</td>
+                                            <td class="text-end">R$ @r.SomaKpiTkm.ToString("N2")</td>
+                                        </tr>
+                                    }
+
+                                    <tr class="table-primary fw-bold">
+                                        <td class="text-end" colspan="3">Total Geral</td>
+                                        <td class="text-end">@totalQtd</td>
+                                        <td class="text-end">R$ @totalSoma.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="modal-footer d-flex justify-content-between">
+                    <div class="small text-muted">
+                        @if (Model?.Resumo != null && Model.Resumo.Count > 0)
+                        {
+                            <span>Vendedores: <strong>@Model.Resumo.Count</strong></span>
+                        }
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <form asp-action="ExportarResumoExcel" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-success btn-sm"
+                                    @(Model?.Resumo == null || Model.Resumo.Count == 0 ? "disabled" : "")>
+                                Exportar Excel
+                            </button>
+                        </form>
+
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            function initTooltips(root) {
+                var scope = root || document;
+                var tooltipTriggerList = [].slice.call(scope.querySelectorAll('[data-bs-toggle="tooltip"]'));
+
+                tooltipTriggerList.forEach(function (el) {
+                    if (el.dataset.tooltipBound === "1") return;
+                    el.dataset.tooltipBound = "1";
+                    new bootstrap.Tooltip(el);
+                });
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                initTooltips(document);
+            });
+
+            var modal = document.getElementById('modalResumoRedistribuicao');
+            if (modal) {
+                modal.addEventListener('shown.bs.modal', function () {
+                    initTooltips(modal);
+                });
+            }
+        })();
+    </script>
+
+    <script>
+        (function () {
+            function parseValue(td, mode) {
+                var text = (td?.innerText || '').trim();
+
+                if (mode === 'num') {
+                    text = text.replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.');
+                    var n = parseFloat(text);
+                    return isNaN(n) ? 0 : n;
+                }
+
+                return text.toLowerCase();
+            }
+
+            function sortTable(table, colIndex, mode) {
+                var tbody = table.tBodies[0];
+                if (!tbody) return;
+
+                var rows = Array.from(tbody.querySelectorAll('tr'));
+                var currentDir = table.getAttribute('data-sort-dir') || 'asc';
+                var currentCol = parseInt(table.getAttribute('data-sort-col') || '-1', 10);
+                var dir = (currentCol === colIndex && currentDir === 'asc') ? 'desc' : 'asc';
+
+                rows.sort(function (a, b) {
+                    var va = parseValue(a.children[colIndex], mode);
+                    var vb = parseValue(b.children[colIndex], mode);
+
+                    if (mode === 'num') {
+                        return dir === 'asc' ? (va - vb) : (vb - va);
+                    }
+
+                    if (va < vb) return dir === 'asc' ? -1 : 1;
+                    if (va > vb) return dir === 'asc' ? 1 : -1;
+                    return 0;
+                });
+
+                rows.forEach(function (r) {
+                    tbody.appendChild(r);
+                });
+
+                table.setAttribute('data-sort-dir', dir);
+                table.setAttribute('data-sort-col', String(colIndex));
+            }
+
+            function bindSortableTables(root) {
+                var scope = root || document;
+
+                scope.querySelectorAll('table thead th.sortable').forEach(function (th) {
+                    if (th.dataset.sortBound === "1") return;
+
+                    th.dataset.sortBound = "1";
+                    th.style.cursor = 'pointer';
+
+                    if (!th.title || th.title.indexOf('Clique para ordenar') === -1) {
+                        th.title = (th.title ? th.title + ' ' : '') + '(Clique para ordenar)';
+                    }
+
+                    th.addEventListener('click', function () {
+                        var table = th.closest('table');
+                        if (!table) return;
+
+                        var headerRow = th.parentElement;
+                        if (!headerRow) return;
+
+                        var cells = Array.from(headerRow.children);
+                        var colIndex = cells.indexOf(th);
+                        var mode = th.getAttribute('data-sort') || 'text';
+
+                        sortTable(table, colIndex, mode);
+                    });
+                });
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                bindSortableTables(document);
+            });
+
+            var modal = document.getElementById('modalResumoRedistribuicao');
+            if (modal) {
+                modal.addEventListener('shown.bs.modal', function () {
+                    bindSortableTables(modal);
+                });
+            }
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const form = document.getElementById("formRedistribuicao");
+            if (!form) return;
+
+            let submitEmAndamento = false;
+            let ultimoBotaoClicado = null;
+
+            function setButtonLoading(button, text) {
+                if (!button) return;
+
+                if (!button.dataset.originalHtml) {
+                    button.dataset.originalHtml = button.innerHTML;
+                }
+
+                button.disabled = true;
+                button.innerHTML = `
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    ${text}
+                `;
+            }
+
+            function restoreButton(button) {
+                if (!button) return;
+
+                if (button.dataset.originalHtml) {
+                    button.innerHTML = button.dataset.originalHtml;
+                }
+
+                button.disabled = false;
+            }
+
+            const botoesSubmit = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+
+            botoesSubmit.forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    ultimoBotaoClicado = btn;
+                });
+            });
+
+            form.addEventListener("submit", function (e) {
+                if (submitEmAndamento) {
+                    e.preventDefault();
+                    return;
+                }
+
+                submitEmAndamento = true;
+
+                const btn = ultimoBotaoClicado;
+                const formAction = btn?.getAttribute("formaction");
+                const actionOriginalForm = form.getAttribute("action") || window.location.pathname;
+
+                if (btn) {
+                    if (btn.id === "btnBuscarRedistribuicao") {
+                        setButtonLoading(btn, "Carregando...");
+                    } else if (btn.id === "btnSimularRedistribuicao") {
+                        setButtonLoading(btn, "Carregando...");
+                    } else {
+                        setButtonLoading(btn, "Processando...");
+                    }
+                }
+
+                botoesSubmit.forEach(function (b) {
+                    if (b !== btn) b.disabled = true;
+                });
+
+                form.action = formAction || actionOriginalForm;
+
+                setTimeout(function () {
+                    form.submit();
+                }, 0);
+            });
+
+            window.addEventListener("pageshow", function () {
+                submitEmAndamento = false;
+                botoesSubmit.forEach(function (btn) {
+                    restoreButton(btn);
+                });
+            });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const btn = document.getElementById("btnAplicarRedistribuicao");
+            if (!btn) return;
+
+            let aplicandoRedistribuicao = false;
+
+            function getToken() {
+                const el = document.getElementById("afToken");
+                return el ? el.value : "";
+            }
+
+            function getSimulacao() {
+                const el = document.getElementById("simulacaoJson");
+                if (!el) return [];
+
+                try {
+                    return JSON.parse(el.textContent || "[]") || [];
+                } catch {
+                    return [];
+                }
+            }
+
+            function setButtonLoading(text) {
+                if (!btn.dataset.originalHtml) {
+                    btn.dataset.originalHtml = btn.innerHTML;
+                }
+
+                btn.disabled = true;
+                btn.innerHTML = `
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    ${text}
+                `;
+            }
+
+            function restoreButton() {
+                if (btn.dataset.originalHtml) {
+                    btn.innerHTML = btn.dataset.originalHtml;
+                } else {
+                    btn.innerText = "Aplicar no SAP";
+                }
+
+                btn.disabled = false;
+            }
+
+            async function aplicarItem(item) {
+                //const resp = await fetch("@Url.Action("AplicarRedistribuicao")", {
+                const resp = await fetch("@Url.Action("AplicarRedistribuicaoViaBanco")", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "RequestVerificationToken": getToken()
+                    },
+                    body: JSON.stringify({
+                        itens: [item]
+                    })
+                });
+
+                const contentType = resp.headers.get("content-type") || "";
+                const isJson = contentType.toLowerCase().includes("application/json");
+                const data = isJson ? await resp.json().catch(() => null) : null;
+
+                if (!resp.ok) {
+                    return {
+                        ok: false,
+                        codPN: item.codPN,
+                        erro: data?.erro || data?.error || data?.mensagem || data?.message || `Falha HTTP ${resp.status}.`
+                    };
+                }
+
+                if (!isJson) {
+                    return {
+                        ok: false,
+                        codPN: item.codPN,
+                        erro: "Resposta inesperada do servidor (não retornou JSON). Verifique sessão/permissão."
+                    };
+                }
+
+                if (Array.isArray(data) && data.length > 0) {
+                    const r = data[0];
+                    return {
+                        ok: !!(r.ok ?? r.Ok),
+                        codPN: r.codPN || r.CodPN || item.codPN,
+                        erro: r.erro || r.Erro || r.message || r.Message || null
+                    };
+                }
+
+                return {
+                    ok: false,
+                    codPN: item.codPN,
+                    erro: "Servidor não retornou resultado do item."
+                };
+            }
+
+            window.addEventListener("beforeunload", function (e) {
+                if (!aplicandoRedistribuicao) return;
+                e.preventDefault();
+                e.returnValue = "";
+            });
+
+            document.addEventListener("keydown", function (e) {
+                if (!aplicandoRedistribuicao) return;
+
+                const key = (e.key || "").toLowerCase();
+
+                if (
+                    key === "f5" ||
+                    (e.ctrlKey && key === "r") ||
+                    (e.ctrlKey && key === "w") ||
+                    (e.altKey && key === "arrowleft") ||
+                    (e.altKey && key === "arrowright")
+                ) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            }, true);
+
+                    btn.addEventListener("click", async function () {
+
+            if (aplicandoRedistribuicao) return;
+
+            const simulacao = getSimulacao();
+
+            const itens = simulacao
+                .filter(x => x && x.slpCodeNovo > 0)
+                .filter(x => (x.slpCodeAtual ?? null) !== x.slpCodeNovo)
+                .map(x => ({
+                    codPN: x.codPN,
+                    slpCodeNovo: x.slpCodeNovo
+                }));
+
+            if (itens.length === 0) {
+                alert("Nenhuma alteração para aplicar.");
+                return;
+            }
+
+            if (!confirm(`Aplicar ${itens.length} alterações diretamente no banco SAP?`)) {
+                return;
+            }
+
+            try {
+
+                aplicandoRedistribuicao = true;
+                setButtonLoading(`Aplicando ${itens.length} registros...`);
+
+                const resp = await fetch("@Url.Action("AplicarRedistribuicaoViaBanco")", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "RequestVerificationToken": getToken()
+                    },
+                    body: JSON.stringify({ itens: itens })
+                });
+
+                const data = await resp.json();
+
+                const ok = data.filter(x => x.ok).length;
+                const erro = data.filter(x => !x.ok).length;
+
+                alert(`Processo concluído.\nOK: ${ok}\nErro: ${erro}`);
+
+                window.location.reload();
+
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao aplicar redistribuição.");
+                restoreButton();
+            } finally {
+                aplicandoRedistribuicao = false;
+            }
+
+        });
+        })();
+    </script>
+}
+
+@section Styles {
+    <style>
+        .spinner-border-sm {
+            vertical-align: -0.125em;
+        }
+    </style>
+}

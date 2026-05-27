@@ -1,0 +1,85 @@
+﻿@model PortalHelpdeskTI.ViewModels.Relatorios.DataTablePage
+
+<div data-current-page="@Model?.Page" data-total-items="@Model?.Total" hidden></div>
+
+@if (Model is null || Model.Data.Rows.Count == 0)
+{
+    <div class="p-4 text-body-secondary small">Sem resultados. Total de itens listados: 0</div>
+}
+else
+{
+    <!-- PAGER (TOPO, colado na grid) -->
+    <div class="d-flex justify-content-between align-items-center p-2 rel-pager-row">
+        <div class="small text-body-secondary">
+            @{
+                var first = (Model.Page - 1) * Model.PageSize + 1;
+                var last = Math.Min(Model.Page * Model.PageSize, Model.Total);
+                if (Model.Total == 0) { first = 0; last = 0; }
+            }
+            Página @Model.Page de @Model.TotalPages • @first–@last de @Model.Total
+            • Total de itens listados: @Model.Total.ToString("N0")
+        </div>
+
+        <div class="rel-pager" role="navigation" aria-label="Paginação">
+            <ul class="pagination pagination-sm mb-0">
+                @{
+                    var prevPage = Model.Page > 1 ? Model.Page - 1 : 1;
+                    var nextPage = Model.Page < Model.TotalPages ? Model.Page + 1 : Model.TotalPages;
+                    var canGoPrev = Model.Page > 1;
+                    var canGoNext = Model.Page < Model.TotalPages;
+                }
+
+                <li class="page-item @(canGoPrev ? "" : "disabled")">
+                    <a class="page-link" href="#" data-page="1">«</a>
+                </li>
+                <li class="page-item @(canGoPrev ? "" : "disabled")">
+                    <a class="page-link" href="#" data-page="@prevPage">‹</a>
+                </li>
+
+                @for (var p = Math.Max(1, Model.Page - 2); p <= Math.Min(Model.TotalPages, Model.Page + 2); p++)
+                {
+                    <li class="page-item @(p == Model.Page ? "active" : "")">
+                        <a class="page-link" href="#" data-page="@p">@p</a>
+                    </li>
+                }
+
+                <li class="page-item @(canGoNext ? "" : "disabled")">
+                    <a class="page-link" href="#" data-page="@nextPage">›</a>
+                </li>
+                <li class="page-item @(canGoNext ? "" : "disabled")">
+                    <a class="page-link" href="#" data-page="@Model.TotalPages">»</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle mb-0 relatorio-table">
+            <thead>
+                <tr>
+                    <th style="width:36px">
+                        <input type="checkbox" id="chkAll" class="form-check-input" />
+                    </th>
+                    @foreach (System.Data.DataColumn c in Model.Data.Columns)
+                    {
+                        <th>@c.ColumnName</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (System.Data.DataRow row in Model.Data.Rows)
+                {
+                    var itemCode = row["Código"] is DBNull ? "" : row["Código"]?.ToString();
+                    <tr data-itemcode="@itemCode">
+                        <td><input type="checkbox" class="row-check form-check-input" /></td>
+                        @foreach (System.Data.DataColumn c in Model.Data.Columns)
+                        {
+                            var txt = row[c] is DBNull ? "" : row[c]?.ToString();
+                            <td title="@txt"><span class="truncate-cell">@txt</span></td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

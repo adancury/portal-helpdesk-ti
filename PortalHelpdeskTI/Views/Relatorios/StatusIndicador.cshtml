@@ -1,0 +1,156 @@
+﻿@model List<PortalHelpdeskTI.Views.Relatorios.StatusIndicadorPedidoVM>
+@{
+    ViewData["Title"] = "Status de Indicador – Histórico por Pedido";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var deValue = Context.Request.Query["de"].ToString();
+}
+
+<link rel="stylesheet" href="~/css/relatorios-status-indicador.css" />
+
+<div class="card rel-status-card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Status de Indicador – Histórico por Pedido</h5>
+
+        <div class="d-flex align-items-center gap-2 rel-status-actions">
+            <form method="get"
+                  class="d-flex align-items-center gap-2 rel-status-filter mb-0">
+                <label class="form-label mb-0 small">A&nbsp;partir&nbsp;de:</label>
+                <input type="date"
+                       name="de"
+                       class="form-control form-control-sm"
+                       value="@deValue" />
+                <button class="btn btn-sm btn-primary" type="submit">Filtrar</button>
+            </form>
+
+            <button type="button"
+                    class="btn btn-sm btn-outline-light"
+                    onclick="history.back()">
+                ← Voltar
+            </button>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive rel-status-table-wrapper">
+            <table id="tabela-status-indicador"
+                   class="table table-sm mb-0 rel-status-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width:52px;" data-noresize="1"></th>
+                        <th>Nº Pedido</th>
+                        <th>Cód. Cliente</th>
+                        <th>Cliente</th>
+                        <th>Criação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var pedido in Model)
+                    {
+                        var collapseId = $"p{pedido.Pedido}";
+
+                        <!-- Linha PAI -->
+                        <tr class="rel-status-parent-row">
+                            <td class="text-center">
+                                <button class="btn btn-xs btn-outline-light rel-status-toggle"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#@collapseId"
+                                        aria-expanded="false"
+                                        aria-controls="@collapseId">
+                                    +
+                                </button>
+                            </td>
+                            <td class="fw-semibold">@pedido.Pedido</td>
+                            <td>@pedido.CardCode</td>
+                            <td class="text-truncate">@pedido.CardName</td>
+                            <td>@pedido.Criacao</td>
+                        </tr>
+
+                        <!-- Bloco FILHO -->
+                        <tr class="collapse rel-status-child-row" id="@collapseId">
+                            <td colspan="5" class="p-0">
+                                <div class="rel-status-child-wrapper">
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <thead class="rel-status-child-header">
+                                            <tr>
+                                                <th style="width:70px;">Log ID</th>
+                                                <th>Status</th>
+                                                <th>Atualização</th>
+                                                <th>Usuário</th>
+                                                <th>TMS</th>
+                                                <th>Vendedor</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var log in pedido.Logs)
+                                            {
+                                                <tr>
+                                                    <td>@(log.LogId == 999 ? "Status atual" : log.LogId.ToString())</td>
+                                                    <td>@log.Status</td>
+                                                    <td>@log.Atualizacao</td>
+                                                    <td>@log.Usuario</td>
+                                                    <td>@log.Tms</td>
+                                                    <td>@log.Vendedor</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Toggle visual (+ / -)
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.rel-status-toggle');
+            if (!btn) return;
+            btn.textContent = btn.textContent.trim() === '+' ? '−' : '+';
+        });
+
+        // Resize de colunas no header principal
+        document.addEventListener('DOMContentLoaded', function () {
+            const table = document.getElementById('tabela-status-indicador');
+            if (!table) return;
+
+            const ths = table.querySelectorAll('thead th');
+
+            ths.forEach(function (th) {
+                if (th.dataset.noresize === '1') return; // pula a col da setinha
+
+                const resizer = document.createElement('span');
+                resizer.className = 'rel-col-resizer';
+                th.appendChild(resizer);
+
+                let startX, startWidth;
+
+                const onMouseDown = function (e) {
+                    startX = e.pageX;
+                    startWidth = th.offsetWidth;
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                    e.preventDefault();
+                };
+
+                const onMouseMove = function (e) {
+                    const diff = e.pageX - startX;
+                    const newWidth = Math.max(80, startWidth + diff);
+                    th.style.width = newWidth + 'px';
+                };
+
+                const onMouseUp = function () {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+
+                resizer.addEventListener('mousedown', onMouseDown);
+            });
+        });
+    </script>
+}

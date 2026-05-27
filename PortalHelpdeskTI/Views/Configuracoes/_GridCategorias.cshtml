@@ -1,0 +1,54 @@
+﻿@model List<PortalHelpdeskTI.Models.TipoChamado>
+
+@foreach (var tipo in Model)
+{
+    if (tipo.Categorias != null && tipo.Categorias.Any())
+    {
+        foreach (var categoria in tipo.Categorias)
+        {
+            var subcategorias = categoria.Subcategorias?.ToList() ?? new List<PortalHelpdeskTI.Models.SubcategoriaChamado>();
+
+            if (subcategorias.Count > 0)
+            {
+                foreach (var sub in subcategorias)
+                {
+                    <tr data-id="@sub.Id">
+                        <td class="tipo">@tipo.Nome</td>
+                        <td class="categoria">@categoria.Nome</td>
+                        <td class="subcategoria">@sub.Nome</td>
+                        <td class="text-center">
+                            <div class="d-inline-flex gap-1">
+                                <button class="btn btn-sm btn-warning btn-editar-categoria" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+
+                                <!-- Botão para excluir subcategoria -->
+                                <button type="button" class="btn btn-sm btn-danger" title="Excluir Subcategoria"
+                                        onclick="excluirSubcategoria(@sub.Id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr class="table-warning">
+                    <td class="tipo">@tipo.Nome</td>
+                    <td class="categoria">@categoria.Nome</td>
+                    <td class="subcategoria">Sem subcategoria</td>
+                    <td class="text-center">
+                        <div class="d-inline-flex gap-1">
+                            <!-- Botão para excluir categoria -->
+                            <button type="button" class="btn btn-sm btn-danger" title="Excluir Categoria"
+                                    onclick="excluirCategoria(@categoria.Id)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        }
+    }
+}

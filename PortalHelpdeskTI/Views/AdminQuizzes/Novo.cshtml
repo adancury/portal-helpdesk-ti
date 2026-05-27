@@ -1,0 +1,95 @@
+﻿@model PortalHelpdeskTI.Models.Quizzes.Quiz
+@{
+    ViewData["Title"] = "Novo Quiz";
+    if (ViewBag.Embed == true) { Layout = null; }
+}
+<div class="admin-quizzes">
+    <h2 class="mb-3">Novo Quiz</h2>
+
+    @if (ViewBag.ModelErrors != null)
+    {
+        <div class="alert alert-danger">
+            <strong>Erros de validação:</strong>
+            <ul class="mb-0">
+                @foreach (var e in (IEnumerable<string>)ViewBag.ModelErrors)
+                {
+                    <li>@e</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @Html.ValidationSummary(excludePropertyErrors: true, message: "", htmlAttributes: new { @class = "text-danger mb-3" })
+
+    <div class="section">
+        <form asp-controller="AdminQuizzes" asp-action="Novo" asp-route-embed="true" method="post" class="needs-validation">
+            @Html.AntiForgeryToken()
+
+            <input asp-for="Id" type="hidden" />
+
+            <div class="mb-3">
+                <label class="form-label" asp-for="Titulo"></label>
+                <input asp-for="Titulo" class="form-control" />
+                <span asp-validation-for="Titulo" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" asp-for="Descricao"></label>
+                <textarea asp-for="Descricao" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Descricao" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label" asp-for="Categoria"></label>
+                    <input asp-for="Categoria" class="form-control" />
+                    <span asp-validation-for="Categoria" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label" asp-for="TempoLimiteSegundos"></label>
+                    <input asp-for="TempoLimiteSegundos" class="form-control" type="number" step="1" min="0" />
+                    <span asp-validation-for="TempoLimiteSegundos" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label" asp-for="NotaCortePercentual"></label>
+                    <input asp-for="NotaCortePercentual" class="form-control" type="number" step="any" min="0" max="100" inputmode="decimal" />
+                    <span asp-validation-for="NotaCortePercentual" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4 mb-3 d-flex align-items-center gap-4">
+                    <!-- Checkbox manual para evitar envio duplo (false + true) -->
+                    <div class="form-check">
+                        <input id="Publicado"
+                               name="Publicado"
+                               type="checkbox"
+                               class="form-check-input"
+                               value="true"
+                               @(Model?.Publicado == true ? "checked" : "") />
+                        <label class="form-check-label" for="Publicado">Publicado</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input id="EmbaralharQuestoes"
+                               name="EmbaralharQuestoes"
+                               type="checkbox"
+                               class="form-check-input"
+                               value="true"
+                               @(Model?.EmbaralharQuestoes == true ? "checked" : "") />
+                        <label class="form-check-label" for="EmbaralharQuestoes">Embaralhar</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">Salvar</button>
+                <a class="btn btn-secondary" asp-controller="AdminQuizzes" asp-action="Index">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

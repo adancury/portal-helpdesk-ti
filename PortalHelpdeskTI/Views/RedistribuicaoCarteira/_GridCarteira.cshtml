@@ -1,0 +1,127 @@
+﻿@model PortalHelpdeskTI.ViewModels.Redistribuicao.RedistribuicaoCarteiraResultadoVm
+
+@{
+    var temSimulacao = Model?.Simulacao != null && Model.Simulacao.Count > 0;
+    var listaElegiveis = Model?.Elegiveis ?? new List<PortalHelpdeskTI.ViewModels.Redistribuicao.ClienteRedistribuicaoVm>();
+}
+
+@functions {
+    private static string NomeBonito(string? nome)
+    {
+        if (string.IsNullOrWhiteSpace(nome)) return "";
+        nome = nome.Trim().ToLowerInvariant();
+        return char.ToUpperInvariant(nome[0]) + nome.Substring(1);
+    }
+
+    private static string VendedorLabel(int? slpCode, string? nome)
+    {
+        // -1 ou null costuma aparecer quando não há vendedor definido
+        if (!slpCode.HasValue || slpCode.Value <= 0)
+            return "Sem vendedor";
+
+        nome ??= "";
+        nome = nome.Trim();
+
+        // padrão solicitado: "codigo - nome"
+        return string.IsNullOrWhiteSpace(nome)
+            ? slpCode.Value.ToString()
+            : $"{slpCode.Value} - {nome}";
+    }
+}
+
+<table class="table table-sm table-striped mb-0">
+    <thead>
+        <tr>
+            <th class="sortable" data-sort="text">CodPN</th>
+            <th class="sortable" data-sort="text">Nome</th>
+            <th class="sortable text-center" data-sort="text">UF</th>
+            <th class="sortable" data-sort="text">Status</th>
+            <th class="sortable text-center" data-sort="text">Última Venda</th>
+            <th class="sortable text-end" data-sort="num">Kpi TkM</th>
+
+            <th class="sortable text-center" data-sort="text">Vendedor Atual</th>
+
+            @if (temSimulacao)
+            {
+                <th class="sortable text-center" data-sort="text">Novo Vendedor</th>
+            }
+        </tr>
+    </thead>
+
+    <tbody>
+        @if (!temSimulacao)
+        {
+            if (listaElegiveis.Count == 0)
+            {
+                <tr><td colspan="7" class="text-muted p-3">Nenhum registro.</td></tr>
+            }
+            else
+            {
+                foreach (var c in listaElegiveis)
+                {
+                    <tr>
+                        <td>@c.CodPN</td>
+
+                        <td class="cliente-nome"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title="@c.NomeFantasia">
+                            @NomeBonito(c.NomeFantasia)
+                        </td>
+
+                        <td class="text-center">@c.Estado</td>
+                        <td>@c.Status</td>
+
+                        <td class="text-center">
+                            @(c.UltimaVenda.HasValue
+                                            ? c.UltimaVenda.Value.ToString("dd/MM/yyyy")
+                                            : "Sem Vendas")
+            </td>
+
+                        <td class="text-end">R$ @c.KpiTkm.ToString("N2")</td>
+                        <td class="text-center">@VendedorLabel(c.SlpCodeAtual, c.VendedorAtualNome)</td>
+                    </tr>
+                }
+            }
+        }
+        else
+        {
+            if (Model!.Simulacao.Count == 0)
+            {
+                <tr><td colspan="8" class="text-muted p-3">Nenhuma simulação.</td></tr>
+            }
+            else
+            {
+                foreach (var c in Model!.Simulacao)
+                {
+                    var mesmaCarteira = c.SlpCodeAtual.HasValue && c.SlpCodeAtual.Value > 0 && c.SlpCodeAtual == c.SlpCodeNovo;
+                    <tr class="@(mesmaCarteira ? "table-warning" : "")">
+                        <td>@c.CodPN</td>
+
+                        <td class="cliente-nome"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title="@c.NomeFantasia">
+                            @NomeBonito(c.NomeFantasia)
+                        </td>
+
+                        <td class="text-center">@c.Estado</td>
+                        <td>@c.Status</td>
+
+                        <td class="text-center">
+                            @(c.UltimaVenda.HasValue
+                                            ? c.UltimaVenda.Value.ToString("dd/MM/yyyy")
+                                            : "Sem Vendas")
+            </td>
+
+                        <td class="text-end">R$ @c.KpiTkm.ToString("N2")</td>
+
+                        <td class="text-center">@VendedorLabel(c.SlpCodeAtual, c.VendedorAtualNome)</td>
+
+                        <td class="text-center">@VendedorLabel(c.SlpCodeNovo, c.VendedorNovoNome)</td>
+                    </tr>
+                }
+            }
+        }
+    </tbody>
+</table>

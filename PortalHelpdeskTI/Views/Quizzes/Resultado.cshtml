@@ -1,0 +1,17 @@
+﻿@model PortalHelpdeskTI.ViewModels.Quizzes.QuizResultadoVM
+@{
+    ViewData["Title"] = "Resultado";
+}
+<div class="quiz-ui">
+    <div class="card result-card">
+        <div class="card-body">
+            <h3>Resultado – @Model.Titulo</h3>
+            <p class="mb-2">
+                <strong>Nota:</strong>
+                <span class="result-metric">@Model.NotaPercentual% (@Model.PontosObtidos/@Model.PontosMaximos)</span>
+            </p>
+            <p class="mb-3"><strong>Tempo gasto:</strong> @Model.TempoGasto</p>
+            <a class="btn btn-primary" asp-route="Quizzes_Index">Voltar aos Quizzes</a>
+        </div>
+    </div>
+</div>

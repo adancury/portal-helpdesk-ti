@@ -1,0 +1,7 @@
+{
+    "codigo": "99",
+    "descricao": "Erro ao reprocessar referências fiscais DRF21 -> RIN21.",
+    "detalhe": "ERROR [S1000] [SAP AG][LIBODBCHDB DLL][HDBODBC] General error;260 invalid column name: ObjType",
+    "numEsboco": 309045,
+    "docEntryNotaCriada": 11093
+}

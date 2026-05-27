@@ -5,73 +5,327 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mt-4">
-    <h2>Abrir Chamado</h2>
-    <form asp-action="Novo" method="post">
-        <select asp-for="TipoChamadoId" class="form-select">
-            <option value="">Selecione...</option>
-            @foreach (var tipo in (IEnumerable<PortalHelpdeskTI.Models.TipoChamado>)ViewBag.Tipos)
-            {
-                <option value="@tipo.Id">@tipo.Nome</option>
-            }
-        </select>
-        <select asp-for="CategoriaId" class="form-select" id="categoriaSelect">
-            <option value="">Selecione...</option>
-            @foreach (var categoria in (IEnumerable<PortalHelpdeskTI.Models.CategoriaChamado>)ViewBag.Categorias)
-            {
-                <option value="@categoria.Id">@categoria.Nome</option>
-            }
-        </select>
-        <select asp-for="SubcategoriaId" class="form-select">
-            <option value="">Selecione...</option>
-            @foreach (var sub in (IEnumerable<PortalHelpdeskTI.Models.SubcategoriaChamado>)ViewBag.Subcategorias)
-            {
-                <option value="@sub.Id">@sub.Nome</option>
-            }
-        </select>
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Abrir Chamado</h2>
 
-    <input asp-for="Titulo" class="form-control" />
-    <textarea asp-for="Descricao" class="form-control"></textarea>
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <form asp-action="Novo"
+                  method="post"
+                  class="card bg-body-tertiary border-0 shadow-sm needs-validation"
+                  enctype="multipart/form-data"
+                  novalidate>
+                @Html.AntiForgeryToken()
+                @Html.ValidationSummary(false, "", new { @class = "text-danger" })
 
-    <select asp-for="Prioridade" class="form-select">
-        <option value="">Selecione...</option>
-        <option>Baixa</option>
-        <option>Média</option>
-        <option>Alta</option>
-        <option>Crítica</option>
-    </select>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Coluna da esquerda -->
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="TipoChamadoId" class="form-label">Tipo de Chamado</label>
+                                <select asp-for="TipoChamadoId"
+                                        class="form-select form-select-sm"
+                                        id="tipoSelect"
+                                        required
+                                        data-selected="@Model?.TipoChamadoId">
+                                    <option disabled selected value="">Selecione...</option>
+                                    @foreach (var tipo in (IEnumerable<PortalHelpdeskTI.Models.TipoChamado>)ViewBag.Tipos)
+                                    {
+                                        <option value="@tipo.Id">@tipo.Nome</option>
+                                    }
+                                </select>
+                                <div class="invalid-feedback">Selecione o tipo do chamado.</div>
+                                <span asp-validation-for="TipoChamadoId" class="text-danger"></span>
+                            </div>
 
-    <button type="submit" class="btn btn-primary">Abrir Chamado</button>
-</form>
+                            <div class="mb-3">
+                                <label asp-for="CategoriaId" class="form-label">Categoria</label>
+                                <select asp-for="CategoriaId"
+                                        class="form-select form-select-sm"
+                                        id="categoriaSelect"
+                                        required
+                                        disabled
+                                        data-selected="@Model?.CategoriaId">
+                                    <option disabled selected value="">Selecione o tipo primeiro</option>
+                                </select>
+                                <div class="invalid-feedback">Selecione a categoria.</div>
+                                <span asp-validation-for="CategoriaId" class="text-danger"></span>
+                            </div>
 
+                            <div class="mb-3">
+                                <label asp-for="SubcategoriaId" class="form-label">Subcategoria</label>
+                                <select asp-for="SubcategoriaId"
+                                        class="form-select form-select-sm"
+                                        id="subcategoriaSelect"
+                                        required
+                                        disabled
+                                        data-selected="@Model?.SubcategoriaId">
+                                    <option disabled selected value="">Selecione a categoria primeiro</option>
+                                </select>
+                                <div class="invalid-feedback">Selecione a subcategoria.</div>
+                                <span asp-validation-for="SubcategoriaId" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-1">
+                                <label asp-for="Prioridade" class="form-label">Prioridade</label>
+                                <select asp-for="Prioridade" class="form-select form-select-sm" required>
+                                    <option value="">Selecione...</option>
+                                    <option>Baixa</option>
+                                    <option>Média</option>
+                                    <option>Alta</option>
+                                    <option>Crítica</option>
+                                </select>
+                                <div class="invalid-feedback">Selecione a prioridade.</div>
+                                <span asp-validation-for="Prioridade" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <!-- Coluna da direita -->
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label asp-for="Titulo" class="form-label">Título</label>
+                                <input asp-for="Titulo"
+                                       class="form-control form-control-sm"
+                                       placeholder="Ex.: Impressora não imprime na rede"
+                                       autocomplete="off"
+                                       required />
+                                <div class="invalid-feedback">Informe um título.</div>
+                                <span asp-validation-for="Titulo" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="Descricao" class="form-label">Descrição</label>
+                                <textarea asp-for="Descricao"
+                                          class="form-control form-control-sm"
+                                          rows="5"
+                                          id="descricaoCampo"
+                                          placeholder="Descreva o problema, quando começou, mensagens de erro, etc."
+                                          required></textarea>
+                                <div class="invalid-feedback">Descreva o problema.</div>
+                                <span asp-validation-for="Descricao" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="anexos" class="form-label">Anexos (opcional)</label>
+                                <input type="file"
+                                       id="anexos"
+                                       name="anexos"
+                                       class="form-control form-control-sm"
+                                       multiple
+                                       accept=".png,.jpg,.jpeg,.pdf,.txt,.log,.doc,.docx,.xlsx,.zip,.7z" />
+                                <small class="text-muted">Você pode selecionar vários arquivos. Tamanho máx. 15 MB por arquivo.</small>
+                            </div>
+
+                            <!-- Sugestões IA -->
+                            <div id="sugestoesIA"
+                                 class="alert alert-info d-none mt-3"
+                                 style="white-space: pre-line;"
+                                 role="status"
+                                 aria-live="polite">
+                                <strong>Sugestões automáticas:</strong>
+                                <ul id="listaSugestoesIA" class="mb-0"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-sm btn-primary px-4" id="btnSubmit">
+                            Abrir Chamado
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div id="erroSugestaoIA" class="alert alert-warning d-none mt-3" role="alert">
+                <strong>Atenção:</strong> Não foi possível gerar sugestões automáticas no momento. Tente novamente mais tarde.
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
+    <!-- usa o partial padrão do ASP.NET -->
     <partial name="_ValidationScriptsPartial" />
-    <script>
-        document.getElementById("categoriaSelect").addEventListener("change", function () {
-            const categoriaId = this.value;
-            const subSelect = document.getElementById("subcategoriaSelect");
-            subSelect.innerHTML = '<option>Carregando...</option>';
 
-            if (categoriaId) {
-                fetch(`/Chamados/SubcategoriasPorCategoria?categoriaId=${categoriaId}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        subSelect.innerHTML = '<option value="">Selecione...</option>';
-                        data.forEach(sub => {
-                            const option = document.createElement("option");
-                            option.value = sub.id;
-                            option.textContent = sub.nome;
-                            subSelect.appendChild(option);
-                        });
-                    })
-                    .catch(() => {
-                        subSelect.innerHTML = '<option>Erro ao carregar</option>';
+    <script>
+        // ---------- Util ----------
+        const form = document.querySelector("form");
+        const btnSubmit = document.getElementById("btnSubmit");
+        const tipoSelect = document.getElementById("tipoSelect");
+        const categoriaSelect = document.getElementById("categoriaSelect");
+        const subcategoriaSelect = document.getElementById("subcategoriaSelect");
+        const maxFileSizeBytes = 15 * 1024 * 1024; // 15MB
+
+        // Validação HTML5 com Bootstrap
+        form.addEventListener("submit", function (e) {
+            if (!tipoSelect.value) tipoSelect.setCustomValidity("Selecione o tipo"); else tipoSelect.setCustomValidity("");
+            if (!categoriaSelect.value) categoriaSelect.setCustomValidity("Selecione a categoria"); else categoriaSelect.setCustomValidity("");
+            if (!subcategoriaSelect.value) subcategoriaSelect.setCustomValidity("Selecione a subcategoria"); else subcategoriaSelect.setCustomValidity("");
+
+            const f = document.getElementById("anexos");
+            if (f?.files?.length > 0) {
+                const arquivosGrandes = Array.from(f.files).filter(file => file.size > maxFileSizeBytes);
+                if (arquivosGrandes.length > 0) {
+                    e.preventDefault();
+                    f.value = "";
+                    alert(`Arquivo excede 15 MB: ${arquivosGrandes[0].name}`);
+                    return;
+                }
+            }
+
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                form.classList.add("was-validated");
+                return;
+            }
+
+            btnSubmit.disabled = true; // evita duplo submit
+        });
+
+        // ---------- Cascading Selects ----------
+        tipoSelect.addEventListener("change", () => carregarCategorias(tipoSelect.value, null, true));
+        categoriaSelect.addEventListener("change", () => carregarSubcategorias(categoriaSelect.value, null, true));
+
+        function carregarCategorias(tipoId, categoriaSel, limparSub) {
+            categoriaSelect.innerHTML = '<option disabled selected>Carregando...</option>';
+            subcategoriaSelect.innerHTML = '<option disabled selected>Selecione a categoria primeiro</option>';
+            categoriaSelect.disabled = true;
+            subcategoriaSelect.disabled = true;
+
+            if (!tipoId) return;
+
+            fetch(`/Chamados/CategoriasPorTipo?tipoId=${encodeURIComponent(tipoId)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!Array.isArray(data) || data.length === 0) {
+                        categoriaSelect.innerHTML = '<option disabled selected>Nenhuma categoria disponível</option>';
+                        return;
+                    }
+                    categoriaSelect.innerHTML = '<option disabled selected value="">Selecione...</option>';
+                    data.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.nome;
+                        categoriaSelect.appendChild(opt);
                     });
-            } else {
-                subSelect.innerHTML = '<option>Selecione uma categoria primeiro</option>';
+                    categoriaSelect.disabled = false;
+
+                    if (categoriaSel) {
+                        categoriaSelect.value = categoriaSel;
+                        carregarSubcategorias(categoriaSel, subcategoriaSelect.dataset.selected, false);
+                    } else if (limparSub) {
+                        subcategoriaSelect.innerHTML = '<option disabled selected>Selecione a categoria primeiro</option>';
+                    }
+                })
+                .catch(() => {
+                    categoriaSelect.innerHTML = '<option disabled selected>Erro ao carregar</option>';
+                });
+        }
+
+        function carregarSubcategorias(categoriaId, subSel, fromUser) {
+            subcategoriaSelect.innerHTML = '<option disabled selected>Carregando...</option>';
+            subcategoriaSelect.disabled = true;
+
+            if (!categoriaId) return;
+
+            fetch(`/Chamados/SubcategoriasPorCategoria?categoriaId=${encodeURIComponent(categoriaId)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!Array.isArray(data) || data.length === 0) {
+                        subcategoriaSelect.innerHTML = '<option disabled selected>Nenhuma subcategoria disponível</option>';
+                        return;
+                    }
+                    subcategoriaSelect.innerHTML = '<option disabled selected value="">Selecione...</option>';
+                    data.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.id;
+                        opt.textContent = s.nome;
+                        subcategoriaSelect.appendChild(opt);
+                    });
+                    subcategoriaSelect.disabled = false;
+
+                    if (subSel) {
+                        subcategoriaSelect.value = subSel;
+                    } else if (fromUser) {
+                        subcategoriaSelect.focus();
+                    }
+                })
+                .catch(() => {
+                    subcategoriaSelect.innerHTML = '<option disabled selected>Erro ao carregar</option>';
+                });
+        }
+
+        // Restaura seleção (ex.: pós-erro de validação do servidor)
+        document.addEventListener("DOMContentLoaded", () => {
+            const tipoSel = tipoSelect.dataset.selected;
+            const catSel = categoriaSelect.dataset.selected;
+            const subSel = subcategoriaSelect.dataset.selected;
+
+            if (tipoSel) {
+                tipoSelect.value = tipoSel;
+                carregarCategorias(tipoSel, catSel, false);
             }
         });
+    </script>
+
+    <script>
+        // ---------- Sugestões IA ----------
+        let timerSugestao;
+        document.addEventListener("DOMContentLoaded", function () {
+            const campoDescricao = document.getElementById("descricaoCampo");
+            if (!campoDescricao) return;
+
+            campoDescricao.addEventListener("input", function (e) {
+                clearTimeout(timerSugestao);
+                const texto = e.target.value?.trim() ?? "";
+
+                if (texto.length >= 15) {
+                    timerSugestao = setTimeout(() => buscarSugestoesIA(texto), 900);
+                } else {
+                    document.getElementById("sugestoesIA").classList.add("d-none");
+                }
+            });
+        });
+
+        function buscarSugestoesIA(texto) {
+            fetch('/Ajuda/SugerirIA', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ texto })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const lista = document.getElementById("listaSugestoesIA");
+                const sugestoesIA = document.getElementById("sugestoesIA");
+                const erroIA = document.getElementById("erroSugestaoIA");
+
+                lista.innerHTML = "";
+
+                if (data?.erro) {
+                    erroIA.classList.remove("d-none");
+                    sugestoesIA.classList.add("d-none");
+                    return;
+                }
+
+                erroIA.classList.add("d-none");
+
+                if (Array.isArray(data?.sugestoes) && data.sugestoes.length > 0) {
+                    data.sugestoes.forEach(sug => {
+                        const li = document.createElement("li");
+                        li.textContent = sug;
+                        lista.appendChild(li);
+                    });
+                    sugestoesIA.classList.remove("d-none");
+                } else {
+                    sugestoesIA.classList.add("d-none");
+                }
+            })
+            .catch(() => {
+                document.getElementById("sugestoesIA").classList.add("d-none");
+                document.getElementById("erroSugestaoIA").classList.remove("d-none");
+            });
+        }
     </script>
 }

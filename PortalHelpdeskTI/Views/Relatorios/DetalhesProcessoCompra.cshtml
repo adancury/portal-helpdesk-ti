@@ -1,0 +1,288 @@
+﻿@model PortalHelpdeskTI.Models.Relatorios.ProcessoCompraDetalhesVM
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Detalhes do Processo de Compra";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var ptBR = new CultureInfo("pt-BR");
+
+    string FormatMoney(decimal v) => v.ToString("C", ptBR);
+    var valorInicial = Model?.NovaCotacao?.ValorCotacaoTotal;
+    var valorInicialDigits = valorInicial.HasValue
+        ? ((long)Math.Round(valorInicial.Value * 100m)).ToString()
+        : "";
+}
+<div class="mb-3">
+    <h2>Processo de Compra - Solicitação @Model.Processo.OPRQDocNum</h2>
+    <p class="text-muted mb-0">
+        DocEntry: @Model.Processo.OPRQDocEntry |
+        Data: @Model.Processo.DataSolicitacao.ToString("dd/MM/yyyy")
+    </p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">
+                Dados da Solicitação
+            </div>
+            <div class="card-body">
+                <dl class="row mb-3">
+                    <dt class="col-sm-4">Solicitante</dt>
+                    <dd class="col-sm-8">@(!string.IsNullOrWhiteSpace(Model.Processo.Solicitante) ? Model.Processo.Solicitante : "-")</dd>
+
+                    <dt class="col-sm-4">Departamento</dt>
+                    <dd class="col-sm-8">@(!string.IsNullOrWhiteSpace(Model.Processo.Departamento) ? Model.Processo.Departamento : "-")</dd>
+
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-secondary">@Model.Processo.StatusProcesso</span>
+                    </dd>
+                </dl>
+
+                <hr class="my-2" />
+
+                <h6 class="mb-2">Itens / Descrição da Solicitação</h6>
+
+                @if (Model.ItensSolicitacao != null && Model.ItensSolicitacao.Any())
+                {
+                    <div class="small" style="max-height: 200px; overflow-y: auto;">
+                        <table class="table table-sm table-borderless mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40%;">Descrição</th>
+                                    <th style="width: 35%;">Descrição NFSe</th>
+                                    <th style="width: 25%;">Comentários</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.ItensSolicitacao)
+                                {
+                                    <tr>
+                                        <td>@(string.IsNullOrWhiteSpace(item.Description) ? "-" : item.Description)</td>
+                                        <td>@(string.IsNullOrWhiteSpace(item.DescricaoNFSe) ? "-" : item.DescricaoNFSe)</td>
+                                        <td>@(string.IsNullOrWhiteSpace(item.Comentarios) ? "-" : item.Comentarios)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted small mb-0">
+                        Nenhuma informação de item encontrada para esta solicitação.
+                    </p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">
+                Pedido de Compra Vencedor
+            </div>
+            <div class="card-body">
+                @if (Model.Processo.OPORDocNum.HasValue)
+                {
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Pedido</dt>
+                        <dd class="col-sm-8">@Model.Processo.OPORDocNum (DocEntry: @Model.Processo.OPORDocEntry)</dd>
+
+                        <dt class="col-sm-4">Data Pedido</dt>
+                        <dd class="col-sm-8">
+                            @(Model.Processo.DataPedido.HasValue
+                                                    ? Model.Processo.DataPedido.Value.ToString("dd/MM/yyyy")
+                                                    : "-")
+                                                      </dd>
+
+                        <dt class="col-sm-4">Fornecedor</dt>
+                        <dd class="col-sm-8">
+                            @Model.Processo.CardNameVencedor<br />
+                            <span class="text-muted small">@Model.Processo.CardCodeVencedor</span>
+                        </dd>
+
+                        <dt class="col-sm-4">Valor Vencedor</dt>
+                        <dd class="col-sm-8">
+                            @(Model.Processo.ValorVencedor.HasValue
+                                                    ? FormatMoney(Model.Processo.ValorVencedor.Value)
+                                                    : "-")
+                    </dd>
+                </dl>
+                                }
+                else
+                {
+                    <span class="text-muted">Ainda não há Pedido de Compra vinculado a esta solicitação.</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-12 col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Cotações Concorrentes</span>
+                <span class="small text-muted">@Model.Cotacoes.Count cotação(ões)</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fornecedor</th>
+                            <th class="text-end">Valor Cotação</th>
+                            <th class="text-center">Prazo (dias)</th>
+                            <th>Condição Pagamento</th>
+                            <th>Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Cotacoes.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">
+                                    Nenhuma cotação concorrente cadastrada.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var c in Model.Cotacoes)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@c.CardNameFornecedor</div>
+                                        <div class="text-muted small">@c.CardCodeFornecedor</div>
+                                    </td>
+                                    <td class="text-end">@FormatMoney(c.ValorCotacaoTotal)</td>
+                                    <td class="text-center">
+                                        @(c.PrazoEntregaDias.HasValue? c.PrazoEntregaDias.Value.ToString() : "-")
+                                    </td>
+                                    <td>@(string.IsNullOrWhiteSpace(c.CondicaoPagamento) ? "-" : c.CondicaoPagamento)</td>
+                                    <td>@(string.IsNullOrWhiteSpace(c.Observacoes) ? "-" : c.Observacoes)</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                Adicionar Cotação Concorrente
+            </div>
+            <div class="card-body">
+                <form asp-action="AdicionarCotacaoConcorrente"
+                      asp-controller="Relatorios"
+                      method="post">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" asp-for="NovaCotacao.ProcessoCompraId" />
+
+                    <div class="mb-2">
+                        <label asp-for="NovaCotacao.CardCodeFornecedor" class="form-label mb-1">Código Fornecedor</label>
+                        <input asp-for="NovaCotacao.CardCodeFornecedor" class="form-control form-control-sm" />
+                    </div>
+
+                    <div class="mb-2">
+                        <label asp-for="NovaCotacao.CardNameFornecedor" class="form-label mb-1">Nome Fornecedor</label>
+                        <input asp-for="NovaCotacao.CardNameFornecedor" class="form-control form-control-sm" />
+                    </div>
+
+                    <div class="mb-2">
+                        <div class="mb-2">
+                            <label asp-for="NovaCotacao.ValorCotacaoTotal" class="form-label mb-1">Valor Total da Cotação</label>
+
+                            <!-- Input visível (formatado em R$ enquanto digita) -->
+                            <input id="NovaCotacao_ValorCotacaoTotal_Display"
+                                   type="text"
+                                   class="form-control form-control-sm"
+                                   inputmode="numeric"
+                                   autocomplete="off"
+                                   value="@(valorInicial.HasValue? valorInicial.Value.ToString("C", ptBR) : "")"
+                                   data-initial-digits="@valorInicialDigits" />
+
+                            <!-- Input real que será postado no formato numérico pt-BR (ex.: 1000,00) -->
+                            <input id="NovaCotacao_ValorCotacaoTotal"
+                                   name="NovaCotacao.ValorCotacaoTotal"
+                                   type="hidden"
+                                   value="@(valorInicial.HasValue? valorInicial.Value.ToString("N2", ptBR) : "")" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 col-md-6 mb-2">
+                            <label asp-for="NovaCotacao.PrazoEntregaDias" class="form-label mb-1">Prazo Entrega (dias)</label>
+                            <input asp-for="NovaCotacao.PrazoEntregaDias" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-12 col-md-6 mb-2">
+                            <label asp-for="NovaCotacao.CondicaoPagamento" class="form-label mb-1">Condição Pagamento</label>
+                            <select class="form-select" name="NovaCotacao.CondicaoPagamento">
+                                <option value="">Selecione...</option>
+                                <option value="Avista/Pix">Avista/Pix</option>
+                                <option value="Cartão">Cartão</option>
+                                <option value="Faturado/Boleto">Faturado/Boleto</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="NovaCotacao.Observacoes" class="form-label mb-1">Observações</label>
+                        <textarea asp-for="NovaCotacao.Observacoes" rows="3" class="form-control form-control-sm"></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="DashboardSavingCompras" asp-controller="Relatorios" class="btn btn-secondary btn-sm">
+                            Voltar
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            Salvar Cotação
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+<script>
+    (function () {
+      const display = document.getElementById('NovaCotacao_ValorCotacaoTotal_Display');
+      const hidden  = document.getElementById('NovaCotacao_ValorCotacaoTotal');
+      if (!display || !hidden) return;
+
+      const nf = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+      function onlyDigits(s) { return (s || '').replace(/\D/g, ''); }
+
+      function syncFromDigits(digits) {
+        if (!digits) {
+          display.value = '';
+          hidden.value = '';
+          return;
+        }
+        const value = parseInt(digits, 10) / 100; // centavos
+        display.value = nf.format(value);
+        hidden.value  = value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      // Formata a cada digitação mantendo o cursor no final (UX simples e estável)
+      display.addEventListener('input', () => {
+        const digits = onlyDigits(display.value);
+        syncFromDigits(digits);
+        display.setSelectionRange(display.value.length, display.value.length);
+      });
+
+      // Se quiser: aceitar valores iniciais já existentes
+      const initialDigits = display.getAttribute('data-initial-digits');
+      if (initialDigits) syncFromDigits(initialDigits);
+    })();
+</script>
+}

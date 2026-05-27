@@ -1,0 +1,148 @@
+﻿@model List<PortalHelpdeskTI.ViewModels.Quizzes.QuizListItemVM>
+@{
+    ViewData["Title"] = "Quizzes";
+}
+<div class="quiz-ui" data-bs-theme="light">
+    <h2>Quizzes disponíveis</h2>
+
+    <div class="row g-3">
+        @foreach (var q in Model)
+        {
+            <div class="col-md-4 quiz-card">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">@q.Titulo</h5>
+                        <p class="text-muted mb-2">
+                            Categoria:
+                            <span class="quiz-badge">@((string.IsNullOrWhiteSpace(q.Categoria) ? "-" : q.Categoria))</span>
+                        </p>
+
+                        <p class="mb-2"><small>Tentativas: @q.TentativasUsadas/3</small></p>
+                        @if (q.Aprovado)
+                        {
+                            <p class="mb-2"><span class="badge bg-success">Aprovado</span></p>
+                        }
+
+                        <p class="mb-3"><small>@q.TotalQuestoes questão(ões)</small></p>
+
+                        <div class="mt-auto">
+                            @if (q.Disponivel)
+                            {
+                                <a class="btn btn-primary"
+                                   asp-route="Quizzes_Take" asp-route-id="@q.Id">Iniciar</a>
+                            }
+                            else
+                            {
+                                <button class="btn btn-secondary" disabled>Indisponível</button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+<!-- Container de toasts (fixado no canto) -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+    <div id="toast-aprovacoes" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Aprovações</strong>
+            <small class="text-muted">agora</small>
+            <button type="button" class="btn-close ms-2 mb-1" data-bs-dismiss="toast" aria-label="Fechar"></button>
+        </div>
+        <div class="toast-body" id="toast-aprovacoes-body">Operação concluída.</div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        (function () {
+          // lê a mensagem salva pela página de detalhes
+          const key = 'aprovacao_msg';
+          const msg = sessionStorage.getItem(key);
+          if (!msg) return;
+
+          sessionStorage.removeItem(key);
+
+          // injeta e exibe o toast (Bootstrap 5)
+          const el = document.getElementById('toast-aprovacoes');
+          const body = document.getElementById('toast-aprovacoes-body');
+          if (el && body) {
+            body.textContent = msg;
+            try {
+              const t = new bootstrap.Toast(el, { delay: 4000, autohide: true });
+              t.show();
+            } catch {
+              // fallback caso Bootstrap JS não esteja carregado
+              alert(msg);
+            }
+          } else {
+            alert(msg);
+          }
+        })();
+    </script>
+    <script>
+        (function () {
+          // delegação de SUBMIT (funciona mesmo se o form foi injetado via AJAX)
+          document.addEventListener('submit', async function (ev) {
+            const form = ev.target;
+            if (!(form instanceof HTMLFormElement)) return;
+            if (form.id !== 'frm-aprovacao') return;
+
+            // Quem clicou (Aprovar ou Rejeitar)
+            const submitter = ev.submitter; // requer browsers modernos (Edge/Chrome/FF atuais)
+            const isApprove = submitter?.classList?.contains('btn-aprovar');
+            const isReject  = submitter?.classList?.contains('btn-rejeitar');
+
+            // Se por algum motivo não tiver submitter, deixa o submit normal seguir
+            if (!isApprove && !isReject) return;
+
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            const id    = form.querySelector('input[name="id"]')?.value || '';
+            const obs   = form.querySelector('#obs')?.value || '';
+
+            if (!id) { alert('ID da aprovação ausente na view.'); return; }
+
+            // URL vem do botão (formaction) — infalível mesmo com áreas/prefixos
+            const url = submitter.getAttribute('formaction') || form.action;
+            const urlIndex = form.getAttribute('data-url-index') || '/Aprovacoes/Index';
+
+            // trava os botões
+            const btns = form.querySelectorAll('.btn-aprovar, .btn-rejeitar');
+            btns.forEach(b => b.disabled = true);
+
+            try {
+              const resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                  'RequestVerificationToken': token,
+                  'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                },
+                credentials: 'same-origin',
+                body: new URLSearchParams({ id, obs, __RequestVerificationToken: token })
+              });
+
+              const text = await resp.text();
+              let json; try { json = JSON.parse(text); } catch { json = { raw: text }; }
+              if (!resp.ok) throw new Error(json?.message || `HTTP ${resp.status}`);
+
+              // toast via sessionStorage para a Index exibir
+              const msgBase = isApprove ? 'Solicitação aprovada com sucesso.' : 'Solicitação rejeitada.';
+              const idNum = Number(id) || null;
+              sessionStorage.setItem('aprovacao_msg', idNum ? `${msgBase} (#${idNum}).` : msgBase);
+
+              // redireciona para Index (fecha modal/navegação atual)
+              window.location.href = urlIndex;
+
+            } catch (err) {
+              console.error(err);
+              alert('Erro ao enviar decisão: ' + (err?.message || err));
+              btns.forEach(b => b.disabled = false);
+            }
+          }, true); // capture=true para garantir que pegamos o submit antes de handlers locais
+        })();
+    </script>
+
+}

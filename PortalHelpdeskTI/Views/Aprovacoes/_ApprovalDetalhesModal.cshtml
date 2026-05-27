@@ -1,0 +1,108 @@
+﻿@model PortalHelpdeskTI.Models.ApprovalDetailsDto
+@{
+    string FmtMoney(decimal v) => v.ToString("N2");
+    string FmtDate(DateTime d) => d.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+    var total = Model.Total;
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">
+        Detalhes da Solicitação
+        <small class="text-muted ms-2">(@(Model.DocumentType ?? "—"))</small>
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+</div>
+
+<div class="modal-body">
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="small text-muted">Documento</div>
+            <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.DocumentNumber) ? Model.DocumentNumber : "—")</div>
+        </div>
+        <div class="col-md-4">
+            <div class="small text-muted">Solicitante</div>
+            <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.RequesterName) ? Model.RequesterName : "—")</div>
+        </div>
+        <div class="col-md-4">
+            <div class="small text-muted">Criado em</div>
+            <div class="fw-semibold">@FmtDate(Model.CreatedAt)</div>
+        </div>
+        <div class="col-md-4">
+            <div class="small text-muted">Status</div>
+            <span class="badge bg-light text-dark border">@Model.Status</span>
+        </div>
+        <div class="col-md-4">
+            <div class="small text-muted">Total</div>
+            <div class="fw-semibold">@FmtMoney(total)</div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <h6 class="mb-2">Itens</h6>
+        @if (Model.Items != null && Model.Items.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 14%;">Código</th>
+                            <th>Descrição</th>
+                            <th style="width: 12%;" class="text-end">Qtde</th>
+                            <th style="width: 14%;" class="text-end">Preço</th>
+                            <th style="width: 14%;" class="text-end">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var it in Model.Items)
+                        {
+                            var subtotal = it.Quantity * it.Price;
+                            <tr>
+                                <td>@it.ItemCode</td>
+                                <td>@it.ItemName</td>
+                                <td class="text-end">@it.Quantity.ToString("N2")</td>
+                                <td class="text-end">@FmtMoney(it.Price)</td>
+                                <td class="text-end">@FmtMoney(subtotal)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-muted">Nenhum item encontrado.</div>
+        }
+    </div>
+
+    <div>
+        <h6 class="mb-2">Comentários anteriores</h6>
+        @if (Model.PreviousComments != null && Model.PreviousComments.Any())
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var c in Model.PreviousComments.OrderByDescending(c => c.Date))
+                {
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(c.Author) ? c.Author : "—")</div>
+                            <div class="text-muted small">@FmtDate(c.Date)</div>
+                        </div>
+                        <div>@(string.IsNullOrWhiteSpace(c.Text) ? "—" : c.Text)</div>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <div class="text-muted">Sem comentários.</div>
+        }
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+    <!-- se quiser já aprovar/rejeitar daqui, você pode ligar esses botões ao endpoint /Aprovacoes/Decidir -->
+    @* 
+    <button type="button" class="btn btn-danger" data-action="reject">Rejeitar</button>
+    <button type="button" class="btn btn-primary" data-action="approve">Aprovar</button>
+    *@
+</div>

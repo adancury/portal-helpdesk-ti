@@ -1,0 +1,192 @@
+﻿@model List<PortalHelpdeskTI.Models.Relatorios.IndicadorTiMensalDto>
+
+@{
+    var embed = Context.Request.Query["embed"] == "1";
+    Layout = embed ? null : "~/Views/Shared/_Layout.cshtml";
+
+    string valDe = Context.Request.Query["de"];
+    string valAte = Context.Request.Query["ate"];
+}
+
+<style>
+    .board {
+        border-radius: .5rem;
+        overflow: hidden;
+        border: 1px solid rgba(0,0,0,.08);
+        background: var(--bs-body-bg,#fff);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)
+    }
+
+    .board-header {
+        background: #0d6efd;
+        color: #fff;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: .75rem;
+        padding: .65rem 1rem
+    }
+
+    .board-title {
+        font-weight: 600
+    }
+
+    .board-body {
+        padding: 0;
+        border-top: 1px solid rgba(0,0,0,.06)
+    }
+
+    .tbl-scroll {
+        max-height: 40vh;
+        overflow: auto
+    }
+
+    .tbl thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: var(--bs-table-bg,var(--bs-body-bg,#fff));
+        box-shadow: 0 1px 0 rgba(0,0,0,.06)
+    }
+
+    .row-click {
+        cursor: pointer;
+    }
+</style>
+
+<div class="board">
+    <div class="board-header">
+        <div class="board-title">
+            <i class="bi bi-speedometer2 me-2"></i> Indicador TI
+        </div>
+    </div>
+
+    <div class="board-body">
+
+        <form method="get"
+              asp-controller="Relatorios"
+              asp-action="IndicadorTi"
+              id="filtroIndicador"
+              class="d-flex flex-wrap align-items-center gap-2 p-2">
+
+            <div class="d-flex align-items-center gap-2">
+                <label for="de" class="form-label m-0 small">De</label>
+                <input type="date" id="de" name="de" value="@valDe"
+                       class="form-control form-control-sm w-auto" />
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <label for="ate" class="form-label m-0 small">Até</label>
+                <input type="date" id="ate" name="ate" value="@valAte"
+                       class="form-control form-control-sm w-auto" />
+            </div>
+
+            <button class="btn btn-light btn-sm fw-semibold" type="submit">Filtrar</button>
+
+            <span class="ms-auto small text-white-50 d-none d-md-inline">
+                Regra: somente chamados com avaliação • Prioridade Alta • Tempo útil igual Relatório de Tempo
+            </span>
+        </form>
+
+        <div class="p-2">
+            <div class="small text-muted">
+                Clique em um mês para ver o detalhe dos chamados que compõem o indicador.
+            </div>
+        </div>
+
+        <div class="tbl-scroll">
+            <table class="table table-hover table-striped tbl">
+                <thead>
+                    <tr>
+                        <th>Mês</th>
+                        <th class="text-end">Chamados</th>
+                        <th class="text-end">Est. (h)</th>
+                        <th class="text-end">Real (h)</th>
+                        <th class="text-end">Perf. %</th>
+                        <th class="text-end">Perf. (cap110)</th>
+                        <th class="text-end">Nota</th>
+                        <th class="text-end">Satisf. %</th>
+                        <th class="text-end">Final (80/20)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="gridMensal">
+                    @await Html.PartialAsync("~/Views/Relatorios/_GridIndicadorTiMensal.cshtml", Model)
+                </tbody>
+            </table>
+        </div>
+
+        <div class="border-top p-2">
+            <div id="detalheMesArea">
+                <div class="text-muted small">Selecione um mês acima para carregar o detalhe.</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    (() => {
+
+        const form = document.getElementById('filtroIndicador');
+        const grid = document.getElementById('gridMensal');
+        const detalheArea = document.getElementById('detalheMesArea');
+
+        if (!form || !grid || !detalheArea) return;
+
+        async function carregarMensal() {
+            const params = new URLSearchParams(new FormData(form));
+            params.set('embed', '1');
+
+            grid.innerHTML = '<tr><td colspan="10" class="text-center p-3">Carregando...</td></tr>';
+
+            const url = form.action + '?' + params.toString();
+            const rsp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!rsp.ok) {
+                grid.innerHTML = '<tr><td colspan="10" class="text-center text-danger p-3">Erro ao carregar</td></tr>';
+                return;
+            }
+
+            grid.innerHTML = await rsp.text();
+
+            // limpa detalhe ao filtrar
+            detalheArea.innerHTML = '<div class="text-muted small">Selecione um mês acima para carregar o detalhe.</div>';
+
+            // mantém filtros na URL (sem embed)
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('de', document.getElementById('de')?.value || '');
+            newUrl.searchParams.set('ate', document.getElementById('ate')?.value || '');
+            newUrl.searchParams.delete('embed');
+            history.replaceState(null, '', newUrl);
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await carregarMensal();
+        });
+
+        // clique no mês (delegation)
+        grid.addEventListener('click', async (e) => {
+            const tr = e.target.closest('tr[data-mesref]');
+            if (!tr) return;
+
+            const mesRef = tr.getAttribute('data-mesref');
+            if (!mesRef) return;
+
+            const params = new URLSearchParams(new FormData(form));
+            params.set('mesRef', mesRef);
+
+            detalheArea.innerHTML = '<div class="text-center p-3">Carregando detalhe...</div>';
+
+            const url = '/Relatorios/IndicadorTiDetalhe?' + params.toString();
+            const rsp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!rsp.ok) {
+                detalheArea.innerHTML = '<div class="text-center text-danger p-3">Erro ao carregar detalhe</div>';
+                return;
+            }
+
+            detalheArea.innerHTML = await rsp.text();
+        });
+
+    })();
+</script>

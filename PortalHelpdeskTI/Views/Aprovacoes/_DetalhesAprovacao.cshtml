@@ -1,0 +1,404 @@
+﻿@model PortalHelpdeskTI.Services.SAP.ServiceLayerClient.ApprovalRequestDetailsDto
+@using System.Globalization
+
+@{
+    var m = Model;
+
+    // Tenta obter o DraftDocNum vindo do controller (ViewBag.DraftDocNum)
+    int? draftDocNum = null;
+    try
+    {
+        if (ViewBag.DraftDocNum != null)
+        {
+            var raw = ViewBag.DraftDocNum.ToString();
+            int tmp;
+            if (int.TryParse(raw, out tmp))
+            {
+                draftDocNum = tmp;
+            }
+        }
+    }
+    catch { }
+
+
+    // Número que será exibido na UI (draft se houver, senão fallback pro ID da aprovação)
+    var docNumDisplay = (draftDocNum.HasValue && draftDocNum.Value > 0)
+        ? draftDocNum.Value.ToString()
+        : m?.ApprovalRequestID.ToString();
+}
+
+@if (m == null)
+{
+    <div class="p-3 text-danger">Não foi possível carregar os detalhes desta aprovação.</div>
+}
+else
+{
+    // Resolve etapa/usuário pendentes (fallback pelas decisões)
+    int? stageCodeEff = m.PendingStageCode
+        ?? m.ApprovalRequestDecisions?.FirstOrDefault(d => d.Status == "ardPending")?.StageCode;
+
+    int? userIdEff = m.PendingUserID
+        ?? m.ApprovalRequestDecisions?.FirstOrDefault(d => d.Status == "ardPending")?.UserID;
+
+    var statusRaw = m.Status ?? "";
+    var statusMap = new Dictionary<string, (string Text, string Css)>
+    {
+        ["arsPeding"] = ("Pendente", "badge bg-warning text-dark"),
+        ["arsPending"] = ("Pendente", "badge bg-warning text-dark"),
+        ["arsApproved"] = ("Aprovado", "badge bg-success"),
+        ["arsRejected"] = ("Rejeitado", "badge bg-danger"),
+        ["arsGenerated"] = ("Gerado", "badge bg-secondary")
+    };
+    var (statusText, statusCss) = statusMap.TryGetValue(statusRaw, out var v)
+        ? v
+        : (statusRaw, "badge bg-secondary");
+
+    <div class="modal-header d-flex justify-content-between align-items-center">
+        <!-- Mostra o DraftDocNum quando existir -->
+        <h5 class="modal-title mb-0">Aprovação #@docNumDisplay</h5>
+
+        <div class="ms-auto d-flex align-items-center gap-2">
+            <span class="@statusCss">@statusText</span>
+        </div>
+    </div>
+
+    <div class="modal-body">
+        <div class="row g-3 align-items-start mb-2">
+            <!-- LADO ESQUERDO -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="text-muted small fw-semibold">Criado em</div>
+                            <div class="fs-6">@((m.CreationDate?.ToString("dd/MM/yyyy")) ?? "—")</div>
+                        </div>
+                        <div>
+                            <div class="text-muted small fw-semibold">Solicitante</div>
+                            <div class="fs-6">@m.RequesterName</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LADO DIREITO -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="text-muted small fw-semibold">Observações</div>
+                            <div class="fs-6" style="white-space: pre-wrap;">
+                                @(!string.IsNullOrWhiteSpace(m.Remarks) ? m.Remarks : "—")
+                            </div>
+                        </div>
+
+                        <hr class="opacity-25" />
+
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="text-muted small fw-semibold">Total do documento</div>
+                                <div class="fs-5 fw-bold">
+                                    @{
+                                        decimal? valor = null;
+                                        string simbolo = "";
+
+                                        // 1º: se tiver valor em moeda estrangeira (> 0), usa DocTotalFC
+                                        if (m.DocTotalFC.HasValue && m.DocTotalFC.Value > 0)
+                                        {
+                                            valor = m.DocTotalFC.Value;
+                                            // considera DocCurrency para decidir símbolo
+                                            simbolo = "U$";
+                                        }
+                                        // 2º: senão, se tiver valor em DocTotal (> 0), usa DocTotal em real
+                                        else if (m.DocTotal.HasValue && m.DocTotal.Value > 0)
+                                        {
+                                            valor = m.DocTotal.Value;
+                                            simbolo = "R$";
+                                        }
+
+                                        var docTotalTxt = valor.HasValue
+                                        ? $"{simbolo} {valor.Value.ToString("N2", new CultureInfo("pt-BR"))}"
+                                        : "—";
+                                    }
+                                    @docTotalTxt
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small fw-semibold">Fornecedor</div>
+                                <div class="fs-6">
+                                    @(!string.IsNullOrWhiteSpace(m.CardName) ? m.CardName : "—")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- fecha col direita -->
+        </div> <!-- FECHA A ROW -->
+
+        <hr />
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Linhas do documento</h6>
+        </div>
+        @if (m.DocumentLines?.Any() == true)
+        {
+            <div class="card border-0 shadow-sm mt-2 card-aprovacao-linhas">
+                <div class="card-body p-0">
+                    <div class="table-responsive mb-0">
+                        @{
+                            // true se existir pelo menos uma linha com Mat. NFS-e preenchido
+                            var showMatNfse = m.DocumentLines?.Any(l =>
+                            !string.IsNullOrWhiteSpace(l.U_TX_DescMatNfse)
+                            ) == true;
+
+                            // para o rodapé: quantas colunas vêm antes do total
+                            var totalColspan = showMatNfse ? 3 : 2; // Descrição + (Mat) + Qtd
+                        }
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Descrição</th>
+                                    @if (showMatNfse)
+                                    {
+                                        <th class="text-nowrap">Mat. NFS-e</th>
+                                    }
+                                    
+                                    <th class="text-end">Qtd</th>
+                                    <th class="text-end">Preço</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var l in m.DocumentLines)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div>
+                                                @(string.IsNullOrWhiteSpace(l.ItemCode) ? "—" : l.ItemCode)
+                                            </div>
+                                            <div class="small text-muted">
+                                                @(l.ItemName ?? l.ItemDescription ?? "—")
+                                            </div>
+                                        </td>
+                                        @if (showMatNfse)
+                                        {
+                                            <td class="text-break">
+                                                @(string.IsNullOrWhiteSpace(l.U_TX_DescMatNfse) ? "—" : l.U_TX_DescMatNfse)
+                                            </td>
+                                        }
+                                        <td class="text-end">@l.Quantity.ToString("N0")</td>
+                                        <td class="text-end">@simbolo @l.Price.ToString("N2", new CultureInfo("pt-BR"))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    @if (showMatNfse)
+                                    {
+                                        <td colspan="3" class="text-end fw-bold">Total do documento</td>
+                                    }
+                                    else
+                                    {
+                                        <td colspan="2" class="text-end fw-bold">Total do documento</td>
+                                    }
+                                    <td class="text-end fw-bold">
+                                        @{
+                                            if (m.DocTotalFC.HasValue && m.DocTotalFC.Value > 0)
+                                            {
+                                                valor = m.DocTotalFC.Value;
+                                                simbolo = "U$";
+                                            }
+                                            else if (m.DocTotal.HasValue && m.DocTotal.Value > 0)
+                                            {
+                                                valor = m.DocTotal.Value;
+                                                simbolo = "R$";
+                                            }
+
+                                            var docTotalTxt2 = valor.HasValue
+                                            ? $"{simbolo} {valor.Value.ToString("N2", new CultureInfo("pt-BR"))}"
+                                            : "—";
+                                        }
+                                        @docTotalTxt2
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div>Sem linhas.</div>
+        }
+
+        <hr />
+
+        <!-- ANEXOS DO DOCUMENTO -->
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Anexos do Documento</h6>
+        </div>
+        <div class="card mt-3">
+            <div class="card-body">
+                @if (Model.Attachments != null && Model.Attachments.Any())
+                {
+                    <div class="aprov-anexos-wrapper">
+                        @foreach (var a in Model.Attachments)
+                        {
+                            <div class="aprov-anexo-row d-flex justify-content-between align-items-center">
+                                <span class="aprov-anexo-text">
+                                    <i class="bi bi-paperclip me-1"></i>
+                                    @a.FileName.@a.FileExtension
+                                </span>
+
+                                <a class="btn btn-sm btn-outline-primary aprov-anexo-btn"
+                                   href="@Url.Action("BaixarAnexo", "Aprovacoes", new { entry = a.AttachmentEntry, line = a.LineNum })">
+                                    Baixar
+                                </a>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <span class="text-muted small">
+                        Nenhum anexo foi incluído neste documento.
+                    </span>
+                }
+            </div>
+        </div>
+
+        <hr />
+        @if (m.PendingStageCode.HasValue && m.PendingUserID.HasValue)
+        {
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Sua decisão</h6>
+            </div>
+            <textarea name="obs" id="obs" class="form-control" rows="3" placeholder="Observações (opcional)"></textarea>
+            <div class="mt-2 d-flex gap-2">
+                <form id="frm-aprovacao"
+                      method="post"
+                      action="@Url.Action("Aprovar","Aprovacoes")"
+                      data-url-index="@Url.Action("Index","Aprovacoes")">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.ApprovalRequestID" />
+                    <div class="mt-3 d-flex justify-content-between flex-wrap gap-2">
+                        <div class="d-flex gap-2">
+                            <button type="submit"
+                                    class="btn-aprovar btn btn-success"
+                                    formaction="@Url.Action("Aprovar", "Aprovacoes")">
+                                <i class="bi bi-check2-circle"></i> Aprovar
+                            </button>
+
+                            <button type="submit"
+                                    class="btn-rejeitar btn btn-danger"
+                                    formaction="@Url.Action("Rejeitar", "Aprovacoes")">
+                                <i class="bi bi-x-circle"></i> Rejeitar
+                            </button>
+                        </div>
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            <i class="bi bi-arrow-left"></i> Voltar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        }
+        else
+        {
+            <div class="text-muted">Você não está pendente nesta solicitação.</div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+          // Número do documento para usar nas mensagens (draft ou ID de fallback)
+          const docNumDisplay = "@docNumDisplay";
+
+          document.addEventListener('submit', async function (ev) {
+            const form = ev.target;
+            if (!(form instanceof HTMLFormElement) || form.id !== 'frm-aprovacao') return;
+
+            const submitter = ev.submitter;
+            const isApprove = submitter?.classList?.contains('btn-aprovar');
+            const isReject  = submitter?.classList?.contains('btn-rejeitar');
+            if (!isApprove && !isReject) return;
+
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            const id    = form.querySelector('input[name="id"]')?.value || '';
+            const obs   = form.querySelector('#obs')?.value || '';
+            if (!id) { alert('ID da aprovação ausente.'); return; }
+
+            const url      = submitter.getAttribute('formaction') || form.action;
+            const urlIndex = form.getAttribute('data-url-index') || '/Aprovacoes/Index';
+
+            // 1) Fecha o modal de detalhes para evitar conflito de modais
+            const modalDetalhesEl = document.getElementById('approvalModal');
+            if (modalDetalhesEl && window.bootstrap?.Modal) {
+              const md = bootstrap.Modal.getOrCreateInstance(modalDetalhesEl);
+              try { md.hide(); } catch {}
+            }
+
+            // 2) Mostra popup "Carregando..."
+            if (window.showPopupLoading) {
+              window.showPopupLoading('Aprovação', 'Enviando decisão...');
+            }
+
+            // Desabilita botões do form por segurança (se o usuário voltar)
+            const btns = form.querySelectorAll('.btn-aprovar, .btn-rejeitar');
+            btns.forEach(b => b.disabled = true);
+
+            try {
+                 const resp = await fetch(url, {
+                  method: 'POST',
+                  headers: {
+                    'RequestVerificationToken': token,
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                  },
+                  credentials: 'same-origin',
+                  body: new URLSearchParams({ id, obs, __RequestVerificationToken: token })
+                });
+
+              const txt = await resp.text();
+              let json; try { json = JSON.parse(txt); } catch { json = { raw: txt }; }
+
+              if (!resp.ok) {
+                const msgErr = json?.message || `HTTP ${resp.status}`;
+                if (window.updatePopupMensagem) window.updatePopupMensagem('Aprovação', msgErr, 'error', 2500);
+                btns.forEach(b => b.disabled = false);
+                return;
+              }
+
+                // 3) Sucesso -> troca popup para "Concluído" e redireciona
+                const baseMsg = isApprove ? 'Solicitação aprovada com sucesso.' : 'Solicitação rejeitada.';
+                const refText = docNumDisplay || id;
+
+                if (window.updatePopupMensagem) {
+                  window.updatePopupMensagem('Aprovação', `${baseMsg} (Doc #${refText}).`, 'success', 1200, urlIndex);
+
+                  // 🔥 garante recarregar a lista após a mensagem
+                  setTimeout(() => {
+                    window.location.href = urlIndex;   // ou: window.location.reload();
+                  }, 1300);
+                } else {
+                  // fallback
+                  sessionStorage.setItem('aprovacao_msg', `${baseMsg} (Doc #${refText}).`);
+                  sessionStorage.setItem('aprovacao_tipo', 'success');
+                  window.location.href = urlIndex;
+                }
+            } catch (err) {
+              const msgErr = err?.message || 'Falha ao enviar decisão.';
+              if (window.updatePopupMensagem) window.updatePopupMensagem('Aprovação', msgErr, 'error', 2500);
+              console.error(err);
+              btns.forEach(b => b.disabled = false);
+            }
+          }, true);
+        })();
+    </script>
+}

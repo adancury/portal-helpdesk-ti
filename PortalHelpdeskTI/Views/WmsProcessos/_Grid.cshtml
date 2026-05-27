@@ -1,0 +1,149 @@
+@model PortalHelpdeskTI.ViewModels.IntegracoesWms.WmsProcessosIndexVm
+@{
+    var page = Model.Filtro.Page;
+    var pageSize = Model.Filtro.PageSize;
+    var totalPages = Math.Max(1, (int)Math.Ceiling(Model.Total / (double)Math.Max(1, pageSize)));
+}
+
+<div class="card shadow-sm wms-panel">
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0 wms-process-table">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Processo</th>
+                    <th>Status</th>
+                    <th>Referência</th>
+                    <th>Pedido/NF</th>
+                    <th>@(Model.ExibirAgrupado ? "Itens" : "Produto")</th>
+                    <th>Qtde</th>
+                    <th>Atualizado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.ExibirAgrupado)
+                {
+                    for (var i = 0; i < Model.Grupos.Count; i++)
+                    {
+                        var g = Model.Grupos[i];
+                        var collapseId = $"wms_items_{i}";
+                        var isDone = string.Equals(g.Status, "FIM", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(g.Status, "ARMAZENADO", StringComparison.OrdinalIgnoreCase);
+                        <tr class="wms-process-group-row">
+                            <td><span class="badge bg-body-secondary text-body">@g.Tipo</span></td>
+                            <td>
+                                <div class="fw-semibold">@g.ChaveProcesso</div>
+                                <div class="text-body-secondary small">@g.TotalItens.ToString("N0") item(ns)</div>
+                            </td>
+                            <td><span class="badge @(isDone ? "bg-success" : "bg-warning text-dark")">@(g.Status ?? "-")</span></td>
+                            <td>@(g.DataReferencia?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                            <td>
+                                <div>@(g.NumeroPedido ?? "-")</div>
+                                <div class="text-body-secondary small">NF @(g.NumeroDocumento ?? "-")</div>
+                            </td>
+                            <td>
+                                <button class="btn btn-outline-primary btn-sm wms-items-toggle"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#@collapseId"
+                                        aria-expanded="false"
+                                        aria-controls="@collapseId">
+                                    <i class="bi bi-chevron-down"></i>
+                                    Ver itens
+                                </button>
+                            </td>
+                            <td>
+                                <div>Prev. @(g.QuantidadePrevista?.ToString("N2") ?? "-")</div>
+                                <div class="text-body-secondary small">Exec. @(g.QuantidadeExecutada?.ToString("N2") ?? "-") / Div. @(g.QuantidadeDivergente?.ToString("N2") ?? "-")</div>
+                            </td>
+                            <td>@g.AtualizadoEm.ToString("dd/MM HH:mm")</td>
+                            <td></td>
+                        </tr>
+                        <tr class="collapse wms-process-items-row" id="@collapseId">
+                            <td colspan="9">
+                                <div class="wms-items-area">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0 wms-items-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Produto</th>
+                                                    <th>Status</th>
+                                                    <th>Qtde</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in g.Itens)
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <div class="fw-semibold">@item.CodigoProduto</div>
+                                                            <div class="text-body-secondary small">@item.DescricaoProduto</div>
+                                                        </td>
+                                                        <td>@(item.Status ?? "-")</td>
+                                                        <td>
+                                                            <div>Prev. @(item.QuantidadePrevista?.ToString("N2") ?? "-")</div>
+                                                            <div class="text-body-secondary small">Exec. @(item.QuantidadeExecutada?.ToString("N2") ?? "-") / Div. @(item.QuantidadeDivergente?.ToString("N2") ?? "-")</div>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <a class="btn btn-outline-primary btn-sm" href="@Url.Action("Detalhe", "WmsProcessos", new { id = item.Id })">
+                                                                <i class="bi bi-clock-history"></i>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    @foreach (var p in Model.Itens)
+                    {
+                        var isDone = string.Equals(p.Status, "FIM", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(p.Status, "ARMAZENADO", StringComparison.OrdinalIgnoreCase);
+                        <tr>
+                            <td><span class="badge bg-body-secondary text-body">@p.Tipo</span></td>
+                            <td>
+                                <div class="fw-semibold">@p.ChaveProcesso</div>
+                                <div class="text-body-secondary small">@p.ChaveItem</div>
+                            </td>
+                            <td><span class="badge @(isDone ? "bg-success" : "bg-warning text-dark")">@(p.Status ?? "-")</span></td>
+                            <td>@(p.DataReferencia?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                            <td>
+                                <div>@(p.NumeroPedido ?? "-")</div>
+                                <div class="text-body-secondary small">NF @(p.NumeroDocumento ?? "-")</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">@p.CodigoProduto</div>
+                                <div class="text-body-secondary small">@p.DescricaoProduto</div>
+                            </td>
+                            <td>
+                                <div>Prev. @(p.QuantidadePrevista?.ToString("N2") ?? "-")</div>
+                                <div class="text-body-secondary small">Exec. @(p.QuantidadeExecutada?.ToString("N2") ?? "-") / Div. @(p.QuantidadeDivergente?.ToString("N2") ?? "-")</div>
+                            </td>
+                            <td>@p.AtualizadoEm.ToString("dd/MM HH:mm")</td>
+                            <td class="text-end">
+                                <a class="btn btn-outline-primary btn-sm" href="@Url.Action("Detalhe", "WmsProcessos", new { id = p.Id })">
+                                    <i class="bi bi-clock-history"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <span class="text-body-secondary small">Total: @Model.Total.ToString("N0") | Página @(page) de @totalPages</span>
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-page-prev @(page <= 1 ? "disabled" : "")>Anterior</button>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-page-next @(page >= totalPages ? "disabled" : "")>Próxima</button>
+        </div>
+    </div>
+</div>

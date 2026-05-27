@@ -1,0 +1,146 @@
+﻿@model PortalHelpdeskTI.Models.EmailSettingsViewModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    var isAjax = ViewContext.HttpContext.Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    Layout = isAjax ? null : "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card" style="margin-top: 0 !important;">
+<div class="card-header bg-primary text-white d-flex align-items-center">
+    <i class="bi bi-envelope-fill me-2"></i>
+    <strong>Configuração do Servidor de E-mail</strong>
+</div>
+<div class="card-body">
+    <form asp-action="ServidorEmail" method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label asp-for="SmtpServer" class="form-label">Servidor SMTP</label>
+                <input asp-for="SmtpServer" class="form-control" />
+                <span asp-validation-for="SmtpServer" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="SmtpPort" class="form-label">Porta</label>
+                <input asp-for="SmtpPort" class="form-control" type="number" />
+                <span asp-validation-for="SmtpPort" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label asp-for="SmtpUser" class="form-label">Usuário SMTP</label>
+                <input asp-for="SmtpUser" class="form-control" />
+                <span asp-validation-for="SmtpUser" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="SmtpPass" class="form-label">Senha SMTP</label>
+                <input asp-for="SmtpPass" class="form-control" type="password" />
+                <span asp-validation-for="SmtpPass" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label asp-for="FromEmail" class="form-label">E-mail de Remetente</label>
+            <input asp-for="FromEmail" class="form-control" type="email" />
+            <span asp-validation-for="FromEmail" class="text-danger small"></span>
+        </div>
+
+        <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-check-circle me-1"></i> Salvar Configurações
+            </button>
+        </div>
+    </form>
+    @if (TempData["MensagemSucesso"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["MensagemSucesso"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+        </div>
+    }
+
+
+    <!-- Botão de Teste -->
+    <div class="mt-3 d-flex justify-content-end">
+        <button type="button" class="btn btn-outline-secondary" id="btnTestarEmail">
+            <i class="bi bi-envelope-check"></i> Testar Envio de E-mail
+        </button>
+    </div>
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+        <div id="toastEmailTeste" class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toastEmailTexto">
+                    Testando envio...
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+@await Html.PartialAsync("_ValidationScriptsPartial")
+
+@Html.Raw(@"
+<script>
+    function inicializarEventosServidorEmail() {
+        console.log('Inicializando eventos da tela de e-mail');
+
+        const toastEl = document.getElementById('toastEmailTeste');
+        const toastTexto = document.getElementById('toastEmailTexto');
+        const toast = new bootstrap.Toast(toastEl);
+
+        const btn = document.getElementById('btnTestarEmail');
+        if (!btn) {
+            console.warn('Botão de teste de e-mail não encontrado');
+            return;
+        }
+
+        btn.addEventListener('click', function () {
+            const emailTeste = prompt('Digite o e-mail para teste:');
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+            if (!emailTeste || !emailRegex.test(emailTeste)) {
+                toastTexto.innerText = 'E-mail inválido.';
+                toastEl.classList.remove('bg-primary', 'bg-success');
+                toastEl.classList.add('bg-danger');
+                toast.show();
+                return;
+            }
+
+            toastTexto.innerText = 'Enviando e-mail de teste...';
+            toastEl.classList.remove('bg-danger', 'bg-success');
+            toastEl.classList.add('bg-primary');
+            toast.show();
+
+            fetch('/Configuracoes/TestarEnvioEmail?email=' + encodeURIComponent(emailTeste))
+                .then(resp => resp.json())
+                .then(data => {
+                    if (data.sucesso) {
+                        toastTexto.innerText = 'E-mail de teste enviado com sucesso!';
+                        toastEl.classList.remove('bg-primary', 'bg-danger');
+                        toastEl.classList.add('bg-success');
+                    } else {
+                        toastTexto.innerText = 'Erro: ' + data.mensagem;
+                        toastEl.classList.remove('bg-primary', 'bg-success');
+                        toastEl.classList.add('bg-danger');
+                    }
+                    toast.show();
+                })
+                .catch(err => {
+                    toastTexto.innerText = 'Erro inesperado: ' + err;
+                    toastEl.classList.remove('bg-primary', 'bg-success');
+                    toastEl.classList.add('bg-danger');
+                    toast.show();
+                });
+        });
+    }
+</script>
+")
+
+
+

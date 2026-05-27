@@ -1,0 +1,548 @@
+﻿@model PortalHelpdeskTI.ViewModels.IntegracoesWms.IntegracoesWmsFiltroVm
+@{
+    ViewData["Title"] = "Monitoramento Integrações SAP x WMS";
+    var metodos = ViewBag.MetodosEnvio as string[] ?? Array.Empty<string>();
+}
+
+<link rel="stylesheet" href="~/css/integracoes-wms.css" />
+
+<div class="container-fluid">
+    <div class="card shadow-sm rounded-3 monitor-card">
+        <div class="card-header monitor-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+            <div class="d-flex flex-column">
+                <div class="h4 mb-0">Monitoramento Integrações SAP x WMS</div>
+                <small class="text-muted">Logs de envios (Worker) e retornos (API)</small>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" id="autoRefresh" @(Model.AutoRefresh ? "checked" : "")>
+                    <label class="form-check-label" for="autoRefresh">Auto-refresh (30s)</label>
+                </div>
+
+                <button class="btn btn-sm btn-outline-success" type="button" id="btnExportar">
+                    <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+                </button>
+
+                <button class="btn btn-sm btn-outline-primary" type="button" id="btnAtualizar">
+                    Atualizar
+                </button>
+            </div>
+        </div>
+
+        <div class="card-body">
+
+            <!-- KPIs topo -->
+            <div id="kpiArea" class="kpi-grid mb-3">
+                <div class="kpi-card">
+                    <div class="kpi-label">Eventos</div>
+                    <div class="kpi-value">—</div>
+                    <div class="kpi-sub">Período selecionado</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">OK</div>
+                    <div class="kpi-value">—</div>
+                    <div class="kpi-sub">Classificados como sucesso</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Erros</div>
+                    <div class="kpi-value">—</div>
+                    <div class="kpi-sub">Classificados como falha</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Neutros</div>
+                    <div class="kpi-value">—</div>
+                    <div class="kpi-sub">Sem classificação</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Taxa de sucesso</div>
+                    <div class="kpi-value">—</div>
+                    <div class="kpi-sub">OK / Total</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Janela</div>
+                    <div class="kpi-value kpi-value-date">—</div>
+                    <div class="kpi-sub">Filtro de datas</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs monitor-tabs" id="tabsWms">
+                <li class="nav-item">
+                    <a class="nav-link @(Model.Aba == "envios" ? "active" : "")" href="#" data-aba="envios">Envios (SAP → WMS)</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(Model.Aba == "retornos" ? "active" : "")" href="#" data-aba="retornos">Retornos (WMS → SAP)</a>
+                </li>
+            </ul>
+
+            <!-- Toolbar filtros -->
+            <div class="monitor-toolbar mt-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Data inicial</label>
+                        <input type="date"
+                               class="form-control form-control-sm"
+                               id="dataIni"
+                               value="@Model.DataIni.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Data final</label>
+                        <input type="date"
+                               class="form-control form-control-sm"
+                               id="dataFim"
+                               value="@Model.DataFim.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <div class="col-md-3" id="wrapMetodo">
+                        <label class="form-label mb-1">Método (Envios)</label>
+                        <select class="form-select form-select-sm" id="metodo">
+                            <option value="">(Todos)</option>
+                            @foreach (var m in metodos)
+                            {
+                                <option value="@m" selected="@(Model.Metodo == m)">@m</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Status</label>
+                        <select class="form-select form-select-sm" id="status">
+                            <option value="">Todos</option>
+                            <option value="OK">Somente OK</option>
+                            <option value="ERRO">Somente Erros</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Buscar (Mensagem / JSON)</label>
+                        <input class="form-control form-control-sm"
+                               id="texto"
+                               value="@Model.Texto"
+                               placeholder="ex.: DocNum, DocEntry, ItemCode, CardCode..." />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards resumo -->
+            <div class="mt-3" id="resumoArea">
+                <div class="resumo-cards" id="resumoCards"></div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div id="gridArea" class="table-responsive monitor-grid-wrap"></div>
+        </div>
+
+        <div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2 monitor-footer">
+            <div class="text-muted small" id="lblTotal">—</div>
+
+            <div class="d-flex align-items-center gap-2">
+                <select id="pageSize" class="form-select form-select-sm" style="width:120px">
+                    @{
+                        int[] sizes = new[] { 25, 50, 100, 200 };
+                        foreach (var s in sizes)
+                        {
+                            <option value="@s" selected="@(Model.PageSize == s)">@s / pág</option>
+                        }
+                    }
+                </select>
+
+                <button class="btn btn-sm btn-outline-secondary" id="btnPrev" type="button">Anterior</button>
+                <span class="small text-muted" id="lblPage">—</span>
+                <button class="btn btn-sm btn-outline-secondary" id="btnNext" type="button">Próxima</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Mensagem -->
+<div class="modal fade" id="modalMsg" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Detalhe do log</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <pre class="log-pre" id="modalMsgText"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: JSON -->
+<div class="modal fade" id="modalJson" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="modalJsonTitle">JSON</h6>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCopiarJson">Copiar</button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <pre class="log-pre" id="modalJsonText"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            let aba = "@Model.Aba";
+            let page = @Model.Page;
+            let timer = null;
+
+            const gridArea = document.getElementById("gridArea");
+            const resumoCards = document.getElementById("resumoCards");
+            const kpiArea = document.getElementById("kpiArea");
+
+            const autoRefresh = document.getElementById("autoRefresh");
+            const btnAtualizar = document.getElementById("btnAtualizar");
+            const btnExportar = document.getElementById("btnExportar");
+
+            const dataIni = document.getElementById("dataIni");
+            const dataFim = document.getElementById("dataFim");
+            const metodo = document.getElementById("metodo");
+            const wrapMetodo = document.getElementById("wrapMetodo");
+            const texto = document.getElementById("texto");
+            const pageSize = document.getElementById("pageSize");
+            const lblTotal = document.getElementById("lblTotal");
+            const lblPage = document.getElementById("lblPage");
+            const btnPrev = document.getElementById("btnPrev");
+            const btnNext = document.getElementById("btnNext");
+            const status = document.getElementById("status");
+
+            function getQuery() {
+                const ps = parseInt(pageSize.value || "50", 10);
+                const q = new URLSearchParams();
+                q.set("Aba", aba);
+                q.set("DataIni", dataIni.value);
+                q.set("DataFim", dataFim.value);
+                q.set("Texto", texto.value || "");
+                q.set("Page", String(page));
+                q.set("PageSize", String(ps));
+                q.set("AutoRefresh", autoRefresh.checked ? "true" : "false");
+                q.set("Metodo", (aba === "envios") ? (metodo.value || "") : "");
+                q.set("Status", status.value || "");
+                return q.toString();
+            }
+
+            function getResumoQuery() {
+                const q = new URLSearchParams();
+                q.set("Aba", aba);
+                q.set("DataIni", dataIni.value);
+                q.set("DataFim", dataFim.value);
+                return q.toString();
+            }
+
+            function htmlDecode(str) {
+                if (!str) return "";
+                const txt = document.createElement("textarea");
+                txt.innerHTML = str;
+                return txt.value;
+            }
+
+            function escapeHtml(text) {
+                if (text == null) return "";
+                const div = document.createElement("div");
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            function formatNumber(n) {
+                return Number(n || 0).toLocaleString("pt-BR");
+            }
+
+            function formatPercent(n) {
+                return Number(n || 0).toLocaleString("pt-BR", {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1
+                }) + "%";
+            }
+
+            function openMsgModal(msg) {
+                document.getElementById("modalMsgText").textContent = htmlDecode(msg || "");
+                new bootstrap.Modal(document.getElementById("modalMsg")).show();
+            }
+
+            function openJsonModal(title, json) {
+                document.getElementById("modalJsonTitle").textContent = title || "JSON";
+
+                let raw = htmlDecode(json || "");
+                let pretty = raw;
+
+                try {
+                    const obj = JSON.parse(raw);
+                    pretty = JSON.stringify(obj, null, 2);
+                } catch {
+                    pretty = raw;
+                }
+
+                document.getElementById("modalJsonText").textContent = pretty;
+                new bootstrap.Modal(document.getElementById("modalJson")).show();
+            }
+
+            function updateKpis(total, oks, erros) {
+                const neutros = Math.max(0, total - oks - erros);
+                const taxa = total > 0 ? ((oks / total) * 100) : 0;
+                const janela = `${dataIni.value || "—"} até ${dataFim.value || "—"}`;
+
+                const cards = kpiArea.querySelectorAll(".kpi-card");
+                if (cards.length < 6) return;
+
+                cards[0].querySelector(".kpi-value").textContent = formatNumber(total);
+                cards[1].querySelector(".kpi-value").textContent = formatNumber(oks);
+                cards[2].querySelector(".kpi-value").textContent = formatNumber(erros);
+                cards[3].querySelector(".kpi-value").textContent = formatNumber(neutros);
+                cards[4].querySelector(".kpi-value").textContent = formatPercent(taxa);
+                cards[5].querySelector(".kpi-value").textContent = janela;
+            }
+
+            function renderResumo(resumo) {
+                if (!resumoCards) return;
+
+                const itens = resumo?.itens || [];
+                if (!itens.length) {
+                    resumoCards.innerHTML = "";
+                    return;
+                }
+
+                const abaAtual = (resumo?.aba || "").toLowerCase();
+
+                resumoCards.innerHTML = itens.map(item => {
+                    const total = Number(item.quantidade || 0);
+                    const ok = Number(item.ok || 0);
+                    const erro = Number(item.erro || 0);
+                    const neutro = Number(item.neutro || 0);
+                    const tentativas = Number(item.tentativas || 0);
+
+                    const pctOk = total > 0 ? (ok / total) * 100 : 0;
+                    const pctErro = total > 0 ? (erro / total) * 100 : 0;
+                    const pctNeutro = total > 0 ? (neutro / total) * 100 : 0;
+
+                    const isStatusOk = item.chave === "OK";
+                    const isStatusErro = item.chave === "ERRO";
+                    const extraClass = isStatusOk
+                        ? "card-resumo-ok"
+                        : isStatusErro
+                            ? "card-resumo-erro"
+                            : "card-resumo-neutro";
+
+                    if (abaAtual === "envios") {
+                        return `
+                            <div class="card shadow-sm card-resumo ${extraClass}">
+                                <div class="card-body">
+                                    <div class="card-title-row">
+                                        <div class="card-resumo-titulo">${escapeHtml(item.titulo)}</div>
+                                        <div class="card-resumo-percentual erro">${formatPercent(pctErro)} erro</div>
+                                    </div>
+
+                                    <div class="card-resumo-total">${formatNumber(total)}</div>
+
+                                    <div class="card-resumo-stats">
+                                        <span class="stat ok">OK ${formatNumber(ok)}</span>
+                                        <span class="stat erro">Erro ${formatNumber(erro)}</span>
+                                        <span class="stat neutro">Tentativas ${formatNumber(tentativas)}</span>
+                                    </div>
+
+                                    <div class="health-bar">
+                                        <div class="health-ok" style="width:${pctOk}%"></div>
+                                        <div class="health-erro" style="width:${pctErro}%"></div>
+                                        <div class="health-neutro" style="width:${pctNeutro}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="card shadow-sm card-resumo ${extraClass}">
+                            <div class="card-body">
+                                <div class="card-title-row">
+                                    <div class="card-resumo-titulo">${escapeHtml(item.titulo)}</div>
+                                </div>
+
+                                <div class="card-resumo-total">${formatNumber(total)}</div>
+
+                                <div class="card-resumo-stats">
+                                    <span class="stat neutro">Tentativas ${formatNumber(tentativas)}</span>
+                                </div>
+
+                                <div class="health-bar">
+                                    <div class="${isStatusOk ? "health-ok" : isStatusErro ? "health-erro" : "health-neutro"}" style="width:100%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            }
+
+            async function carregarResumo() {
+                try {
+                    resumoCards.innerHTML = `<div class="text-muted small px-1">Carregando resumo...</div>`;
+
+                    const url = "/IntegracoesWms/Resumo?" + getResumoQuery();
+                    const resp = await fetch(url, { cache: "no-store" });
+                    if (!resp.ok) throw new Error("Falha ao buscar resumo.");
+
+                    const json = await resp.json();
+                    renderResumo(json);
+                } catch {
+                    resumoCards.innerHTML = `<div class="text-danger small px-1">Erro ao carregar resumo.</div>`;
+                }
+            }
+
+            async function carregar() {
+                try {
+                    wrapMetodo.style.display = (aba === "envios") ? "" : "none";
+
+                    await carregarResumo();
+
+                    gridArea.innerHTML = `<div class="p-3 text-muted">Carregando...</div>`;
+
+                    const url = "/IntegracoesWms/Grid?" + getQuery();
+                    const resp = await fetch(url, {
+                        headers: { "X-Requested-With": "XMLHttpRequest" },
+                        cache: "no-store"
+                    });
+
+                    if (!resp.ok) throw new Error("Falha ao carregar grid.");
+
+                    const html = await resp.text();
+                    gridArea.innerHTML = html;
+
+                    const meta = gridArea.querySelector("[data-total]");
+                    if (meta) {
+                        const total = parseInt(meta.getAttribute("data-total") || "0", 10);
+                        const ps = parseInt(meta.getAttribute("data-pagesize") || pageSize.value || "50", 10);
+                        const pg = parseInt(meta.getAttribute("data-page") || String(page), 10);
+
+                        const erros = parseInt(meta.getAttribute("data-erros") || "0", 10);
+                        const oks = parseInt(meta.getAttribute("data-oks") || "0", 10);
+
+                        lblTotal.textContent = `Total: ${formatNumber(total)} | Erros: ${formatNumber(erros)} | OK: ${formatNumber(oks)}`;
+                        lblPage.textContent = `Página ${pg}`;
+                        btnPrev.disabled = (pg <= 1);
+                        btnNext.disabled = (pg * ps >= total);
+
+                        updateKpis(total, oks, erros);
+                    }
+
+                    gridArea.querySelectorAll("[data-fullmsg]").forEach(btn => {
+                        btn.addEventListener("click", function () {
+                            const msg = this.getAttribute("data-fullmsg") || "";
+                            openMsgModal(msg);
+                        });
+                    });
+
+                    gridArea.querySelectorAll(".btn-expand-wms").forEach(btn => {
+                        const targetSelector = btn.getAttribute("data-bs-target");
+                        if (!targetSelector) return;
+
+                        const target = gridArea.querySelector(targetSelector);
+                        if (!target) return;
+
+                        target.addEventListener("shown.bs.collapse", function () {
+                            btn.textContent = "-";
+                            btn.setAttribute("aria-expanded", "true");
+                        });
+
+                        target.addEventListener("hidden.bs.collapse", function () {
+                            btn.textContent = "+";
+                            btn.setAttribute("aria-expanded", "false");
+                        });
+                    });
+
+                    gridArea.querySelectorAll("[data-json]").forEach(btn => {
+                        btn.addEventListener("click", function () {
+                            const json = this.getAttribute("data-json") || "";
+                            const title = this.getAttribute("data-json-title") || "JSON";
+                            openJsonModal(title, json);
+                        });
+                    });
+
+                } catch (e) {
+                    gridArea.innerHTML = `<div class="p-3 text-danger">Erro ao carregar grid: ${e}</div>`;
+                }
+            }
+
+            function resetAutoRefresh() {
+                if (timer) clearInterval(timer);
+                if (autoRefresh.checked) {
+                    timer = setInterval(carregar, 30000);
+                }
+            }
+
+            document.querySelectorAll("#tabsWms a[data-aba]").forEach(a => {
+                a.addEventListener("click", function (ev) {
+                    ev.preventDefault();
+
+                    document.querySelectorAll("#tabsWms a[data-aba]").forEach(x => x.classList.remove("active"));
+                    this.classList.add("active");
+
+                    aba = this.getAttribute("data-aba") || "envios";
+                    page = 1;
+                    carregar();
+                });
+            });
+
+            btnAtualizar.addEventListener("click", function () {
+                page = 1;
+                carregar();
+            });
+
+            btnPrev.addEventListener("click", function () {
+                if (page > 1) {
+                    page--;
+                    carregar();
+                }
+            });
+
+            btnNext.addEventListener("click", function () {
+                page++;
+                carregar();
+            });
+
+            pageSize.addEventListener("change", function () {
+                page = 1;
+                carregar();
+            });
+
+            [dataIni, dataFim, metodo, status].forEach(el => {
+                el.addEventListener("change", function () {
+                    page = 1;
+                    carregar();
+                });
+            });
+
+            texto.addEventListener("keydown", function (e) {
+                if (e.key === "Enter") {
+                    page = 1;
+                    carregar();
+                }
+            });
+
+            autoRefresh.addEventListener("change", resetAutoRefresh);
+
+            btnExportar.addEventListener("click", function () {
+                const url = "/IntegracoesWms/ExportarExcel?" + getQuery();
+                window.location.href = url;
+            });
+
+            document.getElementById("btnCopiarJson").addEventListener("click", async function () {
+                const txt = document.getElementById("modalJsonText").textContent || "";
+                try {
+                    await navigator.clipboard.writeText(txt);
+                } catch { }
+            });
+
+            carregar();
+            resetAutoRefresh();
+        })();
+    </script>
+}

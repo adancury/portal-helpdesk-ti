@@ -1,0 +1,181 @@
+﻿@model PortalHelpdeskTI.ViewModels.Relatorios.DataTablePage
+
+@{
+    ViewData["Title"] = "Histórico de Rupturas";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    string itemFiltro = Context.Request.Query["item"];
+}
+
+<div class="card mb-3 card-rupturas">
+    <!-- CABEÇALHO: título + botão Voltar à direita -->
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Histórico de Rupturas</h5>
+
+        <button type="button"
+                class="btn btn-sm btn-outline-light"
+                onclick="history.back()">
+            ← Voltar
+        </button>
+    </div>
+    <!-- BODY -->
+    <div class="card-body">
+        <form id="filtro-rupturas" class="row g-2">
+            <div class="col-md-4">
+                <label for="item" class="form-label mb-0">Código do produto</label>
+                <input type="text" name="item" id="item"
+                       value="@itemFiltro"
+                       class="form-control form-control-sm"
+                       placeholder="Ex: GR5000">
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-sm btn-primary w-100" id="btn-buscar-rupturas">
+                    Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="grid-rupturas-wrapper">
+    @await Html.PartialAsync("_GridHistoricoRupturas", Model)
+</div>
+
+@section Scripts {
+    <script>
+        // função de paginação (parecida com a dos Representantes)
+        function initPaginacaoRupturas() {
+            const wrapper = document.getElementById('grid-rupturas-wrapper');
+            if (!wrapper) return;
+
+            const table = wrapper.querySelector('#tabela-rupturas');
+            if (!table) return;
+
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            if (!rows.length) return;
+
+            const hiddenPageSize = wrapper.querySelector('#rupturas-page-size');
+            const pageSize = hiddenPageSize && parseInt(hiddenPageSize.value) > 0
+                ? parseInt(hiddenPageSize.value)
+                : 50;
+
+            let currentPage = 1;
+            const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+
+            const btnPrev = wrapper.querySelector('[data-rupturas-prev]');
+            const btnNext = wrapper.querySelector('[data-rupturas-next]');
+            const lblPaginaAtual = wrapper.querySelector('[data-rupturas-pagina-atual]');
+            const lblTotalPaginas = wrapper.querySelector('[data-rupturas-total-paginas]');
+            const lblRodape = wrapper.querySelector('[data-rupturas-pagina-rodape]');
+
+            function renderPage(page) {
+                if (page < 1) page = 1;
+                if (page > totalPages) page = totalPages;
+                currentPage = page;
+
+                const start = (page - 1) * pageSize;
+                const end = page * pageSize;
+
+                rows.forEach((tr, idx) => {
+                    const show = idx >= start && idx < end;
+                    tr.style.display = show ? '' : 'none';
+                });
+
+                if (lblPaginaAtual) lblPaginaAtual.textContent = page;
+                if (lblTotalPaginas) lblTotalPaginas.textContent = totalPages;
+                if (lblRodape) lblRodape.textContent = 'Página ' + page;
+
+                if (btnPrev) btnPrev.disabled = (page <= 1);
+                if (btnNext) btnNext.disabled = (page >= totalPages);
+            }
+
+            if (btnPrev) {
+                btnPrev.onclick = function () {
+                    if (currentPage > 1) renderPage(currentPage - 1);
+                };
+            }
+
+            if (btnNext) {
+                btnNext.onclick = function () {
+                    if (currentPage < totalPages) renderPage(currentPage + 1);
+                };
+            }
+
+            // página inicial
+            renderPage(1);
+        }
+
+        (function () {
+            const form = document.getElementById('filtro-rupturas');
+            const btn = document.getElementById('btn-buscar-rupturas');
+            const wrapper = document.getElementById('grid-rupturas-wrapper');
+            const url = '@Url.Action("HistoricoRupturas", "Relatorios")';
+
+            // chamada do botão Buscar (carrega grid via AJAX)
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = 'Carregando...';
+
+                const params = new URLSearchParams(new FormData(form));
+                params.set('load', 'true');
+
+                fetch(url + '?' + params.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.text())
+                .then(html => {
+                    wrapper.innerHTML = html;
+                    // depois que o HTML novo entra, inicializa a paginação
+                    initPaginacaoRupturas();
+                })
+                .catch(err => console.error(err))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                });
+            });
+
+            // se algum dia você quiser já vir com dados na primeira carga,
+            // é só chamar initPaginacaoRupturas() aqui também:
+            // initPaginacaoRupturas();
+        })();
+    </script>
+}
+@*@section Scripts {
+    <script>
+        (function () {
+            const form = document.getElementById('filtro-rupturas');
+            const btn = document.getElementById('btn-buscar-rupturas');
+            const wrapper = document.getElementById('grid-rupturas-wrapper');
+            const url = '@Url.Action("HistoricoRupturas", "Relatorios")';
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = 'Carregando...';
+
+                const params = new URLSearchParams(new FormData(form));
+                params.set('load', 'true');   // sinaliza pro controller carregar dados
+
+                fetch(url + '?' + params.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.text())
+                .then(html => {
+                    wrapper.innerHTML = html;
+                })
+                .catch(err => console.error(err))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                });
+            });
+        })();
+    </script>
+}*@

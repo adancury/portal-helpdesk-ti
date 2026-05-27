@@ -1,0 +1,120 @@
+@model PortalHelpdeskTI.Models.Inventario.InventarioDescobertaViewModel
+
+@{
+    ViewData["Title"] = "Descoberta de Equipamentos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var tipos = new[] { "Computador", "Celular", "Switch", "Coletor", "Impressora", "Roteador", "Access Point", "Servidor", "Outro" };
+}
+
+<div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+    <div>
+        <h2 class="mb-1">Descoberta de Equipamentos</h2>
+        <div class="text-muted small">A varredura roda a partir do servidor do portal e usa ping/ARP para localizar ativos na rede.</div>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Index">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form asp-action="Descobrir" method="post" class="row g-2 align-items-end">
+            @Html.AntiForgeryToken()
+            <div class="col-md-5">
+                <label asp-for="Faixa" class="form-label">Faixa de IP</label>
+                <input asp-for="Faixa" class="form-control" placeholder="Ex.: 192.168.0.1-254 ou 192.168.0.0/24" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="TipoPadrao" class="form-label">Tipo padrão ao importar</label>
+                <select asp-for="TipoPadrao" class="form-select">
+                    @foreach (var tipo in tipos)
+                    {
+                        <option value="@tipo">@tipo</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button class="btn btn-primary flex-fill" type="submit">
+                    <i class="bi bi-search"></i> Iniciar varredura
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.Mensagem))
+{
+    <div class="alert alert-info">@Model.Mensagem</div>
+}
+
+@if (Model.Resultados.Any())
+{
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>IP</th>
+                        <th>MAC</th>
+                        <th>Hostname</th>
+                        <th>Sistema operacional</th>
+                        <th>Hardware</th>
+                        <th>Status no inventário</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Resultados)
+                    {
+                        <tr>
+                            <td>@item.EnderecoIp</td>
+                            <td>@(item.EnderecoMac ?? "-")</td>
+                            <td>@(item.Hostname ?? "-")</td>
+                            <td>@(item.SistemaOperacional ?? "-")</td>
+                            <td>
+                                <div>@(item.Fabricante ?? "-") @(item.Modelo ?? "")</div>
+                                <div class="small text-muted">Serie: @(item.NumeroSerie ?? "-")</div>
+                            </td>
+                            <td>
+                                @if (item.JaCadastrado)
+                                {
+                                    <span class="badge text-bg-success">Cadastrado</span>
+                                    <span class="small text-muted ms-1">@item.TipoCadastrado - @item.NomeCadastrado</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-warning">Novo</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                @if (item.JaCadastrado && item.EquipamentoId.HasValue)
+                                {
+                                    <a class="btn btn-sm btn-outline-primary" asp-action="Editar" asp-route-id="@item.EquipamentoId">
+                                        <i class="bi bi-pencil"></i> Editar
+                                    </a>
+                                }
+                                else
+                                {
+                                    <form asp-action="ImportarDescoberto" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="enderecoIp" value="@item.EnderecoIp" />
+                                        <input type="hidden" name="enderecoMac" value="@item.EnderecoMac" />
+                                        <input type="hidden" name="hostname" value="@item.Hostname" />
+                                        <input type="hidden" name="sistemaOperacional" value="@item.SistemaOperacional" />
+                                        <input type="hidden" name="fabricante" value="@item.Fabricante" />
+                                        <input type="hidden" name="modelo" value="@item.Modelo" />
+                                        <input type="hidden" name="numeroSerie" value="@item.NumeroSerie" />
+                                        <input type="hidden" name="tipo" value="@Model.TipoPadrao" />
+                                        <button class="btn btn-sm btn-success">
+                                            <i class="bi bi-plus-circle"></i> Importar
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

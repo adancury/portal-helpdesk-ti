@@ -1,0 +1,284 @@
+@model List<PortalHelpdeskTI.Models.Inventario.EquipamentoInventario>
+
+@{
+    ViewData["Title"] = "Inventário de Equipamentos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var tipos = ViewBag.Tipos as string[] ?? Array.Empty<string>();
+    var status = ViewBag.Status as string[] ?? Array.Empty<string>();
+    var totalDispositivos = Model?.Count ?? 0;
+}
+
+@section Styles {
+    <style>
+        body.inventario-body-lock {
+            overflow: hidden;
+        }
+
+        .inventario-page {
+            height: calc(100vh - 150px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .inventario-header,
+        .inventario-filtros {
+            flex: 0 0 auto;
+        }
+
+        .inventario-grid-card {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--bs-border-color);
+            box-shadow: 0 .15rem .4rem rgba(0,0,0,.06);
+        }
+
+        .inventario-grid-card .card-header {
+            flex: 0 0 auto;
+            background: var(--bs-card-cap-bg);
+            border-bottom: 1px solid var(--bs-border-color);
+        }
+
+        .inventario-total {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .3rem .65rem;
+            border-radius: .5rem;
+            background: #f0f6ff;
+            color: #004A80;
+            border: 1px solid rgba(0, 74, 128, .18);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .inventario-grid-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: auto;
+        }
+
+        #tabela-inventario {
+            border-collapse: collapse;
+            border-spacing: 0;
+            min-width: 1080px;
+        }
+
+        #tabela-inventario thead {
+            background-color: #004a80 !important;
+            border-bottom: 2px solid #004A80 !important;
+        }
+
+        #tabela-inventario th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            padding: .75rem;
+            border: none;
+            background-color: #004a80 !important;
+            color: #fff;
+            font-weight: 700;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        #tabela-inventario td {
+            padding: .75rem;
+            vertical-align: middle;
+            border: none;
+        }
+
+        #tabela-inventario tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        #tabela-inventario tbody tr:nth-child(even) {
+            background-color: #f2f6fa;
+        }
+
+        #tabela-inventario tbody tr:hover {
+            background-color: #e9ecef !important;
+        }
+
+        #tabela-inventario .btn-outline-primary {
+            color: #004A80;
+            border-color: #004A80;
+        }
+
+        #tabela-inventario .btn-outline-primary:hover {
+            background-color: #004A80;
+            border-color: #004A80;
+            color: #fff;
+        }
+
+        [data-bs-theme="dark"] .inventario-total {
+            background: #0b213e;
+            color: #e7eef7;
+            border-color: rgba(77, 171, 247, .35);
+        }
+
+        [data-bs-theme="dark"] #tabela-inventario tbody tr:nth-child(odd) {
+            background-color: #212529;
+        }
+
+        [data-bs-theme="dark"] #tabela-inventario tbody tr:nth-child(even) {
+            background-color: #2b3035;
+        }
+
+        [data-bs-theme="dark"] #tabela-inventario tbody tr:hover {
+            background-color: #343a40 !important;
+        }
+
+        @@media (max-width: 767.98px) {
+            .inventario-page {
+                height: calc(100vh - 126px);
+            }
+        }
+    </style>
+}
+
+<div class="inventario-page">
+    <div class="inventario-header d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+        <div>
+            <h2 class="mb-1">Inventário de Equipamentos</h2>
+            <div class="text-muted small">Equipamentos cadastrados manualmente ou descobertos pela rede.</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" asp-action="Descobrir">
+                <i class="bi bi-router"></i> Descobrir na rede
+            </a>
+            <a class="btn btn-primary" asp-action="Novo">
+                <i class="bi bi-plus-circle"></i> Novo equipamento
+            </a>
+        </div>
+    </div>
+
+    <div class="inventario-filtros card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-lg-4">
+                    <label class="form-label">Busca</label>
+                    <input name="filtro" class="form-control" value="@ViewBag.Filtro" placeholder="Nome, IP, MAC, patrimônio, proprietário..." />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tipo</label>
+                    <select name="tipo" class="form-select">
+                        <option value="">Todos</option>
+                        @foreach (var item in tipos)
+                        {
+                            <option value="@item" selected="@(ViewBag.TipoSelecionado == item)">@item</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">Todos</option>
+                        @foreach (var item in status)
+                        {
+                            <option value="@item" selected="@(ViewBag.StatusSelecionado == item)">@item</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Origem</label>
+                    <select name="origem" class="form-select">
+                        <option value="">Todas</option>
+                        <option value="Manual" selected="@(ViewBag.OrigemSelecionada == "Manual")">Manual</option>
+                        <option value="Rede" selected="@(ViewBag.OrigemSelecionada == "Rede")">Rede</option>
+                        <option value="Script" selected="@(ViewBag.OrigemSelecionada == "Script")">Script</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button class="btn btn-secondary flex-fill" type="submit">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                    <a class="btn btn-outline-secondary" asp-action="Index" title="Limpar filtros">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="inventario-grid-card card">
+        <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+            <strong>Dispositivos</strong>
+            <span class="inventario-total">
+                <i class="bi bi-pc-display-horizontal"></i>
+                @totalDispositivos dispositivos listados
+            </span>
+        </div>
+        <div class="inventario-grid-scroll">
+            <table class="table align-middle mb-0" id="tabela-inventario">
+                <thead>
+                    <tr>
+                        <th>Equipamento</th>
+                        <th>Tipo</th>
+                        <th>Rede</th>
+                        <th>Proprietário</th>
+                        <th>Status</th>
+                        <th>Origem</th>
+                        <th>Atualizado</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">Nenhum equipamento encontrado.</td>
+                        </tr>
+                    }
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">@(item.NomeEquipamento ?? item.Hostname ?? "Sem nome")</div>
+                                <div class="small text-muted">SO: @(item.SistemaOperacional ?? "-")</div>
+                                <div class="small text-muted">
+                                    Patrimônio: @(item.Patrimonio ?? "-") | Série: @(item.NumeroSerie ?? "-")
+                                </div>
+                            </td>
+                            <td>@item.Tipo</td>
+                            <td>
+                                <div>@(item.EnderecoIp ?? "-")</div>
+                                <div class="small text-muted">@(item.EnderecoMac ?? item.Hostname ?? "-")</div>
+                            </td>
+                            <td>@item.ProprietarioDescricao</td>
+                            <td><span class="badge text-bg-secondary">@item.Status</span></td>
+                            <td>@item.OrigemCadastro</td>
+                            <td>@item.AtualizadoEm.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1">
+                                    <a class="btn btn-sm btn-outline-primary" asp-action="Editar" asp-route-id="@item.Id" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    @if (item.Status != "Inativo")
+                                    {
+                                        <form asp-action="Desativar" method="post" onsubmit="return confirm('Marcar este equipamento como inativo?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button class="btn btn-sm btn-outline-warning" title="Inativar">
+                                                <i class="bi bi-slash-circle"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.body.classList.add('inventario-body-lock');
+    </script>
+}

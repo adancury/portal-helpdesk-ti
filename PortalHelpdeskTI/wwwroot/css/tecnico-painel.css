@@ -1,71 +1,1517 @@
 ﻿/* Título do painel */
 h2 {
-    color: #004A80;
-    font-weight: bold;
-}
-#tabela-painel2 {
-    border-collapse: separate;
-    border-spacing: 1;
+color: #004A80;
+font-weight: bold;
 }
 
-    /* Cabeçalho da tabela */
-    #tabela-painel2 thead {
-        background-color: #F37021;
-        border-bottom: 2px solid #004A80;
-    }
-    #tabela-painel2 th {
-        font-weight: 600;
-        color: #004A80;
-        padding: 0.75rem;
-        border: none;
-    }
 /* Tabela geral */
 #tabela-painel {
-    border-collapse: separate;
-    border-spacing: 0;
+border-collapse: collapse;
+border-spacing: 0;
 }
 
-    /* Cabeçalho da tabela */
+/* Corpo da tabela */
+#tabela-painel td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border: none;
+}
+
+/* Linhas alternadas */
+#tabela-painel tbody tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+#tabela-painel tbody tr:nth-child(even) {
+    background-color: #f2f6fa;
+}
+
+/* Hover nas linhas */
+#tabela-painel tbody tr:hover {
+    background-color: #e9ecef !important;
+}
+
+/* Botão Atender */
+#tabela-painel .btn-primary {
+    background-color: #004A80;
+    border-color: #004A80;
+}
+
+#tabela-painel .btn-primary:hover {
+    background-color: #0066aa;
+    border-color: #0066aa;
+}
+
+/* Cabeçalho da tabela */
     #tabela-painel thead {
-        background-color: #f8f9fa;
-        border-bottom: 2px solid #004A80;
+        background-color: #004a80 !important; /* Fundo azul */
+        border-bottom: 2px solid #004A80 !important;
     }
 
     #tabela-painel th {
-        font-weight: 600;
-        color: #004A80;
+        /*font-weight: 600;*/
+        font-weight: bold;
+        /*color: #004a80 !important;*/ /* Texto branco */
         padding: 0.75rem;
         border: none;
     }
+.badge-notificacao {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 12px;
+    height: 12px;
+    background-color: red;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+.bolinha-notificacao {
+    width: 10px;
+    height: 10px;
+    padding: 0 !important;
+    pointer-events: none; /* Permite clicar no botão por baixo */
+    background-color: red;
+    border-radius: 50%;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    transform: translate(-50%, -50%);
+    border: 1px solid white;
+}
+.tr-destaque {
+    animation: destaque 2s ease-out;
+}
 
-    /* Corpo da tabela */
-    #tabela-painel td {
-        padding: 0.75rem;
-        vertical-align: middle;
-        border: none;
+/* Animação leve para quando um novo chamado chega */
+@keyframes destaque {
+    from {
+        background-color: #ffd700;
     }
 
-    /* Linhas alternadas */
-    #tabela-painel tbody tr:nth-child(odd) {
+    to {
         background-color: #ffffff;
     }
+}
+.bolinha-vermelha {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background-color: red;
+    border-radius: 50%;
+}
+/* Linha de destaque de novo chamado */
+tr.table-warning {
+    background-color: #ffdd99 !important;
+    border-left: 5px solid #ffa500;
+}
+.toast-laranja {
+    background-color: #F37021 !important;
+    color: white !important;
+    font-weight: bold;
+}
 
-    #tabela-painel tbody tr:nth-child(even) {
-        background-color: #f2f6fa;
+    .toast-laranja .toast-body {
+        color: white !important;
+        font-weight: bold;
+    }
+.scroll-tabela {
+    overflow-x: auto;
+}
+.dropdown-filtro-status {
+    position: absolute;
+    z-index: 999;
+    background-color: #fff;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    min-width: 220px;
+}
+/* =========================================================
+   PortalHelpdeskTI — Quizzes
+   Autor: BRW TI
+   Data: 2025-09-04
+   Observação: estilos focados em classes/estrutura usada nas
+   views fornecidas (Index/Take/Resultado + Admin/Novo/Editar).
+   ========================================================= */
+
+/* Paleta baseada no Bootstrap (herda se existir); fallback genéricos */
+:root {
+    --quiz-accent: var(--bs-primary, #0d6efd);
+    --quiz-muted: var(--bs-secondary-color, #6c757d);
+    --quiz-border: var(--bs-border-color, #dee2e6);
+    --quiz-bg: var(--bs-body-bg, #fff);
+    --quiz-card-bg: var(--bs-card-bg, #fff);
+    --quiz-success: var(--bs-success, #198754);
+    --quiz-danger: var(--bs-danger, #dc3545);
+    --quiz-warning: var(--bs-warning, #ffc107);
+}
+
+/* ===== Layout geral das páginas de quiz ===== */
+.quiz-ui h2 {
+    font-weight: 600;
+    letter-spacing: .2px;
+    margin-bottom: .75rem;
+}
+
+.quiz-ui p.text-muted {
+    color: var(--quiz-muted) !important;
+}
+
+/* ===== Cards da listagem (Views/Quizzes/Index) ===== */
+.quiz-card .card {
+    background: var(--quiz-card-bg);
+    border: 1px solid var(--quiz-border);
+    transition: transform .08s ease, box-shadow .08s ease;
+}
+
+    .quiz-card .card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0.25rem 1rem rgba(0,0,0,.06);
     }
 
-    /* Hover nas linhas */
-    #tabela-painel tbody tr:hover {
-        background-color: #e9ecef !important;
+.quiz-card .card-title {
+    font-size: 1.05rem;
+    margin-bottom: .25rem;
+}
+
+.quiz-badge {
+    display: inline-block;
+    font-size: .75rem;
+    padding: .15rem .5rem;
+    border: 1px solid var(--quiz-border);
+    border-radius: .5rem;
+    color: var(--quiz-muted);
+    background: rgba(0,0,0,.02);
+}
+
+/* ===== Página de execução (Views/Quizzes/Take) ===== */
+.quiz-question {
+    background: var(--quiz-bg);
+    border: 1px solid var(--quiz-border) !important;
+    border-radius: .5rem;
+    transition: background-color .12s ease, border-color .12s ease;
+}
+
+    .quiz-question:hover {
+        background: rgba(0,0,0,.02);
     }
 
-    /* Botão Atender */
-    #tabela-painel .btn-primary {
-        background-color: #004A80;
-        border-color: #004A80;
+    .quiz-question h5 {
+        font-size: 1rem;
+        margin: 0 0 .5rem 0;
     }
 
-        #tabela-painel .btn-primary:hover {
-            background-color: #0066aa;
-            border-color: #0066aa;
+.form-check {
+    padding-top: .15rem;
+    padding-bottom: .15rem;
+}
+
+.form-check-input {
+    width: 1.05rem;
+    height: 1.05rem;
+    margin-top: .25rem;
+    cursor: pointer;
+}
+
+    .form-check-input:focus {
+        outline: none;
+        box-shadow: 0 0 0 .2rem rgba(13,110,253,.15);
+        border-color: var(--quiz-accent);
+    }
+
+.form-check-label {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Timer (usa o #tempoRestante do Take.cshtml) */
+#tempoRestante {
+    font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-weight: 600;
+}
+
+/* Botões */
+.quiz-actions .btn {
+    min-width: 140px;
+}
+
+/* ===== Página de resultado ===== */
+.result-card .card {
+    border: 1px solid var(--quiz-border);
+}
+
+.result-card h3 {
+    font-weight: 600;
+    font-size: 1.25rem;
+}
+
+.result-metric {
+    display: inline-block;
+    padding: .35rem .6rem;
+    border-radius: .5rem;
+    background: rgba(25, 135, 84, .08);
+    color: var(--quiz-success);
+    border: 1px solid rgba(25, 135, 84, .25);
+}
+
+/* ===== Admin (Views/AdminQuizzes/*) ===== */
+.admin-quizzes .table {
+    border-color: var(--quiz-border);
+}
+
+    .admin-quizzes .table thead th {
+        font-size: .85rem;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        color: var(--quiz-muted);
+        border-bottom-width: 1px;
+    }
+
+    .admin-quizzes .table td,
+    .admin-quizzes .table th {
+        vertical-align: middle;
+    }
+
+.admin-quizzes .section {
+    border: 1px solid var(--quiz-border);
+    border-radius: .5rem;
+    padding: .75rem;
+    background: var(--quiz-card-bg);
+}
+
+/* Formulários de Admin: inputs mais aconchegantes */
+.admin-quizzes .form-control,
+.admin-quizzes .form-select {
+    border-color: var(--quiz-border);
+}
+
+    .admin-quizzes .form-control:focus,
+    .admin-quizzes .form-select:focus {
+        border-color: var(--quiz-accent);
+        box-shadow: 0 0 0 .2rem rgba(13,110,253,.15);
+    }
+
+/* Botões discretamente mais “elevados” */
+.btn {
+    border-radius: .5rem;
+}
+
+.btn-primary, .btn-success, .btn-secondary {
+    box-shadow: 0 .1rem .4rem rgba(0,0,0,.06);
+}
+
+    .btn-primary:hover, .btn-success:hover, .btn-secondary:hover {
+        transform: translateY(-1px);
+    }
+
+/* ===== Acessibilidade e foco ===== */
+.quiz-ui a:focus, .quiz-ui button:focus {
+    outline: 2px dashed var(--quiz-accent);
+    outline-offset: 2px;
+}
+
+/* ===== Responsividade ===== */
+@media (max-width: 767.98px) {
+    .quiz-card .card {
+        height: 100%;
+    }
+
+    .quiz-actions .btn {
+        width: 100%;
+    }
+
+    .form-check-input {
+        width: 1.15rem;
+        height: 1.15rem;
+    }
+}
+
+/* ===== Dark mode (respeita o preferido do usuário) ===== */
+@media (prefers-color-scheme: dark) {
+    .quiz-card .card,
+    .admin-quizzes .section,
+    .result-card .card {
+        background: #101214;
+        border-color: #2b2f36;
+    }
+
+    .quiz-question {
+        background: #0c0e10;
+        border-color: #2b2f36 !important;
+    }
+
+        .quiz-question:hover {
+            background: #121419;
         }
+
+    .quiz-badge {
+        border-color: #2b2f36;
+        background: #0c0e10;
+        color: #a9b1ba;
+    }
+
+    .result-metric {
+        background: rgba(25, 135, 84, .15);
+        border-color: rgba(25, 135, 84, .35);
+    }
+}
+/* ==== Força tema claro nas páginas de Quizzes (Admin e Usuário) ==== */
+.admin-quizzes,
+.quiz-ui {
+    /* se usa Bootstrap 5.3+ isso ajuda a clarear controles nativos */
+    color-scheme: light;
+    --quiz-bg: #fff;
+    --quiz-card-bg: #fff;
+    --quiz-border: #dee2e6;
+}
+
+    /* superfícies */
+    .admin-quizzes .section,
+    .quiz-question,
+    .result-card .card,
+    .quiz-card .card,
+    .admin-quizzes .card {
+        background: #fff !important;
+        border-color: #dee2e6 !important;
+        color: #212529 !important;
+    }
+
+    /* inputs e selects */
+    .admin-quizzes .form-control,
+    .admin-quizzes .form-select,
+    .quiz-ui .form-control,
+    .quiz-ui .form-select {
+        background-color: #fff !important;
+        color: #212529 !important;
+        border-color: #ced4da !important;
+    }
+
+        .admin-quizzes .form-control::placeholder,
+        .quiz-ui .form-control::placeholder {
+            color: #6c757d !important;
+        }
+
+    /* tabelas */
+    .admin-quizzes .table {
+        background-color: #fff !important;
+    }
+
+        .admin-quizzes .table td,
+        .admin-quizzes .table th {
+            background-color: transparent !important;
+        }
+
+/* se o SO do usuário estiver em dark mode, ainda assim mantenha claro nessas telas */
+@media (prefers-color-scheme: dark) {
+    .admin-quizzes .section,
+    .quiz-question,
+    .result-card .card,
+    .quiz-card .card,
+    .admin-quizzes .card {
+        background: #fff !important;
+        border-color: #dee2e6 !important;
+        color: #e9ecef !important; /* texto será herdado; ajuste se precisar */
+        color: #212529 !important; /* preferencial em tema claro */
+    }
+}
+/* ===== Dropdown de Filtro (light/dark) ===== */
+.dropdown-filtro-status {
+    position: absolute;
+    z-index: 1050;
+    min-width: 260px;
+    padding: .9rem 1rem;
+    border-radius: .75rem;
+    border: 1px solid var(--df-border);
+    background: var(--df-bg);
+    color: var(--df-fg);
+    box-shadow: 0 12px 28px rgba(0,0,0,.28);
+}
+
+    /* Tipografia/inputs dentro do menu */
+    .dropdown-filtro-status .form-check {
+        margin-bottom: .5rem;
+    }
+
+    .dropdown-filtro-status .form-check-label {
+        color: var(--df-fg);
+    }
+
+    .dropdown-filtro-status .form-check-input {
+        width: 1.05rem;
+        height: 1.05rem;
+        margin-top: .15rem;
+        background-color: transparent;
+        border-color: var(--df-border);
+        accent-color: var(--bs-primary); /* cor do check */
+    }
+
+    .dropdown-filtro-status .btn {
+        width: 100%;
+    }
+
+/* Paleta - LIGHT */
+:root {
+    --df-bg: #ffffff;
+    --df-fg: #212529;
+    --df-border: #ced4da;
+}
+
+/* Paleta - DARK */
+[data-bs-theme="dark"] {
+    --df-bg: #101922; /* fundo do popup */
+    --df-fg: #e7eef7; /* texto */
+    --df-border: #263244; /* borda */
+}
+
+    /* foco/hover mais visíveis no dark */
+    [data-bs-theme="dark"] .dropdown-filtro-status .form-check-input:focus {
+        box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb), .25);
+    }
+/* Card e header no padrão do painel */
+.relatorio-card .card-header {
+    padding: .75rem 1rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.relatorio-card .avatar-32 {
+    width: 32px;
+    height: 32px;
+}
+
+/* Área rolável da grid – só dentro dos relatórios */
+.relatorio-card .table-wrap {
+    max-height: calc(100vh - 240px);
+    overflow: auto;
+}
+
+/* Cabeçalho 'grudado' */
+.relatorio-table thead.sticky-head th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+/* Afinar e evitar quebra feia */
+.relatorio-table th, .relatorio-table td {
+    white-space: nowrap;
+}
+/* manter tudo em uma linha na tabela */
+.relatorio-table th,
+.relatorio-table td {
+    white-space: nowrap;
+}
+
+/* célula com truncamento + reticências */
+.truncate-cell {
+    display: inline-block;
+    max-width: 600px; /* ajuste fino aqui conforme sua largura desejada */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+/* Mantém nowrap e ellipsis, mas deixa o browser calcular larguras naturalmente */
+.relatorio-table th,
+.relatorio-table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 280px; /* define limite por célula */
+}
+
+    /* conteúdo completo no hover */
+    .relatorio-table td span.truncate-cell {
+        display: inline-block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Sem quebra de linha e com reticências em TODAS as células */
+    .relatorio-table th,
+    .relatorio-table td {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Garante que o conteúdo ocupe 100% da célula para o ellipsis funcionar bem */
+    .relatorio-table .truncate-cell {
+        display: block; /* block para ocupar toda a largura da td */
+        width: 100%; /* 100% da largura disponível da célula */
+        overflow: hidden; /* necessário para text-overflow */
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+.relatorio-table th, .relatorio-table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 280px; /* ajuste fino conforme necessário */
+}
+
+.relatorio-table .truncate-cell {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* Garante que o pager do relatório não herde posição fixa/pegajosa de estilos globais */
+.relatorio-card .rel-pager {
+    position: static !important;
+}
+
+/* Mantém o pager colado no card e sem margem extra */
+.relatorio-card .rel-pager-row {
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.relatorio-card .pagination {
+    margin-bottom: 0;
+}
+/* Pager do relatório não herda posição fixa/pegajosa */
+.relatorio-card .rel-pager {
+    position: static !important;
+    display: block !important;
+}
+
+/* Linha do pager colada ao topo da grid */
+.relatorio-card .rel-pager-row {
+    border-bottom: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg);
+    position: relative;
+    z-index: 1; /* acima do conteúdo rolável da tabela */
+}
+
+    /* Zera margens para não “sumir” por colapso */
+    .relatorio-card .rel-pager-row .pagination {
+        margin: 0;
+    }
+/* Sidebar */
+.rel-sidebar {
+    border: 1px solid var(--bs-border-color);
+}
+
+.rel-side-link {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .75rem;
+    border-radius: .5rem;
+    color: var(--bs-body-color);
+}
+
+    .rel-side-link .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--bs-border-color);
+    }
+
+    .rel-side-link.active, .rel-side-link:hover {
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+    }
+
+        .rel-side-link.active .dot {
+            background: var(--bs-primary);
+        }
+
+/* Cards */
+.rel-card {
+    border: 1px solid var(--bs-border-color);
+}
+
+    .rel-card .rel-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bs-body-tertiary-bg);
+        font-size: 18px;
+    }
+.relatorio-table th:first-child,
+.relatorio-table td:first-child {
+    width: 36px;
+}
+/* ===== Responsividade – página de Relatórios ===== */
+@media (max-width: 767.98px) {
+    /* Header empilhado no mobile */
+    .rel-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rel-header-left {
+        margin-bottom: .25rem;
+    }
+
+    .rel-header-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+        .rel-header-right .input-group {
+            width: 100%; /* busca ocupa toda a largura */
+        }
+
+        .rel-header-right .dropdown > .btn {
+            white-space: nowrap; /* não quebra o texto "Período" */
+        }
+}
+/* =============================
+   RESPONSIVO – Dados de Produtos
+   ============================= */
+@media (max-width: 768px) {
+
+    /* Header vira coluna */
+    .dp-header {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.75rem;
+    }
+
+        /* Bloco da direita vira linhas múltiplas */
+        .dp-header > .d-flex:last-child {
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 0.5rem;
+        }
+
+        /* Campo de busca ocupa largura total */
+        .dp-header .input-group {
+            width: 100% !important;
+        }
+
+            /* Caixa “Itens 200” também ocupa largura estável */
+            .dp-header #selPageSize,
+            .dp-header .input-group select {
+                min-width: 120px;
+            }
+
+        /* Botões ficam lado a lado sem quebrar texto */
+        .dp-header .btn {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+    /* A tabela vira scroll horizontal (não deforma) */
+    .relatorio-card .table-wrap {
+        width: 100%;
+        max-height: none; /* <--- NOVO: sem limite de altura no mobile */
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Largura mínima da tabela para evitar espremer colunas */
+    .relatorio-table {
+        min-width: 800px;
+    }
+}
+
+/* =============================
+   RESPONSIVO – Histórico de Rupturas
+   ============================= */
+
+/* wrapper com scroll horizontal */
+.table-wrap-rupturas {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* evita tabelas espremidas em desktop também */
+.relatorio-table-rupturas {
+    width: 100%;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+
+    /* Card mais “cheio” no mobile */
+    .card-rupturas {
+        border-radius: 1rem;
+    }
+
+        /* Título + botão voltar empilhados se faltar espaço */
+        .card-rupturas .card-header {
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+
+            .card-rupturas .card-header h5 {
+                margin-bottom: 0;
+            }
+
+    /* Campos do filtro ocupam largura cheia (Bootstrap já ajuda, isso é só reforço) */
+    #filtro-rupturas .col-md-4,
+    #filtro-rupturas .col-md-2 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    /* Tabela ganha largura mínima e scroll lateral */
+    .table-wrap-rupturas {
+        max-height: none;
+        margin-top: .25rem;
+    }
+
+    .relatorio-table-rupturas {
+        min-width: 720px; /* ajusta se precisar de mais/menos */
+        font-size: .85rem; /* levemente menor pra caber melhor */
+    }
+
+        .relatorio-table-rupturas th,
+        .relatorio-table-rupturas td {
+            white-space: nowrap;
+        }
+}
+
+/* =============================
+   RESPONSIVO – Rupturas Previsão
+   ============================= */
+
+/* wrapper com scroll horizontal */
+.table-wrap-rupturas-prev {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Tabela ocupa toda a largura (desktop) */
+.relatorio-table-rupturas-prev {
+    width: 100%;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+
+    /* Card um pouco mais aconchegante no mobile */
+    .card-ruptura-prev {
+        border-radius: 1rem;
+    }
+
+        /* Header (título + voltar) pode quebrar em duas linhas sem ficar feio */
+        .card-ruptura-prev .card-header {
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+
+            .card-ruptura-prev .card-header h5 {
+                margin-bottom: 0;
+            }
+
+    /* Campos do filtro ocupam largura cheia */
+    #filtro-previsao .col-md-4,
+    #filtro-previsao .col-md-2 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    /* wrapper da tabela sem limite de altura no mobile */
+    .table-wrap-rupturas-prev {
+        max-height: none;
+        margin-top: .25rem;
+    }
+
+    /* Tabela com largura mínima e fonte levemente menor */
+    .relatorio-table-rupturas-prev {
+        min-width: 720px; /* ajusta se precisar */
+        font-size: .85rem;
+    }
+
+        .relatorio-table-rupturas-prev th,
+        .relatorio-table-rupturas-prev td {
+            white-space: nowrap;
+        }
+}
+
+/* =============================
+   RESPONSIVO – Representantes de Vendas
+   ============================= */
+@media (max-width: 768px) {
+
+    /* Header (título + filtro) empilhado */
+    .card-representantes .rep-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    /* Form de filtro em várias linhas */
+    .card-representantes #frm-filtro {
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 0.5rem 0.75rem;
+    }
+
+        /* Cada "bloco" do form ocupa a linha inteira */
+        .card-representantes #frm-filtro > div {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+
+        /* Inputs ocupam largura total do bloco */
+        .card-representantes #frm-filtro .form-control {
+            width: 100%;
+        }
+
+        /* Grupo Aplicar / Exportar em linha, mas na própria faixa */
+        .card-representantes #frm-filtro .d-flex.gap-2 {
+            justify-content: flex-start;
+        }
+
+        /* Botão Voltar alinhado à direita e sem quebrar texto */
+        .card-representantes #frm-filtro > .d-flex:last-child {
+            justify-content: flex-end;
+        }
+
+        .card-representantes #frm-filtro .btn {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+    /* Wrapper com scroll horizontal */
+    .card-representantes #grid-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Tabela mais larga no mobile, sem table-layout fixed */
+    .card-representantes #tabela-representantes {
+        min-width: 900px; /* aumenta a largura mínima pra não esmagar */
+        font-size: 0.85rem;
+        table-layout: auto !important; /* <-- mata o fixed no mobile */
+    }
+        /* Cabeçalhos e células sem quebra estranha */
+        .card-representantes #tabela-representantes th,
+        .card-representantes #tabela-representantes td {
+            white-space: nowrap;
+            word-break: normal;
+        }
+        /* Coluna "Ativo" bem estreita */
+        .card-representantes #tabela-representantes th:last-child,
+        .card-representantes #tabela-representantes td:last-child {
+            width: 70px;
+        }
+}
+/* Lista de anexos na tela de aprovações */
+.aprov-anexo-list .aprov-anexo-item {
+    background-color: transparent !important; /* remove o fundo escuro */
+    border: 0; /* remove borda da list-group-item */
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+}
+
+.aprov-anexo-text {
+    font-size: 0.85rem; /* texto menor */
+}
+
+.aprov-anexo-btn {
+    font-size: 0.8rem; /* botão menor */
+    padding: 0.15rem 0.6rem;
+}
+.aprov-anexo-list {
+    margin-bottom: 0;
+}
+
+.card .aprov-anexo-list {
+    padding-left: 0;
+}
+/* bloco de anexos na tela de aprovações */
+.aprov-anexos-wrapper {
+    margin: 0; /* encosta dentro do card-body */
+}
+
+/* linha de anexo sem fundo */
+.aprov-anexo-row {
+    background: transparent !important;
+    border: 0;
+    padding: 0.15rem 0; /* bem compacto */
+}
+
+/* texto menor */
+.aprov-anexo-text {
+    font-size: 0.85rem;
+}
+
+/* botão menor */
+.aprov-anexo-btn {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.6rem;
+}
+/* ================================
+   Rupturas – Modo Dark (cores alinhadas às badges)
+   ================================ */
+
+[data-bs-theme="dark"] .ruptura-card {
+    background: #2b2f36 !important;
+    color: #f0f0f0 !important;
+    border-radius: 0.75rem;
+    border-width: 0;
+    box-shadow: 0 0.35rem 0.75rem rgba(0,0,0,.35);
+}
+
+[data-bs-theme="dark"] .ruptura-rupturado {
+    background: #111827 !important;
+    border-left: 4px solid #9ca3af !important;
+}
+
+/* ALTO – vermelho (bg-danger) */
+[data-bs-theme="dark"] .ruptura-alto {
+    background: #3b0a0a !important;
+    border-left: 4px solid #ef4444 !important;
+}
+
+/* MÉDIO – amarelo (bg-warning) */
+[data-bs-theme="dark"] .ruptura-medio {
+    background: #31220a !important;
+    border-left: 4px solid #f59e0b !important;
+}
+
+/* BAIXO – verde (bg-success) */
+[data-bs-theme="dark"] .ruptura-baixo {
+    background: #06291a !important;
+    border-left: 4px solid #22c55e !important;
+}
+
+/* SEM RISCO – cinza (bg-secondary) */
+[data-bs-theme="dark"] .ruptura-ok {
+    background: #252933 !important;
+    border-left: 4px solid #6c757d !important;
+}
+
+/* TÍTULOS DENTRO DOS CARDS */
+[data-bs-theme="dark"] .ruptura-card .small {
+    color: #c5c5c5 !important;
+}
+
+/* VALORES */
+[data-bs-theme="dark"] .ruptura-card .fs-4 {
+    color: #ffffff !important;
+}
+
+/* HOVER PARA DEIXAR INTERATIVO */
+[data-bs-theme="dark"] .ruptura-card:hover {
+    background: #353a42 !important;
+    transition: .2s ease;
+    transform: translateY(-2px);
+}
+/* ================================
+   KPIs CHAMADOS - MODO DARK
+   ================================ */
+
+[data-bs-theme="dark"] .kpi-card {
+    background: #2b2f36 !important;
+    color: #f0f0f0 !important;
+    border-radius: 0.75rem;
+    border-width: 0;
+    box-shadow: 0 0.35rem 0.75rem rgba(0,0,0,.35);
+}
+
+/* Total de chamados (azul) */
+[data-bs-theme="dark"] .kpi-total {
+    background: #0b213e !important;
+    border-left: 4px solid #3b82f6 !important;
+}
+
+/* Em andamento (âmbar) */
+[data-bs-theme="dark"] .kpi-andamento {
+    background: #31220a !important;
+    border-left: 4px solid #f59e0b !important;
+}
+
+/* Resolvidos (verde) */
+[data-bs-theme="dark"] .kpi-resolvidos {
+    background: #06291a !important;
+    border-left: 4px solid #22c55e !important;
+}
+
+/* Urgentes (vermelho) */
+[data-bs-theme="dark"] .kpi-urgentes {
+    background: #3b0a0a !important;
+    border-left: 4px solid #ef4444 !important;
+}
+
+/* Título/label dentro dos cards */
+[data-bs-theme="dark"] .kpi-card .small {
+    color: #c5c5c5 !important;
+}
+
+/* Valores (números) */
+[data-bs-theme="dark"] .kpi-card .fs-4 {
+    color: #ffffff !important;
+}
+
+/* Hover para dar “vida” igual rupturas */
+[data-bs-theme="dark"] .kpi-card:hover {
+    background: #353a42 !important;
+    transition: .2s ease;
+    transform: translateY(-2px);
+}
+/* ================================
+   KPIs CHAMADOS - MODO LIGHT
+   ================================ */
+
+.kpi-card {
+    border-radius: 0.75rem;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.15rem 0.4rem rgba(0,0,0,.06);
+}
+
+/* Total de chamados (azul suave) */
+.kpi-total {
+    background: #f0f6ff; /* bem leve, estilo bg-primary-subtle */
+    border-left: 4px solid #0d6efd;
+}
+
+/* Em andamento (âmbar suave) */
+.kpi-andamento {
+    background: #fff7e6; /* estilo bg-warning-subtle */
+    border-left: 4px solid #f59f00;
+}
+
+/* Resolvidos (verde suave) */
+.kpi-resolvidos {
+    background: #eafaf2; /* estilo bg-success-subtle */
+    border-left: 4px solid #198754;
+}
+
+/* Urgentes (vermelho suave) */
+.kpi-urgentes {
+    background: #ffecec; /* estilo bg-danger-subtle */
+    border-left: 4px solid #dc3545;
+}
+
+/* Tipografia interna no light */
+.kpi-card .small {
+    color: #6c757d;
+}
+
+.kpi-card .fs-4 {
+    color: #212529;
+}
+/* ============================
+   Previsão de Ruptura – Cards
+   (cores alinhadas com as badges)
+   ============================ */
+
+.ruptura-card {
+    border-radius: 0.75rem;
+    border: none;
+    color: #fff;
+}
+
+/* RUPTURADO */
+.ruptura-rupturado {
+    background-color: #212529;
+}
+
+/* ALTO – vermelho (bg-danger) */
+.ruptura-alto {
+    background-color: #dc3545;
+}
+
+/* MÉDIO – amarelo (bg-warning) */
+.ruptura-medio {
+    background-color: #ffc107;
+    color: #212529; /* texto escuro, igual badge warning */
+}
+
+/* BAIXO – verde (bg-success) */
+.ruptura-baixo {
+    background-color: #198754;
+}
+
+/* SEM RISCO – cinza (bg-secondary) */
+.ruptura-ok {
+    background-color: #6c757d;
+}
+/* Mantém largo no mobile */
+.filtros-dashboard {
+    width: 100%;
+}
+
+/* Desktop: mantém alinhado à direita */
+@media (min-width: 768px) {
+    .filtros-dashboard {
+        width: auto !important; /* deixa o bloco com tamanho natural */
+        margin-left: auto !important; /* empurra para a direita */
+    }
+
+    .filtro-data-input {
+        max-width: 150px; /* ajusta a largura */
+    }
+}
+.filtro-depto-dropdown {
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .filtros-dashboard {
+        width: auto !important;
+        margin-left: auto !important;
+    }
+
+    .filtro-data-input {
+        max-width: 150px;
+    }
+
+    .filtro-depto-dropdown {
+        width: auto;
+        min-width: 200px;
+    }
+}
+.kpi-trends {
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.15rem;
+    margin-bottom: 0.35rem;
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+}
+
+.kpi-chip {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.18);
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+    .kpi-chip span {
+        margin-left: 4px;
+    }
+.kpi-comparativos {
+    margin-left: auto; /* empurra para a direita dentro do flex */
+    gap: 0.15rem; /* espaçamento vertical entre os badges (além do mb-1) */
+}
+
+.kpi-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    opacity: 0.85;
+}
+
+.kpi-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.kpi-amount {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+/* Base dos cards do Dashboard de Liberação */
+.liberacao-card {
+    border: 0;
+    background: transparent;
+    border-radius: 18px;
+    height: 100%;
+}
+
+.liberacao-card-inner {
+    border-radius: 18px;
+    border: 1px solid transparent;
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    padding: 0.6rem 1rem;
+    color: #f8f9fa;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.45);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, background 0.15s ease-out, opacity 0.15s ease-out;
+    height: 100%;
+}
+
+    /* Hover geral */
+    .liberacao-card-inner:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 30px rgba(0,0,0,0.6);
+        opacity: 0.96;
+    }
+
+/* =========================
+   VARIAÇÕES DE COR
+   ========================= */
+
+/* Total de pedidos */
+.liberacao-total .liberacao-card-inner {
+    background-image: linear-gradient(#20242b, #20242b), /* preenchimento interno */
+    linear-gradient(135deg, #4dabf7, #1864ab); /* borda */
+}
+
+/* Liberado dentro do SLA */
+.liberacao-dentro-sla .liberacao-card-inner {
+    background-image: linear-gradient(#113323, #113323), linear-gradient(135deg, #51cf66, #2b8a3e);
+}
+
+/* Liberados com atraso */
+.liberacao-atraso .liberacao-card-inner {
+    background-image: linear-gradient(#3a260b, #3a260b), linear-gradient(135deg, #ff922b, #e8590c);
+}
+
+/* Sem bloqueio */
+.liberacao-sem-bloqueio .liberacao-card-inner {
+    background-image: linear-gradient(#0b213e, #0b213e), /* interior mais escuro/menos intenso */
+    linear-gradient(135deg, #4dabf7, #1d4ed8); /* borda azul forte */
+}
+
+/* Recusados */
+.liberacao-recusados .liberacao-card-inner {
+    background-image: linear-gradient(#3a1113, #3a1113), linear-gradient(135deg, #ff6b6b, #c92a2a);
+}
+/* Pendências (card grande) */
+.liberacao-pendencias .liberacao-card-inner {
+    background-image: linear-gradient(#3b2a06, #3b2a06), /* interior escuro/menos “gritante” */
+    linear-gradient(135deg, #ffd43b, #f59f00); /* borda amarelo/âmbar forte */
+    color: #f8f9fa; /* texto claro para contraste */
+}
+/* Devolvidos (pedidos faturados e depois devolvidos) */
+.liberacao-devolvidos .liberacao-card-inner {
+    background-image: linear-gradient(#2b1433, #2b1433), /* fundo interno */
+    linear-gradient(135deg, #da77f2, #862e9c); /* borda roxo/violeta */
+}
+.valor-dev-wrapper span {
+    line-height: 1.1;
+}
+.progress-sla {
+    height: 18px;
+    background-color: #2b2b2b;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+    .progress-sla .progress-bar {
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* faixas de cor */
+    .progress-sla .sla-azul {
+        background-color: #0d6efd;
+    }
+
+    .progress-sla .sla-verde {
+        background-color: #198754;
+    }
+
+    .progress-sla .sla-amarelo {
+        background-color: #ffc107;
+        color: #212529;
+    }
+
+    .progress-sla .sla-laranja {
+        background-color: #fd7e14;
+    }
+
+    .progress-sla .sla-vermelho {
+        background-color: #dc3545;
+    }
+/* Badges da coluna SITUAÇÃO alinhadas com os cards do topo */
+
+/* Ajuste esses hex para bater 100% com as cores reais dos cards */
+.badge-sit-devolvido {
+    background-color: #5b2a86; /* roxo do card "Devolvidos" */
+    color: #ffffff;
+}
+
+.badge-sit-cancelado {
+    background-color: #5c1b24; /* vermelho escuro do card "Recusados" */
+    color: #ffffff;
+}
+
+.badge-sit-faturado {
+    background-color: #145c32; /* verde do card "Liberado dentro do SLA" */
+    color: #ffffff;
+}
+
+.badge-sit-aberto {
+    background-color: #0d6efd; /* azul (pode alinhar com "Sem bloqueio" ou padrão) */
+    color: #ffffff;
+}
+
+.badge-sit-normal {
+    background-color: #495057; /* cinza escuro padrão */
+    color: #ffffff;
+}
+
+/* ===========================
+   BADGES – SITUAÇÃO
+   (cores alinhadas com os cards)
+   =========================== */
+
+.badge-sit-devolvido {
+    /* mesmo tom do card "Devolvidos" */
+    background-color: #4b235f; /* ajuste para o roxo real do card */
+    color: #ffffff;
+}
+
+.badge-sit-cancelado {
+    /* mesmo tom do card "Recusados" */
+    background-color: #5c1b24; /* vermelho escuro */
+    color: #ffffff;
+}
+
+.badge-sit-faturado {
+    /* mesmo tom do card "Liberado dentro do SLA" */
+    background-color: #145c32; /* verde */
+    color: #ffffff;
+}
+
+.badge-sit-aberto {
+    /* pode alinhar com "Sem bloqueio" ou cor própria */
+    background-color: #0d6efd; /* azul */
+    color: #ffffff;
+}
+
+.badge-sit-normal {
+    background-color: #495057; /* cinza */
+    color: #ffffff;
+}
+
+/* ===========================
+   BADGES – STATUS
+   (cores alinhadas com os cards)
+   =========================== */
+
+/* Liberado dentro do SLA → cor do card "Liberado dentro do SLA" */
+.badge-status-liberado-sla {
+    background-color: #145c32; /* mesmo verde do card */
+    color: #ffffff;
+}
+
+/* Liberado com atraso → cor do card "Liberados com atraso" */
+.badge-status-liberado-atraso {
+    background-color: #6a3b13; /* marrom/laranja escuro do card */
+    color: #ffffff;
+}
+
+/* Sem bloqueio → cor do card "Sem bloqueio" (azul) */
+.badge-status-sem-bloqueio {
+    background-color: #0d6efd;
+    color: #ffffff;
+}
+
+/* Pendentes → cor do card "Pendências" (amarelo) */
+.badge-status-pendente {
+    background-color: #f6c453;
+    color: #1f1f1f;
+}
+
+/* Recusados → cor do card "Recusados" */
+.badge-status-recusado {
+    background-color: #5c1b24;
+    color: #ffffff;
+}
+/* melhora a leitura do card de Top Departamentos */
+.card-top-dept .list-group-item {
+    background: transparent;
+    border-color: rgba(255,255,255,.06);
+}
+
+    .card-top-dept .list-group-item:hover {
+        background: rgba(255,255,255,.03);
+    }
+/* Mesma cor do card-header nas 4 primeiras colunas */
+#tabela-saving-compras th.col-solicitacao,
+#tabela-saving-compras td.col-solicitacao {
+    background-color: var(--bs-card-cap-bg, #f8f9fa);
+}
+#tabela-saving-compras th.col-solicitacao,
+#tabela-saving-compras td.col-solicitacao {
+    border-right: 1px solid var(--bs-border-color, #dee2e6);
+}
+/* Força alinhamento à esquerda em toda a tabela (thead e tbody) */
+#tabela-saving-compras th,
+#tabela-saving-compras td {
+    text-align: left !important;
+}
+
+/* Mantém conteúdo de flex que você usa (ex.: d-flex) sem centralizar */
+#tabela-saving-compras .text-end,
+#tabela-saving-compras .text-center,
+#tabela-saving-compras .text-start {
+    text-align: left !important;
+}
+/* Base: garante consistência visual do contorno */
+.card.kpi-card[data-kpi-card="sla-dentro"],
+.card.kpi-card.kpi-sla-fora {
+    border-radius: .75rem; /* mantém padrão do card */
+    border: 1px solid transparent; /* evita “borda dupla” */
+}
+
+/* Dentro do SLA (verde) - caso você queira padronizar aqui também */
+.card.kpi-card[data-kpi-card="sla-dentro"] {
+    border-color: rgba(34, 197, 94, .55);
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, .12);
+}
+
+/* Fora do SLA (laranja) - mesma intensidade do verde */
+.card.kpi-card.kpi-sla-fora {
+    border-color: rgba(249, 115, 22, .55);
+    box-shadow: 0 0 0 1px rgba(249, 115, 22, .12);
+}
+
+/* Dark mode: um pouco mais visível sem “estourar” */
+html[data-theme="dark"] .card.kpi-card[data-kpi-card="sla-dentro"] {
+    border-color: rgba(34, 197, 94, .65);
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, .16);
+}
+
+html[data-theme="dark"] .card.kpi-card.kpi-sla-fora {
+    border-color: rgba(249, 115, 22, .65);
+    box-shadow: 0 0 0 1px rgba(249, 115, 22, .16);
+}
+/* Gaveta dos KPIs */
+.kpi-drawer {
+    overflow: hidden;
+    max-height: 999px; /* aberto */
+    transition: max-height .25s ease, opacity .20s ease, transform .20s ease;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+    .kpi-drawer.is-collapsed {
+        max-height: 0; /* fechado */
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+/* Indicadores: mesma largura da grid */
+#cards-indicadores-wrapper {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+/* se o pai estiver em display:flex, garante que o card estique */
+#cards-indicadores-wrapper {
+    flex: 1 1 auto;
+}
+
+/* Botão */
+.kpi-toggle {
+    border-radius: .6rem;
+}
+
+/* Ícone gira suavemente */
+#kpiToggleIcon {
+    transition: transform .2s ease;
+}
+
+.kpi-toggle[aria-expanded="false"] #kpiToggleIcon {
+    transform: rotate(180deg);
+}

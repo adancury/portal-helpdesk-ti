@@ -1,108 +1,549 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Http
+@using System.Collections.Generic
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Portal Helpdesk TI</title>
+    <link rel="icon" type="image/x-icon" href="/images/LogoHelp_512x512.png" />
+    <!-- Bootstrap CDN + Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Seus estilos -->
+    <link rel="stylesheet" href="/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/atender.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/usuarios.css" />
     <link rel="stylesheet" href="~/css/tecnico-painel.css" />
+    <link rel="stylesheet" href="~/css/fonte-segoe.css" />
+    <link href="~/css/usuarios.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/relatorio-tempo.css" asp-append-version="true" />
+
+
     <style>
-        .navbar-custom {
-            background-color: #004A80;
+        .navbar-custom { background-color: var(--primary); }
+        .navbar-custom .nav-link, .navbar-custom .navbar-brand { color: var(--primary-contrast); }
+        .navbar-custom .nav-link:hover { color: #d1e7ff; /* ou var(--accent) se preferir */ }
+
+        body { padding-top: 80px; } /* espaço para navbar fixa */
+
+        .modal { z-index: 1055; }
+        .modal-backdrop { z-index: 1040; }
+        .navbar { z-index: 1030; }
+
+        tr.destaque-animado { animation: destaque 2s ease-out; }
+
+        /* Header mínimo para telas públicas */
+        .minimal-header {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: #004A80; color: #fff;
+            height: 56px; display: flex; align-items: center;
+            padding: 0 16px; z-index: 1040;
         }
-
-            .navbar-custom .nav-link,
-            .navbar-custom .navbar-brand {
-                color: #fff;
-            }
-
-                .navbar-custom .nav-link:hover {
-                    color: #d1e7ff;
-                }
-
-        footer {
-            background-color: #f8f9fa;
+        .minimal-header .brand {
+            display: flex; align-items: center; gap: 8px; font-weight: 600;
         }
+        .minimal-header img { height: 26px; }
+        /* reduzir o padding-top quando header mínimo */
+        body.layout-minimal { padding-top: 56px; }
     </style>
-</head>
-<body>
-    @{
-        var usuarioId = Context.Session.GetInt32("UsuarioId");
-        var controller = Context.Request.RouteValues["controller"]?.ToString();
-        var action = Context.Request.RouteValues["action"]?.ToString();
 
-        string perfil = null;
+    @RenderSection("Styles", required: false)
+
+    <script>
+(function() {
+  try {
+    var stored = localStorage.getItem('theme'); // 'dark' | 'light' | null
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = stored || (prefersDark ? 'dark' : 'light');
+
+    // Se usar Bootstrap 5.3+, aproveite:
+    document.documentElement.setAttribute('data-bs-theme', theme);
+
+    // Fallback: classe .dark para quem não usa data-bs-theme
+    if (theme === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  } catch(e) {}
+})();
+</script>
+
+
+</head>
+<body class="d-flex flex-column min-vh-100 @(/*classe por layout*/ "")">
+@{
+    var controller = Context.Request.RouteValues["controller"]?.ToString();
+    var action = Context.Request.RouteValues["action"]?.ToString();
+
+    var minimalActions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "Login","Registrar","EsqueciSenha","RedefinirSenha",
+        "ConfirmarEmail","ConfirmarEmailResultado","TokenExpirado"
+    };
+
+    bool isMinimal = controller == "Account" && minimalActions.Contains(action);
+
+    int? usuarioId = null;
+    string perfil = null;
+    string nomeUsuario = null;
+
+    // -------------- AQUI: declarar antes --------------
+    string primeiroUltimo = null;
+
+    if (!isMinimal)
+    {
+        usuarioId = Context.Session.GetInt32("UsuarioId");
+
         if (usuarioId != null)
         {
-            using (var scope = Context.RequestServices.CreateScope())
+            using var scope = Context.RequestServices.CreateScope();
+            var db = scope.ServiceProvider.GetService<AppDbContext>();
+            var usuario = db?.Usuarios.FirstOrDefault(u => u.Id == usuarioId.Value);
+
+            if (usuario != null)
             {
-                var db = scope.ServiceProvider.GetService<AppDbContext>();
-                perfil = db.Usuarios
-                .Where(u => u.Id == usuarioId.Value)
-                .Select(u => u.Perfil)
-                .FirstOrDefault();
+                perfil = usuario.Perfil;
+                nomeUsuario = usuario.Nome;
             }
         }
-    }
 
-    @if (!(controller == "Account" && action == "Login"))
-    {
-        <nav class="navbar navbar-expand-lg navbar-custom">
-            <div class="container-fluid">
-                <a class="navbar-brand" href="/Home/Index">Portal Helpdesk TI</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon" style="filter: invert(100%);"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Home/Index">Início</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Chamados/Index">Meus Chamados</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Chamados/Novo">Abrir Chamado</a>
-                        </li>
-                        @if (!string.IsNullOrEmpty(perfil) &&
-                                            (perfil.Equals("Técnico", StringComparison.OrdinalIgnoreCase) ||
-                                            perfil.Equals("Tecnico", StringComparison.OrdinalIgnoreCase)))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" href="/Chamados/TecnicoPainel">Painel Técnico</a>
-                            </li>
-                        }
-                    </ul>
-                    <ul class="navbar-nav">
-                        @if (usuarioId != null)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" href="/Account/Logoff">Sair</a>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" href="/Account/Login">Login</a>
-                            </li>
-                        }
-                    </ul>
-                </div>
-            </div>
-        </nav>
+        // montar nome curto
+        primeiroUltimo = nomeUsuario;
+        if (!string.IsNullOrWhiteSpace(nomeUsuario))
+        {
+            var partes = nomeUsuario.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (partes.Length > 1)
+                primeiroUltimo = partes[0] + " " + partes[^1];
+        }
     }
+}
 
+@if (isMinimal)
+{
+    <!-- Header mínimo: apenas o nome do portal -->
+    <div class="minimal-header">
+        <div class="brand">
+            <img src="~/images/LogoBranco.png" alt="Logo" />
+           <!--<span>Portal Helpdesk TI</span>-->
+        </div>
+    </div>
+}
+else
+{
+    <!-- Navbar completa quando logado (ou páginas internas) -->
+    <nav class="navbar navbar-dark bg-brw navbar-expand-lg fixed-top brw-navbar">
+    <div class="container-fluid">
+
+        <!-- LOGO -->
+        <a class="navbar-brand d-flex align-items-center" href="/Inicio/Index">
+            <img src="~/images/LogoBranco.png" alt="Logo BRW" style="height: 35px;" />
+        </a>
+
+        <!-- BOTÃO MOBILE – abre offcanvas -->
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#menuMobile"
+                aria-controls="menuMobile">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- MENU DESKTOP -->
+        <div class="collapse navbar-collapse d-none d-lg-flex justify-content-end">
+            <ul class="navbar-nav align-items-center gap-2">
+
+                <li class="nav-item">
+                    <a class="btn btn-theme btn-sm d-flex align-items-center gap-2 in-navbar" href="/Chamados/Index">
+                        <i class="bi bi-list-task"></i>
+                        <span>Meus Chamados</span>
+                    </a>
+                </li>
+
+                @if (!string.IsNullOrEmpty(perfil) &&
+                     (perfil == "Técnico" || perfil == "Tecnico"))
+                {
+                    <li class="nav-item">
+                        <a class="btn btn-theme btn-sm d-flex align-items-center gap-2 in-navbar" href="/Chamados/TecnicoPainel">
+                            <i class="bi bi-tools"></i>
+                            <span>Painel Técnico</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="btn btn-theme btn-sm d-flex align-items-center gap-2 in-navbar" href="/IntegracoesNotas/Index">
+                            <i class="bi bi-envelope-paper"></i>
+                            <span>Envio de Notas</span>
+                        </a>
+                    </li>
+                }
+
+                <li class="nav-item">
+                    <a class="btn btn-theme btn-sm d-flex align-items-center gap-2 in-navbar" href="/Chamados/Novo">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Abrir Chamado</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="btn btn-theme btn-sm d-flex align-items-center gap-2 in-navbar" href="/Quizzes">
+                        <i class="bi bi-ui-checks-grid"></i>
+                        <span>Quiz</span>
+                    </a>
+                </li>
+
+                @if (!string.IsNullOrEmpty(perfil) &&
+                     (perfil == "Técnico" || perfil == "Tecnico"))
+                {
+                    <li class="nav-item">
+                        <a class="btn btn-theme btn-sm d-flex align-items-center gap-2 in-navbar" href="/Inventario">
+                            <i class="bi bi-pc-display-horizontal"></i>
+                            <span>Inventário</span>
+                        </a>
+                    </li>
+                }
+
+                <li class="nav-item">
+                    <button id="themeToggle" class="btn btn-theme btn-sm d-flex align-items-center gap-2">
+                        <i class="bi bi-moon-stars-fill theme-icon"></i>
+                    </button>
+                </li>
+
+                @* USUÁRIO LOGADO *@
+                @if (usuarioId != null)
+                {
+                    <li class="nav-item dropdown">
+                        <a class="btn btn-theme btn-sm dropdown-toggle d-flex align-items-center gap-2"
+                           href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i>
+                            <span>@primeiroUltimo</span>
+                        </a>
+
+                        <ul class="dropdown-menu dropdown-menu-end">
+
+                            @if (perfil == "Técnico" || perfil == "Tecnico")
+                            {
+                                <li>
+                                    <a class="dropdown-item" href="/Configuracoes/Index">
+                                        <i class="bi bi-gear"></i> Configurações
+                                    </a>
+                                </li>
+                            }
+
+                            <li>
+                                <a class="dropdown-item" href="/Account/Logoff">
+                                    <i class="bi bi-box-arrow-right"></i> Sair
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                }
+
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- OFFCANVAS MENU MOBILE -->
+<div class="offcanvas offcanvas-end text-bg-dark brw-offcanvas" tabindex="-1" id="menuMobile">
+
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">Menu</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <div class="offcanvas-body">
+
+        <ul class="navbar-nav flex-column gap-2">
+
+            <li class="nav-item">
+                <a class="nav-link d-flex gap-2" href="/Chamados/Index">
+                    <i class="bi bi-list-task"></i> Meus Chamados
+                </a>
+            </li>
+
+            @if (!string.IsNullOrEmpty(perfil) &&
+                    (perfil == "Técnico" || perfil == "Tecnico"))
+            {
+                <li class="nav-item">
+                    <a class="nav-link d-flex gap-2" href="/Chamados/TecnicoPainel">
+                        <i class="bi bi-tools"></i> Painel Técnico
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link d-flex gap-2" href="/IntegracoesNotas/Index">
+                        <i class="bi bi-envelope-paper"></i> Envio de Notas
+                    </a>
+                </li>
+            }
+
+            <li class="nav-item">
+                <a class="nav-link d-flex gap-2" href="/Chamados/Novo">
+                    <i class="bi bi-plus-circle"></i> Abrir Chamado
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link d-flex gap-2" href="/Quizzes">
+                    <i class="bi bi-ui-checks-grid"></i> Quiz
+                </a>
+            </li>
+
+            @if (!string.IsNullOrEmpty(perfil) &&
+                    (perfil == "Técnico" || perfil == "Tecnico"))
+            {
+                <li class="nav-item">
+                    <a class="nav-link d-flex gap-2" href="/Inventario">
+                        <i class="bi bi-pc-display-horizontal"></i> Inventário
+                    </a>
+                </li>
+            }
+
+            <li><hr class="dropdown-divider"></li>
+
+            <li class="nav-item">
+                <a class="nav-link d-flex gap-2" href="/Account/Logoff">
+                    <i class="bi bi-box-arrow-right"></i> Sair
+                </a>
+            </li>
+
+        </ul>
+
+    </div>
+</div>
+
+}
+
+<main class="flex-fill">
     <div class="container mt-4">
         @RenderBody()
     </div>
+</main>
 
-    <footer class="text-center text-muted mt-4 p-3">
+@if (!isMinimal)
+{
+    <footer class="text-center text-muted mt-0 mb-0 p-1">
+        <img src="~/images/logo.png" alt="Logo da Empresa" style="height: 30px;" class="mb-2" />
+        <br />
         &copy; @DateTime.Now.Year - Portal Helpdesk TI
     </footer>
+}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    @RenderSection("Scripts", required: false)
+@if (TempData["MensagemSucesso"] != null)
+{
+    <div class="modal fade" id="modalMensagemSucesso" tabindex="-1" aria-labelledby="modalMensagemSucessoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="modalMensagemSucessoLabel">Sucesso</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    @TempData["MensagemSucesso"]
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const modal = new bootstrap.Modal(document.getElementById('modalMensagemSucesso'));
+            modal.show();
+            setTimeout(() => modal.hide(), 4000);
+        });
+    </script>
+}
+<!-- Popup genérico de mensagem (padrão SL) -->
+<div id="popupMensagem" class="modal fade" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-body text-center p-4">
+        <i class="bi bi-check-circle text-success display-4 mb-3" id="popupMensagemIcon"></i>
+        <h5 class="mb-2" id="popupMensagemTitulo">Sucesso</h5>
+        <p id="popupMensagemTexto">Operação concluída.</p>
+        <button type="button" class="btn btn-success mt-3 px-4" id="popupMensagemBtn" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Mostra estado de carregando no popup (icone girando, botão oculto)
+  window.showPopupLoading = function (titulo = 'Processando', texto = 'Carregando...') {
+    const el = document.getElementById('popupMensagem');
+    if (!el) return;
+    const icon = el.querySelector('.modal-body .bi');
+    const btn  = el.querySelector('.modal-body .btn');
+
+    // icone "loading"
+    icon.className = 'bi bi-arrow-repeat text-info display-4 mb-3 spin';
+    el.querySelector('#popupMensagemTitulo').textContent = titulo;
+    el.querySelector('#popupMensagemTexto').textContent  = texto;
+    // desabilita/esconde botão enquanto carrega
+    btn.className = 'btn mt-3 px-4 btn-secondary';
+    btn.disabled = true;
+    btn.style.visibility = 'hidden';
+
+    const modal = bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false });
+    modal.show();
+  };
+
+  // Atualiza popup para sucesso/erro e (opcional) redireciona depois de X ms
+  window.updatePopupMensagem = function (titulo, texto, tipo = 'success', autoHideMs = 1200, redirectUrl) {
+    const el = document.getElementById('popupMensagem');
+    if (!el) return;
+    const icon = el.querySelector('.modal-body .bi');
+    const btn  = el.querySelector('.modal-body .btn');
+
+    // reseta spinner
+    icon.classList.remove('spin');
+    icon.className = 'bi display-4 mb-3';
+    btn.disabled = false;
+    btn.style.visibility = 'visible';
+
+    // estilo conforme tipo
+    if (tipo === 'error') {
+      icon.classList.add('bi-x-circle', 'text-danger');
+      btn.className = 'btn mt-3 px-4 btn-danger';
+    } else if (tipo === 'warning') {
+      icon.classList.add('bi-exclamation-triangle', 'text-warning');
+      btn.className = 'btn mt-3 px-4 btn-warning';
+    } else if (tipo === 'info') {
+      icon.classList.add('bi-info-circle', 'text-info');
+      btn.className = 'btn mt-3 px-4 btn-info';
+    } else {
+      icon.classList.add('bi-check-circle', 'text-success');
+      btn.className = 'btn mt-3 px-4 btn-success';
+    }
+
+    el.querySelector('#popupMensagemTitulo').textContent = titulo || 'Mensagem';
+    el.querySelector('#popupMensagemTexto').textContent  = texto || '';
+
+    const modal = bootstrap.Modal.getOrCreateInstance(el);
+
+    if (autoHideMs && autoHideMs > 0) {
+      setTimeout(() => {
+        try { modal.hide(); } catch {}
+        if (redirectUrl) window.location.href = redirectUrl;
+      }, autoHideMs);
+    } else if (redirectUrl) {
+      // sem autoHide, redireciona ao clicar em OK
+      btn.onclick = () => { modal.hide(); window.location.href = redirectUrl; };
+    }
+  };
+</script>
+<script>
+  // tipo: 'success' | 'error' | 'warning' | 'info'
+  window.showPopupMensagem = function (titulo, texto, tipo = 'success', autoHideMs = 3500) {
+    const modalEl  = document.getElementById('popupMensagem');
+    const tituloEl = document.getElementById('popupMensagemTitulo');
+    const textoEl  = document.getElementById('popupMensagemTexto');
+    const iconEl   = document.getElementById('popupMensagemIcon');
+    const btnEl    = document.getElementById('popupMensagemBtn');
+    if (!modalEl || !tituloEl || !textoEl || !iconEl || !btnEl) return;
+
+    // reset visual
+    iconEl.className = 'bi display-4 mb-3';
+    btnEl.className  = 'btn mt-3 px-4';
+
+    switch (tipo) {
+      case 'error':
+        iconEl.classList.add('bi-x-circle', 'text-danger');
+        btnEl.classList.add('btn-danger');
+        break;
+      case 'warning':
+        iconEl.classList.add('bi-exclamation-triangle', 'text-warning');
+        btnEl.classList.add('btn-warning');
+        break;
+      case 'info':
+        iconEl.classList.add('bi-info-circle', 'text-info');
+        btnEl.classList.add('btn-info');
+        break;
+      default:
+        iconEl.classList.add('bi-check-circle', 'text-success');
+        btnEl.classList.add('btn-success');
+        break;
+    }
+
+    tituloEl.textContent = titulo || 'Mensagem';
+    textoEl.textContent  = texto || '';
+
+    const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
+    modal.show();
+
+    // auto-fecha se quiser
+    if (autoHideMs && autoHideMs > 0) {
+      setTimeout(() => {
+        try { modal.hide(); } catch {}
+      }, autoHideMs);
+    }
+  };
+</script>
+<script src="~/js/site.js" asp-append-version="true" defer></script>
+@{
+    // Esses TempData podem ser setados nas actions (ex.: Aprovar/Rejeitar)
+    var toastMsg  = TempData["ToastMsg"]  as string;
+    var toastTipo = TempData["ToastTipo"] as string; // 'success' | 'error' | 'warning' | 'info'
+}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // 1) Mensagem vinda do servidor (RedirectToAction com TempData)
+    var msgTemp  = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(toastMsg  ?? ""));
+    var tipoTemp = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(toastTipo ?? "success"));
+
+    if (msgTemp) {
+      window.showPopupMensagem('Aprovação', msgTemp, tipoTemp || 'success');
+      return;
+    }
+
+    // 2) Mensagem vinda do client (sessionStorage) — usada na _DetalhesAprovacao
+    var msg  = sessionStorage.getItem('aprovacao_msg');
+    var tipo = sessionStorage.getItem('aprovacao_tipo') || 'success';
+    if (msg) {
+      sessionStorage.removeItem('aprovacao_msg');
+      sessionStorage.removeItem('aprovacao_tipo');
+      window.showPopupMensagem('Aprovação', msg, tipo);
+    }
+  });
+</script>
+@RenderSection("Scripts", required: false)
+<script>
+  // a cada 10 minutos, renova a sessão se a aba estiver aberta
+  setInterval(() => { fetch('/ping', { cache: 'no-store' }); }, 10 * 60 * 1000);
+</script>
+<script>
+window.showPopupMensagem = function (titulo, mensagem, tipo) {
+  try {
+    const el = document.getElementById('popupMensagem');
+    if (!el) {
+      console.warn('popupMensagem não encontrado no DOM');
+      return;
+    }
+
+    // ajusta título e texto
+    el.querySelector('#popupMensagemTitulo').textContent = titulo || 'Mensagem';
+    el.querySelector('#popupMensagemTexto').textContent = mensagem || '—';
+
+    // ajusta cor/ícone
+    const icon = el.querySelector('.bi');
+    icon.className = 'bi display-4 mb-3';
+    if (tipo === 'error') icon.classList.add('bi-x-circle', 'text-danger');
+    else icon.classList.add('bi-check-circle', 'text-success');
+
+    // Mostra com Bootstrap (garante que existe antes)
+    if (window.bootstrap) {
+      const modal = bootstrap.Modal.getOrCreateInstance(el);
+      modal.show();
+      setTimeout(() => modal.hide(), 3500);
+    } else {
+      alert(mensagem);
+    }
+  } catch (e) {
+    console.error('Erro no showPopupMensagem', e);
+  }
+};
+</script>
 </body>
 </html>

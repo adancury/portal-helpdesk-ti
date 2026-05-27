@@ -1,0 +1,67 @@
+﻿@model List<PortalHelpdeskTI.ViewModels.Redistribuicao.ClienteRedistribuicaoVm>
+@functions {
+    private static string NomeBonito(string? nome)
+    {
+        if (string.IsNullOrWhiteSpace(nome)) return "";
+
+        nome = nome.Trim().ToLowerInvariant();
+        return char.ToUpperInvariant(nome[0]) + nome.Substring(1);
+    }
+
+    private static string VendedorLabel(int? slpCode, string? nome)
+    {
+        if (!slpCode.HasValue || slpCode.Value <= 0)
+            return "Sem vendedor";
+
+        nome ??= "";
+        nome = nome.Trim();
+
+        return string.IsNullOrWhiteSpace(nome)
+            ? slpCode.Value.ToString()
+            : $"{slpCode.Value} - {nome}";
+    }
+}
+
+
+<table class="table table-sm table-striped mb-0">
+    <thead>
+        <tr>
+            <th>CodPN</th>
+            <th>Nome</th>
+            <th>CNPJ</th>
+            <th>Estado</th>
+            <th>Status</th>
+            <th class="text-center">Vendedor Atual</th>
+            <th class="text-center">Ativo</th>
+            <th>Motivo</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model == null || Model.Count == 0)
+        {
+            <tr><td colspan="8" class="text-muted p-3">Nenhuma pendência.</td></tr>
+        }
+        else
+        {
+            foreach (var x in Model)
+            {
+                <tr>
+                    <td>@x.CodPN</td>
+                    <td class="cliente-nome"
+                        data-bs-toggle="tooltip"
+                        data-bs-placement="top"
+                        title="@x.NomeFantasia">
+                        @NomeBonito(x.NomeFantasia)
+                    </td>
+
+                    <td>@x.Cnpj</td>
+                    <td>@x.Estado</td>
+                    <td>@x.Status</td>
+                    <td class="text-center">@VendedorLabel(x.SlpCodeAtual, x.VendedorAtualNome)</td>
+                    <td class="text-center">@x.Ativo</td>
+                    <td class="text-danger">@x.MotivoCadastroPendente</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>

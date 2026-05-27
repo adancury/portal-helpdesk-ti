@@ -1,0 +1,481 @@
+﻿@model PortalHelpdeskTI.Models.Relatorios.DashboardSavingComprasVM
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Dashboard Saving de Compras";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var ptBR = new CultureInfo("pt-BR");
+
+    string FormatMoney(decimal? v) =>
+        v.HasValue ? v.Value.ToString("C", ptBR) : "-";
+
+    string FormatPercent(decimal? v) =>
+        v.HasValue ? v.Value.ToString("N2", ptBR) + " %" : "-";
+}
+@{
+    string TitleizeWords(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return "-";
+        s = s.Trim().ToLower(ptBR);
+
+        // deixa cada palavra com 1ª letra maiúscula
+        return ptBR.TextInfo.ToTitleCase(s);
+    }
+}
+
+
+<link rel="stylesheet" href="~/css/tecnico-painel.css" />
+
+<div class="mb-2">
+    <h2 class="mb-0 text-wrap">
+        Saving de Compras (Período @Model.DataDe.ToString("dd/MM/yyyy") - @Model.DataAte.ToString("dd/MM/yyyy"))
+    </h2>
+</div>
+
+<!-- Filtros -->
+<div class="mb-3 card">
+    <div class="card-body">
+        <form method="get" asp-controller="Relatorios" asp-action="DashboardSavingCompras" class="row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label for="dataDe" class="form-label mb-1">Data Solicitação (De)</label>
+                <input type="date"
+                       class="form-control form-control-sm"
+                       id="dataDe"
+                       name="dataDe"
+                       value="@Model.DataDe.ToString("yyyy-MM-dd")" />
+            </div>
+
+            <div class="col-12 col-md-3">
+                <label for="dataAte" class="form-label mb-1">Data Solicitação (Até)</label>
+                <input type="date"
+                       class="form-control form-control-sm"
+                       id="dataAte"
+                       name="dataAte"
+                       value="@Model.DataAte.ToString("yyyy-MM-dd")" />
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label for="termoBusca" class="form-label mb-1">Buscar por Pedido ou Fornecedor</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="termoBusca"
+                       name="termoBusca"
+                       value="@Model.TermoBusca" />
+            </div>
+            @*
+            <div class="col-12 col-md-4">
+                <label class="form-label mb-1">Equipe responsável</label>
+                <select class="form-select" name="equipeResponsavel">
+                    <option value="Todos" selected="@(Model.EquipeResponsavelSelecionada == "Todos")">Todos</option>
+                    <option value="Compras" selected="@(Model.EquipeResponsavelSelecionada == "Compras")">Compras</option>
+                    <option value="Importacao" selected="@(Model.EquipeResponsavelSelecionada == "Importacao")">Importação</option>
+                </select>
+            </div>
+            *@
+            <input type="hidden" name="pagina" value="1" />
+
+            <div class="col-12 col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    Aplicar Filtros
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Cards de resumo -->
+<!-- Cards de resumo (1ª fileira) -->
+<div class="row g-3 mb-3">
+
+    <div class="col-12 col-md-3">
+        <div class="card shadow-sm h-100 border-0">
+            <div class="card-body py-3">
+                <div class="small text-muted">Total Compras no Período</div>
+                <div class="fs-4 fw-bold">@FormatMoney(Model.TotalComprasPeriodo)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-3">
+        <div class="card shadow-sm h-100 border-0">
+            <div class="card-body py-3">
+                <div class="small text-muted">Saving Total</div>
+                <div class="fs-4 fw-bold">@FormatMoney(Model.TotalSavingPeriodo)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-3">
+        <div class="card shadow-sm h-100 border-0">
+            <div class="card-body py-3">
+                <div class="small text-muted">Saving Médio (%)</div>
+                <div class="fs-4 fw-bold">
+                    @Model.SavingMedioPercentual.ToString("N2", ptBR) @Html.Raw("%")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-3">
+        <div class="card shadow-sm h-100 border-0">
+            <div class="card-body py-3">
+                <div class="small text-muted">Processos de Compra</div>
+                <div class="fs-4 fw-bold">@Model.QtdProcessos</div>
+                <div class="small text-muted mt-1">
+                    Fornecedores envolvidos: @Model.QtdFornecedoresEnvolvidos
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Cards adicionais (2ª fileira) -->
+<div class="row g-3 mb-3">
+
+    <!-- 1) Processos sem cotação -->
+    <div class="col-12 col-lg-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase">Processos sem cotação</div>
+                <div class="fs-4 fw-bold">@Model.QtdProcessosSemCotacao</div>
+                <div class="small text-muted mt-2">
+                    @Model.PercentualProcessosSemCotacao.ToString("N2", ptBR)% do total de processos (@Model.QtdProcessos)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2) Top 3 Departamentos – Maior Gasto (2 espaços) -->
+    <div class="col-12 col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">
+                <strong>Top 3 Departamentos – Maior Gasto</strong>
+            </div>
+
+            <div class="card-body p-0">
+                @if (Model.TopDepartamentosGasto?.Any() == true)
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var d in Model.TopDepartamentosGasto)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <div class="me-3">
+                                    <div class="fw-semibold">@d.Departamento</div>
+                                    <small class="text-muted">@d.PercentualSobreTotal.ToString("N2", ptBR)% do total</small>
+                                </div>
+                                <div class="text-end fw-bold text-primary">
+                                    @d.TotalGasto.ToString("C", ptBR)
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="p-3 text-muted">Sem dados no período</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- 3) Status dos processos -->
+    <div class="col-12 col-lg-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">
+                <strong>Status dos Processos</strong>
+            </div>
+
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Em Cotação</span>
+                    <strong>@Model.QtdProcessosEmCotacao</strong>
+                </div>
+                <div class="progress mb-3" style="height:6px;">
+                    <div class="progress-bar bg-warning" style="width:@Model.PercentualEmCotacao.ToString("N0", ptBR)%"></div>
+                </div>
+
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Fechados</span>
+                    <strong>@Model.QtdProcessosFechados</strong>
+                </div>
+                <div class="progress" style="height:6px;">
+                    <div class="progress-bar bg-success" style="width:@Model.PercentualFechados.ToString("N0", ptBR)%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Cards adicionais (3ª fileira) -->
+<div class="row g-3 mb-3">
+
+    <!-- Top 3 Departamentos – Maior Saving (2 espaços) -->
+    <div class="col-12 col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">
+                <strong>Top 3 Departamentos – Maior Saving</strong>
+            </div>
+
+            <div class="card-body p-0">
+                @if (Model.TopDepartamentosSaving?.Any() == true)
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var d in Model.TopDepartamentosSaving)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <div class="me-3">
+                                    <div class="fw-semibold">@d.Departamento</div>
+                                    <small class="text-muted">@d.PercentualSobreSaving.ToString("N2", ptBR)% do saving</small>
+                                </div>
+                                <span class="fw-bold text-success">@d.TotalSaving.ToString("C", ptBR)</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="p-3 text-muted">Sem saving no período</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Espaços livres (2 cards) -->
+    <div class="col-12 col-lg-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body text-muted">
+                Espaço livre
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body text-muted">
+                Espaço livre
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Grid de processos -->
+<div class="card">
+    <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <strong>Processos de Compra</strong>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <label for="filtroRapidoGrid" class="mb-0 small text-muted">Filtro rápido:</label>
+            <input type="text"
+                   class="form-control form-control-sm"
+                   id="filtroRapidoGrid"
+                   style="min-width:260px;"
+                   placeholder="Pedido, solicitação, fornecedor..." />
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm mb-0 align-middle" id="tabela-saving-compras">
+                <thead>
+                    <tr>
+                        <th class="col-solicitacao" style="min-width:110px;">Nº Sol.</th>
+                        <th class="col-solicitacao" style="min-width:110px;">Data Sol.</th>
+                        <th class="col-solicitacao" style="min-width:180px;">Solicitante</th>
+                        <th class="col-solicitacao" style="min-width:160px;">Departamento</th>
+                        <th class="col-solicitacao" style="min-width:140px;">Nº Pedido</th>
+                        <th class="col-solicitacao" style="min-width:240px;">Fornecedor</th>
+                        <th class="col-solicitacao" style="min-width:140px;" class="text-end">Valor</th>
+                        <th class="col-solicitacao" style="min-width:160px;" class="text-end">Concorrente</th>
+                        <th class="col-solicitacao" style="min-width:130px;" class="text-end">Saving (R$)</th>
+                        <th class="col-solicitacao" style="min-width:120px;" class="text-end">Saving (%)</th>
+                        <th class="col-solicitacao" style="min-width:120px;" class="text-center">Qtde Cotações</th>
+                        <th class="col-solicitacao" style="min-width:140px;">Status</th>
+                        <th class="col-solicitacao" style="min-width:110px;">Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.Linhas == null || !Model.Linhas.Any())
+                    {
+                        <tr>
+                            <td colspan="13" class="text-center py-3 text-muted">
+                                Nenhum processo de compra encontrado para o período/filtros informados.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var l in Model.Linhas)
+                        {
+                            var textoBusca = $"{l.OPRQDocNum} {l.OPORDocNum} {l.CardCodeVencedor} {l.CardNameVencedor} {l.Solicitante} {l.Departamento}";
+
+                            <tr data-busca="@textoBusca">
+                                <td class="col-solicitacao">
+                                    <div class="fw-semibold">@l.OPRQDocNum</div>
+                                    @*<div class="text-muted small">DocEntry: @l.OPRQDocEntry</div>*@
+                                </td>
+
+                                <td class="col-solicitacao">@l.DataSolicitacao.ToString("dd/MM/yyyy")</td>
+
+                                <td class="col-solicitacao">@(string.IsNullOrWhiteSpace(@TitleizeWords(l.Solicitante)) ? "-" : @TitleizeWords(l.Solicitante))</td>
+
+                                <td class="col-solicitacao">@(string.IsNullOrWhiteSpace(@TitleizeWords(l.Departamento)) ? "-" : @TitleizeWords(l.Departamento))</td>
+
+                                <td>
+                                    @if (l.OPORDocNum.HasValue)
+                                    {
+                                        <div class="fw-semibold">@l.OPORDocNum.Value</div>
+                                        @*<div class="text-muted small">DocEntry: @l.OPORDocEntry</div>*@
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(l.CardNameVencedor))
+                                    {
+                                        <div class="fw-semibold">@TitleizeWords(l.CardNameVencedor)</div>
+                                        <div class="text-muted small">@l.CardCodeVencedor</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
+
+                                <td class="text-end">
+                                    @FormatMoney(l.ValorVencedor)
+                                </td>
+
+                                <td class="text-end">
+                                    @FormatMoney(l.ValorBaseConcorrentes)
+                                </td>
+
+                                <td class="text-end">
+                                    @FormatMoney(l.SavingValor)
+                                </td>
+
+                                <td class="text-end">
+                                    @FormatPercent(l.SavingPercentual)
+                                </td>
+
+                                <td class="text-center">
+                                    @l.QtdConcorrentes
+                                </td>
+
+                                <td>
+                                    @{
+                                        // Mantém simples, mas já no padrão badge
+                                        var statusTxt = !string.IsNullOrWhiteSpace(l.StatusProcesso) ? l.StatusProcesso : "—";
+                                    }
+                                    <span class="badge bg-secondary">@statusTxt</span>
+                                </td>
+
+                                <td>
+                                    <a asp-controller="Relatorios"
+                                       asp-action="DetalhesProcessoCompra"
+                                       asp-route-id="@l.ProcessoId"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        Cotações
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="small text-muted">
+            Total: <span id="lbl-total-saving">@Model.TotalRegistros</span>
+        </div>
+
+        <div class="small text-muted">
+            Página <span id="lbl-pagina-saving">@Model.PaginaAtual</span> de <span id="lbl-total-paginas-saving">@Model.TotalPaginas</span>
+        </div>
+
+        <div class="d-inline-flex align-items-center">
+            @if (Model.TotalPaginas > 1)
+            {
+                if (Model.PaginaAtual > 1)
+                {
+                    <a class="btn btn-sm btn-outline-secondary me-1"
+                       asp-controller="Relatorios"
+                       asp-action="DashboardSavingCompras"
+                       asp-route-dataDe="@Model.DataDe.ToString("yyyy-MM-dd")"
+                       asp-route-dataAte="@Model.DataAte.ToString("yyyy-MM-dd")"
+                       asp-route-termoBusca="@Model.TermoBusca"
+                       asp-route-pagina="@(Model.PaginaAtual - 1)">
+                        « Anterior
+                    </a>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" disabled>
+                        « Anterior
+                    </button>
+                }
+
+                if (Model.PaginaAtual < Model.TotalPaginas)
+                {
+                    <a class="btn btn-sm btn-outline-secondary"
+                       asp-controller="Relatorios"
+                       asp-action="DashboardSavingCompras"
+                       asp-route-dataDe="@Model.DataDe.ToString("yyyy-MM-dd")"
+                       asp-route-dataAte="@Model.DataAte.ToString("yyyy-MM-dd")"
+                       asp-route-termoBusca="@Model.TermoBusca"
+                       asp-route-pagina="@(Model.PaginaAtual + 1)">
+                        Próxima »
+                    </a>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                        Próxima »
+                    </button>
+                }
+            }
+            else
+            {
+                <button type="button" class="btn btn-sm btn-outline-secondary me-1" disabled>« Anterior</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Próxima »</button>
+            }
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var input = document.getElementById('filtroRapidoGrid');
+            if (!input) return;
+
+            input.addEventListener('keyup', function () {
+                var termo = this.value.toLowerCase();
+
+                var linhas = document.querySelectorAll('table.table tbody tr');
+                linhas.forEach(function (tr) {
+                    var texto = (tr.getAttribute('data-busca') || tr.innerText || '').toLowerCase();
+
+                    if (!termo) {
+                        // Sem filtro -> mostra tudo da página
+                        tr.classList.remove('d-none');
+                    } else {
+                        if (texto.indexOf(termo) >= 0) {
+                            tr.classList.remove('d-none');
+                        } else {
+                            tr.classList.add('d-none');
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+}

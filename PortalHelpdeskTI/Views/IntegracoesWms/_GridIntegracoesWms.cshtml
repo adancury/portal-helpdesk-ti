@@ -1,0 +1,381 @@
+﻿@using System.Net
+@using System.Linq
+@model System.Data.DataTable
+
+@{
+    int total = (int)(ViewBag.Total ?? 0);
+    int paginaAtual = (int)(ViewBag.Page ?? 1);
+    int pageSize = (int)(ViewBag.PageSize ?? 50);
+
+    bool hasLogTs = Model.Columns.Contains("LOG_TS");
+    bool hasMethod = Model.Columns.Contains("METHOD");
+    bool hasMessage = Model.Columns.Contains("MESSAGE");
+
+    bool hasKeyWms = Model.Columns.Contains("KEY_WMS");
+    bool hasKeySap = Model.Columns.Contains("KEY_SAP");
+    bool hasReqJson = Model.Columns.Contains("REQUEST_JSON");
+    bool hasRespJson = Model.Columns.Contains("RESPONSE_JSON");
+
+    string TipoDoc(string method)
+    {
+        if (string.IsNullOrWhiteSpace(method)) return "—";
+        method = method.Trim();
+
+        if (method.Contains("cadastrarProduto", StringComparison.OrdinalIgnoreCase)) return "Cadastro Produto";
+        if (method.Contains("cadastrarPessoa", StringComparison.OrdinalIgnoreCase)) return "Cadastro Cliente/Fornecedor";
+        if (method.Contains("enviarOrdemSaida", StringComparison.OrdinalIgnoreCase)) return "Pedido de Venda / Ordem Saída";
+        if (method.Contains("enviarCancelamentoOrdemSaida", StringComparison.OrdinalIgnoreCase)) return "Cancelamento Ordem Saída";
+        if (method.Contains("enviarOrdemEntrada", StringComparison.OrdinalIgnoreCase)) return "Entrada (NF/Pedido Compra)";
+        if (method.Contains("enviarEstoque", StringComparison.OrdinalIgnoreCase)) return "Estoque";
+        if (method.Contains("enviarFaturamentoOrdemSaida", StringComparison.OrdinalIgnoreCase)) return "Faturamento (Saída)";
+        if (method.Contains("/Invoices", StringComparison.OrdinalIgnoreCase)) return "Faturamento (Invoices)";
+
+        return method;
+    }
+
+    bool EhErro(string msg)
+    {
+        var u = (msg ?? "").Trim().ToUpperInvariant();
+        return u.Contains("ERRO")
+            || u.Contains("EXCEPTION")
+            || u.Contains("FALHA")
+            || u.Contains("TIMEOUT")
+            || u.Contains("INVALID")
+            || u.Contains("INCOMPATIVEL")
+            || u.Contains("NÃO")
+            || u.Contains("NAO")
+            || u.Contains("SEM CORPO");
+    }
+
+    bool EhOk(string msg)
+    {
+        var u = (msg ?? "").Trim().ToUpperInvariant();
+        return u == "OK"
+            || u.StartsWith("OK")
+            || u.Contains("SUCESSO")
+            || u.Contains("HTTP 200")
+            || u.Contains("HTTP 201")
+            || u.Contains("CREATED")
+            || u.Contains("PROCESSADO")
+            || u.StartsWith("200");
+    }
+
+    int erros = 0, oks = 0;
+    var linhasPrincipaisParaStatus = Model.Rows
+        .Cast<System.Data.DataRow>()
+        .GroupBy(r =>
+        {
+            var keySapAgrupamento = hasKeySap ? (r["KEY_SAP"]?.ToString() ?? "").Trim() : "";
+            return string.IsNullOrWhiteSpace(keySapAgrupamento)
+                ? "__SEM_KEY_SAP__" + Guid.NewGuid().ToString("N")
+                : keySapAgrupamento;
+        })
+        .Select(g => g.OrderByDescending(r =>
+        {
+            DateTime dt;
+            var valor = hasLogTs ? (r["LOG_TS"]?.ToString() ?? "") : "";
+            return DateTime.TryParse(valor, out dt) ? dt : DateTime.MinValue;
+        }).First());
+
+    foreach (System.Data.DataRow rr in linhasPrincipaisParaStatus)
+    {
+        var m = hasMessage ? (rr["MESSAGE"]?.ToString() ?? "") : "";
+        if (EhErro(m)) erros++;
+        else if (EhOk(m)) oks++;
+    }
+}
+
+<div data-total="@total"
+     data-erros="@erros"
+     data-oks="@oks"
+     data-page="@paginaAtual"
+     data-pagesize="@pageSize"></div>
+
+<table class="table table-sm mb-0 align-middle table-monitor">
+    <thead>
+        <tr>
+            <th style="width:170px">Data/Hora</th>
+            <th style="width:220px">Tipo</th>
+            <th style="width:110px">Status</th>
+            <th style="width:280px">Chave (SAP / WMS)</th>
+            <th style="width:240px">Método</th>
+            <th>Mensagem</th>
+            <th style="width:220px" class="text-end">Ações</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @if (Model.Rows.Count == 0)
+        {
+            <tr>
+                <td colspan="7" class="text-muted p-3">Nenhum log encontrado para o filtro selecionado.</td>
+            </tr>
+        }
+        else
+        {
+            var grupos = Model.Rows
+            .Cast<System.Data.DataRow>()
+            .GroupBy(r =>
+            {
+                var keySapAgrupamento = hasKeySap ? (r["KEY_SAP"]?.ToString() ?? "").Trim() : "";
+                return string.IsNullOrWhiteSpace(keySapAgrupamento)
+                    ? "__SEM_KEY_SAP__" + Guid.NewGuid().ToString("N")
+                    : keySapAgrupamento;
+            })
+            .Select(g => new
+            {
+                KeySap = g.Key,
+                Logs = g.OrderByDescending(r =>
+                    {
+                DateTime dt;
+                var valor = hasLogTs ? (r["LOG_TS"]?.ToString() ?? "") : "";
+                return DateTime.TryParse(valor, out dt) ? dt : DateTime.MinValue;
+            }).ToList()
+            })
+            .OrderByDescending(g =>
+            {
+                DateTime dt;
+                var valor = hasLogTs ? (g.Logs.First()["LOG_TS"]?.ToString() ?? "") : "";
+                return DateTime.TryParse(valor, out dt) ? dt : DateTime.MinValue;
+            })
+            .ToList();
+
+            int idxGrupo = 0;
+
+            foreach (var grupo in grupos)
+            {
+                idxGrupo++;
+
+                var principal = grupo.Logs.First();
+                var historico = grupo.Logs.Skip(1).ToList();
+
+                string ts = hasLogTs && principal["LOG_TS"] != DBNull.Value ? (principal["LOG_TS"]?.ToString() ?? "") : "";
+                string method = hasMethod ? (principal["METHOD"]?.ToString() ?? "") : "";
+                string msgFull = hasMessage ? (principal["MESSAGE"]?.ToString() ?? "") : "";
+
+                string keySap = hasKeySap ? (principal["KEY_SAP"]?.ToString() ?? "") : "";
+                string keyWms = hasKeyWms ? (principal["KEY_WMS"]?.ToString() ?? "") : "";
+
+                string reqJson = hasReqJson ? (principal["REQUEST_JSON"]?.ToString() ?? "") : "";
+                string respJson = hasRespJson ? (principal["RESPONSE_JSON"]?.ToString() ?? "") : "";
+
+                bool isErro = EhErro(msgFull);
+                bool isOk = !isErro && EhOk(msgFull);
+
+                string rowClass = isErro ? "row-erro" : (isOk ? "row-ok" : "row-neutro");
+                string statusTxt = isErro ? "ERRO" : (isOk ? "OK" : "—");
+                string statusBadge = isErro ? "bg-danger" : (isOk ? "bg-success" : "bg-secondary");
+
+                string msgShort = msgFull;
+                if (!string.IsNullOrEmpty(msgShort) && msgShort.Length > 220)
+                    msgShort = msgShort.Substring(0, 220) + "…";
+
+                var msgAttr = WebUtility.HtmlEncode(msgFull ?? "");
+                var reqAttr = WebUtility.HtmlEncode(reqJson ?? "");
+                var respAttr = WebUtility.HtmlEncode(respJson ?? "");
+
+                string collapseId = $"hist_wms_{idxGrupo}";
+
+                <tr class="@rowClass fw-semibold">
+                    <td class="text-nowrap td-datetime">
+                        @if (historico.Any())
+                        {
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-warning btn-expand-wms me-2"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#@collapseId"
+                                    aria-expanded="false"
+                                    aria-controls="@collapseId">
+                                +
+                            </button>
+                        }
+                        else
+                        {
+                            <span class="d-inline-block me-2" style="width:31px;"></span>
+                        }
+
+                        @ts
+                    </td>
+
+                    <td class="text-nowrap">@TipoDoc(method)</td>
+
+                    <td>
+                        <span class="badge @statusBadge">@statusTxt</span>
+                        @if (grupo.Logs.Count > 1)
+                        {
+                            <span class="badge bg-secondary ms-1">@grupo.Logs.Count logs</span>
+                        }
+                    </td>
+
+                    <td class="td-chave">
+                        @if (!string.IsNullOrWhiteSpace(keySap))
+                        {
+                            <div class="text-nowrap"><span class="text-muted">SAP:</span> <strong>@keySap</strong></div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(keyWms))
+                        {
+                            <div class="text-nowrap"><span class="text-muted">WMS:</span> <strong>@keyWms</strong></div>
+                        }
+                        @if (string.IsNullOrWhiteSpace(keySap) && string.IsNullOrWhiteSpace(keyWms))
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+
+                    <td>
+                        @if (!string.IsNullOrWhiteSpace(method))
+                        {
+                            <span class="badge-method">@method</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+
+                    <td class="log-msg" title="@msgFull">@msgShort</td>
+
+                    <td class="text-end">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Ações do log">
+                            @if (!string.IsNullOrWhiteSpace(msgFull))
+                            {
+                                <button type="button"
+                                        class="btn btn-outline-primary"
+                                        data-fullmsg="@msgAttr">
+                                    Ver
+                                </button>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(reqJson))
+                            {
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        data-json="@reqAttr"
+                                        data-json-title="Request JSON">
+                                    JSON
+                                </button>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(respJson))
+                            {
+                                <button type="button"
+                                        class="btn btn-outline-info"
+                                        data-json="@respAttr"
+                                        data-json-title="Response JSON">
+                                    Resp
+                                </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+
+                if (historico.Any())
+                {
+                    <tr class="collapse" id="@collapseId">
+                        <td colspan="7" class="p-0">
+                            <table class="table table-sm mb-0 align-middle table-monitor">
+                                <tbody>
+                                    @foreach (var h in historico)
+                                    {
+                                        string hTs = hasLogTs && h["LOG_TS"] != DBNull.Value ? (h["LOG_TS"]?.ToString() ?? "") : "";
+                                        string hMethod = hasMethod ? (h["METHOD"]?.ToString() ?? "") : "";
+                                        string hMsg = hasMessage ? (h["MESSAGE"]?.ToString() ?? "") : "";
+                                        string hReqJson = hasReqJson ? (h["REQUEST_JSON"]?.ToString() ?? "") : "";
+                                        string hRespJson = hasRespJson ? (h["RESPONSE_JSON"]?.ToString() ?? "") : "";
+
+                                        string hKeySap = hasKeySap ? (h["KEY_SAP"]?.ToString() ?? "") : "";
+                                        string hKeyWms = hasKeyWms ? (h["KEY_WMS"]?.ToString() ?? "") : "";
+
+                                        bool hErro = EhErro(hMsg);
+                                        bool hOk = !hErro && EhOk(hMsg);
+
+                                        string hRowClass = hErro ? "row-erro" : (hOk ? "row-ok" : "row-neutro");
+                                        string hStatusTxt = hErro ? "ERRO" : (hOk ? "OK" : "—");
+                                        string hStatusBadge = hErro ? "bg-danger" : (hOk ? "bg-success" : "bg-secondary");
+
+                                        string hMsgShort = hMsg;
+                                        if (!string.IsNullOrEmpty(hMsgShort) && hMsgShort.Length > 220)
+                                            hMsgShort = hMsgShort.Substring(0, 220) + "…";
+
+                                        var hMsgAttr = WebUtility.HtmlEncode(hMsg ?? "");
+                                        var hReqAttr = WebUtility.HtmlEncode(hReqJson ?? "");
+                                        var hRespAttr = WebUtility.HtmlEncode(hRespJson ?? "");
+
+                                        <tr class="@hRowClass historico-wms">
+                                            <td style="width:170px" class="text-nowrap td-datetime ps-5">
+                                                ↳ @hTs
+                                            </td>
+
+                                            <td style="width:220px" class="text-nowrap">@TipoDoc(hMethod)</td>
+
+                                            <td style="width:110px">
+                                                <span class="badge @hStatusBadge">@hStatusTxt</span>
+                                            </td>
+
+                                            <td style="width:280px" class="td-chave">
+                                                @if (!string.IsNullOrWhiteSpace(hKeySap))
+                                                {
+                                                    <div class="text-nowrap"><span class="text-muted">SAP:</span> <strong>@hKeySap</strong></div>
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(hKeyWms))
+                                                {
+                                                    <div class="text-nowrap"><span class="text-muted">WMS:</span> <strong>@hKeyWms</strong></div>
+                                                }
+                                            </td>
+
+                                            <td style="width:240px">
+                                                @if (!string.IsNullOrWhiteSpace(hMethod))
+                                                {
+                                                    <span class="badge-method">@hMethod</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+
+                                            <td class="log-msg" title="@hMsg">@hMsgShort</td>
+
+                                            <td style="width:220px" class="text-end">
+                                                <div class="btn-group btn-group-sm" role="group" aria-label="Ações do histórico do log">
+                                                    @if (!string.IsNullOrWhiteSpace(hMsg))
+                                                    {
+                                                        <button type="button"
+                                                                class="btn btn-outline-primary"
+                                                                data-fullmsg="@hMsgAttr">
+                                                            Ver
+                                                        </button>
+                                                    }
+
+                                                    @if (!string.IsNullOrWhiteSpace(hReqJson))
+                                                    {
+                                                        <button type="button"
+                                                                class="btn btn-outline-secondary"
+                                                                data-json="@hReqAttr"
+                                                                data-json-title="Request JSON">
+                                                            JSON
+                                                        </button>
+                                                    }
+
+                                                    @if (!string.IsNullOrWhiteSpace(hRespJson))
+                                                    {
+                                                        <button type="button"
+                                                                class="btn btn-outline-info"
+                                                                data-json="@hRespAttr"
+                                                                data-json-title="Response JSON">
+                                                            Resp
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                }
+            }
+        }
+    </tbody>
+</table>

@@ -1,64 +1,535 @@
 ﻿@using PortalHelpdeskTI.Models
+@using System.Web
+@using System.Text.RegularExpressions
 @model Chamado
 
 @{
     ViewData["Title"] = "Atender Chamado";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var jaAvaliado = (ViewBag.JaAvaliado as bool?) ?? false;
 }
 
-<link rel="stylesheet" href="~/css/atender.css" />
+<link rel="stylesheet" href="/css/atender.css?v=7" />
+<div id="overlay-bloqueio">
+    <div class="overlay-conteudo">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+        <p>Atualizando chamado, aguarde...</p>
+    </div>
+</div>
+<div class="container">
+    <h2>#@Model.Id - @Model.Titulo</h2>
+</div>
+<!-- Bloco de Categorias do Chamado -->
+<div class="container">
+    <div class="descricao-chamado mb-4 atender-container">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="TipoChamadoId" class="form-label">Tipo</label>
+                <select id="TipoChamadoId" name="TipoChamadoId" class="form-select" form="formAtender">
+                    <option value="">-- Selecione --</option>
+                    @foreach (var t in (List<TipoChamado>)ViewBag.Tipos)
+                    {
+                        <option value="@t.Id" selected="@(Model.TipoChamadoId == t.Id ? "selected" : null)">@t.Nome</option>
+                    }
+                </select>
+            </div>
 
-<div class="atender-container">
-    <h2>Atender Chamado</h2>
+            <div class="col-md-4">
+                <label for="CategoriaId" class="form-label">Categoria</label>
+                <select id="CategoriaId" name="CategoriaId" class="form-select" form="formAtender">
+                    <option value="">-- Selecione --</option>
+                    @if (ViewBag.Categorias != null)
+                    {
+                        foreach (var c in (List<CategoriaChamado>)ViewBag.Categorias)
+                        {
+                            <option value="@c.Id" selected="@(Model.CategoriaId == c.Id ? "selected" : null)">@c.Nome</option>
+                        }
+                    }
+                </select>
+            </div>
 
-    <p><strong>Título:</strong> @Model.Titulo</p>
-    <p><strong>Descrição:</strong> @Model.Descricao</p>
-    <p><strong>Status atual:</strong> @Model.Status</p>
-    <p><strong>Usuário:</strong> @Model.Usuario?.Nome</p>
-
-    <form method="post">
-        <label for="novoStatus">Novo status:</label>
-        <select name="novoStatus" id="novoStatus">
-            <option selected>@Model.Status</option>
-            <option>Em Atendimento</option>
-            <option>Aguardando</option>
-            <option>Concluído</option>
-        </select>
-
-        <label for="tecnicoResponsavelId">Técnico Responsável:</label>
-        <select name="tecnicoResponsavelId" id="tecnicoResponsavelId">
+            <div class="col-md-4">
+                <label for="SubcategoriaId" class="form-label">Subcategoria</label>
+                <select id="SubcategoriaId" name="SubcategoriaId" class="form-select" form="formAtender">
+                    <option value="">-- Selecione --</option>
+                    @if (ViewBag.Subcategorias != null)
+                    {
+                        foreach (var s in (List<SubcategoriaChamado>)ViewBag.Subcategorias)
+                        {
+                            <option value="@s.Id" selected="@(Model.SubcategoriaId == s.Id ? "selected" : null)">@s.Nome</option>
+                        }
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Descrição do Chamado -->
+<div class="container">
+<div class="descricao-chamado mb-4 atender-container">
+    <div>
+        <strong>
+            <label for="Nome" class="form-label">Descrição</label>
+        </strong>
+    </div>
+        @{
+            var raw = Model.Descricao ?? string.Empty;
+            // Remove somente espaços/tabs no INÍCIO do texto (não mexe nas quebras)
+            var desc = Regex.Replace(raw, @"^[ \t]+", "");
+        }
+        <div class="descricao-texto">@desc</div>
+</div>
+</div>
+<!-- Dados do Solicitante do Chamado -->
+<div class="container">
+    <div class="atender-container">
+        <h5 class="mb-3"><i class="bi bi-person-circle me-1"></i> Dados do Solicitante</h5>
+        <div class="d-flex flex-wrap gap-4 mb-3">
+            <div>
+                <label for="Nome" class="form-label">Nome:</label> @Model.Usuario?.Nome
+            </div>
+            <div>
+                <label for="Nome" class="form-label">E-mail:</label> @Model.Usuario?.Email
+            </div>
+            <div>
+                <label for="Nome" class="form-label">Ramal:</label>@Model.Usuario?.Ramal
+            </div>
+            <div>
+                <label for="Nome" class="form-label">Departamento:</label> @Model.Usuario?.Departamento?.Nome
+            </div>
+        </div>
+    </div>
+    <div class="row align-items-start">
+        <div class="col-md-6">
+            <div class="atender-container">
+                @{
+                    var isConcluido = string.Equals(Model.Status, "Concluído", StringComparison.OrdinalIgnoreCase);
+                }
+    <form asp-controller="Chamados" asp-action="Atender" id="formAtender" method="post" enctype="multipart/form-data">
+     <input type="hidden" id="statusAtual" value="@Model.Status" />
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <div class="mb-3">
+        <label for="TecnicoId" class="form-label">Técnico Responsável:</label>
+        <select asp-for="TecnicoId" id="TecnicoId" class="form-select" disabled="@(isConcluido ? "disabled" : null)">
             <option value="">-- Selecione --</option>
-            @foreach (var tecnico in (IEnumerable<dynamic>)ViewBag.Tecnicos)
+            @foreach (var tecnico in (List<Usuario>)ViewBag.Tecnicos)
             {
-                <option value="@tecnico.Id" @(Model.TecnicoId == tecnico.Id ? "selected" : "")>@tecnico.Nome</option>
+                <option value="@tecnico.Id" selected="@(Model.TecnicoId == tecnico.Id ? "selected" : null)">@tecnico.Nome</option>
             }
         </select>
+    </div>
+    <div class="mb-3">
+        <label for="novoStatus" class="form-label">Novo status:</label>
+        <select name="novoStatus" id="novoStatus" class="form-select">
+            <option value="@Model.Status" selected>@Model.Status</option>
+            <option value="Em Atendimento">Em Atendimento</option>
+            <option value="Aguardando">Aguardando</option>
+            <option value="Concluído">Concluído</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="Prioridade" class="form-label">Prioridade:</label>
+        <select name="Prioridade" id="Prioridade" class="form-select" disabled="@(isConcluido ? "disabled" : null)">
+            <option value="Baixa" selected="@(string.Equals(Model.Prioridade, "Baixa", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">Baixa</option>
+            <option value="Média" selected="@(string.Equals(Model.Prioridade, "Média", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">Média</option>
+            <option value="Alta" selected="@(string.Equals(Model.Prioridade, "Alta", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">Alta</option>
+            <option value="Crítica" selected="@(string.Equals(Model.Prioridade, "Crítica", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">Crítica</option>
+        </select>
+    </div>
+    @if (isConcluido)
+    {
+        <div class="alert alert-success mb-2">
+            <i class="bi bi-check2-circle me-1"></i>
+            Este chamado está <strong>Concluído</strong>. O formulário está bloqueado.
+            Para registrar nova mensagem, altere o status para “Em Atendimento”.
+        </div>
+    }
 
-        <label for="interacaoMensagem">Interação (opcional):</label>
-        <textarea name="interacaoMensagem" id="interacaoMensagem"></textarea>
+    <div class="mb-3 interacao-bloco @(isConcluido ? "interacao-bloqueada" : "")">
+        <label for="interacaoMensagem" class="form-label">Mensagem:</label>
+        <textarea name="interacaoMensagem"
+                  id="interacaoMensagem"
+                  class="form-control"
+                  rows="4"
+                  disabled="@(isConcluido ? "disabled" : null)"></textarea>
+    </div>
 
-        <button type="submit">Atualizar Chamado</button>
-    </form>
-
-    <div class="interacoes">
-        <h3>Histórico de Interações</h3>
-        @if (Model.Interacoes != null && Model.Interacoes.Any())
+    <div class="d-flex align-items-center gap-2 mb-3 interacao-bloco @(isConcluido ? "interacao-bloqueada" : "")">
+        <label for="anexo" class="form-label mb-0 me-2">Anexo: </label>
+        <input type="file" name="Anexo" id="anexo"
+               class="form-control form-control-sm"
+               style="max-width: 300px; font-size: 0.875rem;"
+                               disabled="@(isConcluido ? "disabled" : null)" />
+        @if (Model.Anexos != null && Model.Anexos.Count > 0)
         {
-            <ul>
-                @foreach (var i in Model.Interacoes.OrderBy(x => x.Data))
-                {
-                    <li>
-                        <strong>@i.Data.ToString("dd/MM/yyyy HH:mm")</strong> -
-                        @i.Mensagem (por @i.Usuario?.Nome)
-                    </li>
-                }
-            </ul>
+            <button type="button" class="btn-anexo" data-bs-toggle="modal" data-bs-target="#modalAnexos"
+                                    disabled="@(isConcluido ? "disabled" : null)">
+                <img src="/images/anexo_branco.png" alt="Anexos" style="height: 20px;" />
+            </button>
         }
         else
         {
-            <p>Sem interações ainda.</p>
+            <span class="text-muted" style="font-size: 0.9rem;">🔒 Nenhum anexo disponível</span>
         }
     </div>
+    <div class="d-flex gap-2 mt-3">
+        <button type="submit" id="btnSubmit" class="btn btn-primary flex-fill" disabled="@(isConcluido ? "disabled" : null)">
+            Atualizar Chamado
+        </button>
+        <a href="/Chamados/TecnicoPainel" class="btn btn-secondary flex-fill">Voltar ao Painel Técnico</a>
+    </div>
+</form>
+            </div>
+            <div class="modal fade" id="modalAnexos" tabindex="-1" aria-labelledby="modalAnexosLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content shadow-lg rounded">
+                        <div class="modal-header bg-light">
+                            <h5 class="modal-title" id="modalAnexosLabel">Anexos do Chamado</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                        </div>
+                        <div class="modal-body">
+                            @if (Model.Anexos != null && Model.Anexos.Count > 0)
+                            {
+                                <div class="list-group">
+                                    @foreach (var anexo in Model.Anexos)
+                                    {
+                                        <a href="/Chamados/DownloadAnexo?chamadoId=@Model.Id&nomeArquivo=@anexo.CaminhoArquivo" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center">
+                                                <img src="/images/anexo.png" alt="Anexo" style="height: 20px; margin-right: 8px;" />
+                                                <span>@anexo.NomeOriginal</span>
+                                            </div>
+                                            <small class="text-muted">Abrir</small>
+                                        </a>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info mb-0">
+                                    Nenhum anexo enviado.
+                                </div>
+                            }
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <a href="/Chamados/TecnicoPainel">Voltar ao Painel Técnico</a>
+        <div class="col-md-6">
+            <div class="atender-container">
+                @if (string.Equals(Model.Status?.Trim(), "Concluído", StringComparison.OrdinalIgnoreCase)
+                                && !jaAvaliado
+                                && !Model.AvaliacaoLembreteEnviado)
+                {
+                    <form asp-action="EnviarLembreteAvaliacao" method="post" class="mb-3">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-like-alert-warning border border-warning">
+                            <i class="bi bi-envelope"></i> Enviar lembrete de avaliação
+                        </button>
+                    </form>
+                }
+                <h3>Histórico de Interações</h3>
+                @if (Model.Interacoes != null && Model.Interacoes.Any())
+                {
+                    <div class="historico-interacoes">
+                        <div class="interacoes-chat">
+                            @foreach (var i in Model.Interacoes.OrderByDescending(x => x.Data))
+                            {
+                                var isTecnico = i.Usuario?.Perfil == "Tecnico" || i.Usuario?.Perfil == "Técnico";
+                                <div class="chat-bubble @(isTecnico ? "tecnico" : "usuario")">
+                                    <div class="chat-message">
+                                        @i.Mensagem
+                                    </div>
+                                    <div class="chat-meta">
+                                        @i.Data.ToString("dd/MM/yyyy HH:mm") - @i.Usuario?.Nome
+                                    </div>
+
+                                    @if (i.Anexos != null && i.Anexos.Any())
+                                    {
+                                        <div class="mt-1">
+                                            <strong>Anexos:</strong>
+                                            <ul class="list-group list-group-flush">
+                                                @foreach (var anexo in i.Anexos)
+                                                {
+                                                    <li class="list-group-item p-1">
+                                                        <div class="d-flex align-items-center">
+                                                            <i class="bi bi-paperclip me-1"></i>
+                                                            <span class="me-2">@anexo.NomeOriginal</span>
+                                                            <button type="button"
+                                                                    class="btn btn-sm btn-outline-secondary p-1 visualizar-anexo"
+                                                                    data-anexo="/Chamados/DownloadAnexo?chamadoId=@Model.Id&nomeArquivo=@HttpUtility.UrlEncode(System.IO.Path.GetFileName(anexo.CaminhoArquivo))"
+                                                                    data-nome="@anexo.NomeOriginal"
+                                                                    title="Visualizar Anexo">
+                                                                    <i class="bi bi-eye"></i>
+                                                            </button>
+
+                                                        </div>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <p>Sem interações ainda.</p>
+                }
+            </div>
+        </div>
+    </div>
 </div>
+<div class="modal fade" id="anexoModal" tabindex="-1" aria-labelledby="anexoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="anexoModalLabel">Visualizar Anexo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body text-center" id="anexoModalBody" style="min-height: 500px; display: flex; align-items: center; justify-content: center;">
+                <img id="anexoImage" src="" class="img-fluid d-none" style="max-height: 500px; object-fit: contain;" />
+                <iframe id="anexoFrame" src=""
+                        style="max-width: 100%; width: 100%; max-height: 500px; height: 500px; border: none;"
+                        class="d-none"></iframe>
+            </div>
+
+        </div>
+    </div>
+</div>
+<!-- Coloque isso uma vez no final da página, antes dos <script> -->
+<div class="modal fade" id="brwAlert" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-2">
+                    <img src="/images/logo_brw.png" alt="BRW" style="height:24px;">
+                    <strong class="modal-title">Aviso</strong>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p id="brwAlertMsg" class="mb-0"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.querySelectorAll('.visualizar-anexo').forEach(button => {
+        button.addEventListener('click', function () {
+            const anexoUrl = this.getAttribute('data-anexo');
+            const nome = this.getAttribute('data-nome');
+            const extensoesImagem = ['.jpg', '.jpeg', '.png', '.gif'];
+            const extensoesVideo = ['.mp4'];
+            const extensoesDocumento = ['.pdf'];
+            const ext = anexoUrl.substring(anexoUrl.lastIndexOf('.')).toLowerCase();
+
+            const modal = new bootstrap.Modal(document.getElementById('anexoModal'));
+            const modalTitle = document.querySelector('#anexoModal .modal-title');
+            const modalBody = document.getElementById('anexoModalBody');
+            const img = document.getElementById('anexoImage');
+            const frame = document.getElementById('anexoFrame');
+
+            // Resetar visual
+            modalTitle.textContent = '';
+            img.classList.add('d-none');
+            frame.classList.add('d-none');
+            img.src = '';
+            frame.src = '';
+
+            if (extensoesImagem.includes(ext)) {
+                modalTitle.textContent = 'Visualizar Anexo - ' + nome;
+                img.src = anexoUrl;
+                img.classList.remove('d-none');
+                modal.show();
+            } else if (extensoesVideo.includes(ext)) {
+                modalTitle.textContent = 'Visualizar Anexo - ' + nome;
+                frame.src = anexoUrl;
+                frame.classList.remove('d-none');
+                modal.show();
+            } else if (extensoesDocumento.includes(ext)) {
+                // PDF: abrir em nova aba e NÃO abrir modal
+                window.open(anexoUrl, '_blank');
+            } else {
+                // Arquivo não visualizável: faz download e alerta
+                window.open(anexoUrl, '_blank');
+                alert("O download do anexo foi iniciado. Este tipo de arquivo não pode ser visualizado diretamente.");
+            }
+        });
+    });
+    document.getElementById('anexoModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('anexoImage').src = '';
+        document.getElementById('anexoFrame').src = '';
+    });
+</script>
+<script>
+    // Cascata: Tipo -> Categoria
+    document.getElementById('TipoChamadoId')?.addEventListener('change', async function () {
+        const tipoId = this.value;
+        const categoriaSel = document.getElementById('CategoriaId');
+        const subcategoriaSel = document.getElementById('SubcategoriaId');
+
+        // limpa dependentes
+        categoriaSel.innerHTML = '<option value="">-- Selecione --</option>';
+        subcategoriaSel.innerHTML = '<option value="">-- Selecione --</option>';
+
+        if (!tipoId) return;
+
+        const r = await fetch(`/Chamados/CategoriasPorTipo?tipoId=${tipoId}`);
+        const data = await r.json();
+
+        data.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.nome;
+            categoriaSel.appendChild(opt);
+        });
+    });
+
+    // Cascata: Categoria -> Subcategoria
+    document.getElementById('CategoriaId')?.addEventListener('change', async function () {
+        const categoriaId = this.value;
+        const subcategoriaSel = document.getElementById('SubcategoriaId');
+
+        subcategoriaSel.innerHTML = '<option value="">-- Selecione --</option>';
+        if (!categoriaId) return;
+
+        const r = await fetch(`/Chamados/SubcategoriasPorCategoria?categoriaId=${categoriaId}`);
+        const data = await r.json();
+
+        data.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.nome;
+            subcategoriaSel.appendChild(opt);
+        });
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      function setFormEnabled(enabled) {
+        const form = document.getElementById('formAtender');
+
+        // 1) Dentro do form (menos #novoStatus e inputs hidden)
+        form.querySelectorAll('input, select, textarea, button').forEach(el => {
+          if (el.id === 'novoStatus') return;
+          if (el.type === 'hidden') return;
+          el.disabled = !enabled;
+        });
+
+        // 2) Fora do form, mas com form="formAtender"
+        document.querySelectorAll('[form="formAtender"]').forEach(el => {
+          if (el.id === 'novoStatus') return;
+          el.disabled = !enabled;
+        });
+
+        document.querySelectorAll('.interacao-bloco')
+          .forEach(b => b.classList.toggle('interacao-bloqueada', !enabled));
+      }
+
+      const statusInicial = document.getElementById('statusAtual')?.value || '';
+      const nasceuConcluido = statusInicial === 'Concluído';
+
+      // 🔹 Prioridade (string) — se você usa ID, troque os ids/names conforme seu select
+      const prioridadeEl = document.getElementById('prioridade');            // <select id="prioridade" name="Prioridade">
+      const prioridadeInicial = prioridadeEl?.dataset.inicial ?? prioridadeEl?.getAttribute('data-inicial') ?? prioridadeEl?.value ?? '';
+
+      // (opcional) Técnico, se quiser considerar mudança de técnico como “alteração”
+      const tecnicoEl = document.getElementById('TecnicoId');
+      const tecnicoInicial = tecnicoEl?.dataset.inicial ?? tecnicoEl?.value ?? '';
+
+      // Estado inicial
+      setFormEnabled(!nasceuConcluido);
+
+      // Ao mudar o status
+      const selStatus = document.getElementById('novoStatus');
+      selStatus.addEventListener('change', function () {
+        if (nasceuConcluido && this.value === 'Concluído') {
+          setFormEnabled(false);
+          return;
+        }
+        setFormEnabled(true);
+      });
+
+      // Validação no submit
+      document.getElementById('formAtender').addEventListener('submit', function (e) {
+        const btn = document.getElementById('btnSubmit');
+        const novoStatus = selStatus.value;
+        const msg = document.getElementById('interacaoMensagem');
+
+        // Se botão está desabilitado, não envia
+        if (btn && btn.disabled) {
+          e.preventDefault();
+          return;
+        }
+
+        // 🔹 Detecta se houve alguma mudança “de dado”
+        const prioridadeAtual = prioridadeEl ? prioridadeEl.value : '';
+        const mudouPrioridade = prioridadeEl ? (prioridadeAtual !== (prioridadeInicial ?? '')) : false;
+
+        const tecnicoAtual = tecnicoEl ? tecnicoEl.value : '';
+        const mudouTecnico = tecnicoEl ? (tecnicoAtual !== (tecnicoInicial ?? '')) : false;
+
+        const mudouStatus = (novoStatus !== statusInicial);
+
+        const houveMudanca = mudouPrioridade || mudouTecnico || mudouStatus;
+
+        // Caso de ENCERRAMENTO AGORA: status mudou de != Concluído para Concluído => exige mensagem
+        if (statusInicial !== 'Concluído' && novoStatus === 'Concluído') {
+          if (!msg || !msg.value.trim()) {
+            e.preventDefault();
+            brwAlert("Para concluir o chamado, descreva a ação realizada na mensagem.");
+            msg?.focus();
+            return;
+          }
+        } else {
+          // 🔹 Regra geral:
+          // - Se NÃO houve mudança de dados, e o campo msg está habilitado e vazio => exigir algo (evita submit “em branco”)
+          // - Se HOUVE mudança (ex.: prioridade), permitir sem mensagem.
+          if (!houveMudanca) {
+            if (msg && !msg.disabled && !msg.value.trim()) {
+              e.preventDefault();
+              brwAlert("Por favor, descreva a atualização (ou altere algum campo, como prioridade) antes de enviar.");
+              msg?.focus();
+              return;
+            }
+          }
+        }
+
+        document.getElementById('overlay-bloqueio').style.display = 'flex';
+      });
+    });
+
+    function brwAlert(message) {
+      const el = document.getElementById('brwAlertMsg');
+      el.textContent = message;
+      const m = new bootstrap.Modal(document.getElementById('brwAlert'));
+      m.show();
+    }
+</script>
+@functions {
+    public string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Aberto" => "bg-secondary",
+            "Em Atendimento" => "bg-warning text-dark",
+            "Aguardando" => "bg-info text-dark",
+            "Concluído" => "bg-success",
+            _ => "bg-light text-dark"
+        };
+    }
+}

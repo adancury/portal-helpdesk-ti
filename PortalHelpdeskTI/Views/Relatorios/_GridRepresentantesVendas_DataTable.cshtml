@@ -1,0 +1,91 @@
+﻿@model PortalHelpdeskTI.ViewModels.Relatorios.DataTablePage
+@{
+    var dt = Model?.Data;
+    string Get(object? v) => v == null || v == System.DBNull.Value ? string.Empty : v.ToString();
+
+    // paginação
+    var total = Model?.Total ?? 0;
+    var curPage = Model?.Page ?? 1;    // usar curPage para evitar conflito com diretiva @page
+    var pageSize = Model?.PageSize ?? 20;
+    var last = (int)Math.Ceiling(total / (double)pageSize);
+}
+
+<table id="tabela-representantes" class="table table-sm align-middle mb-0" style="table-layout:fixed;">
+    <colgroup>
+        <col style="width:110px;">   @* Código *@
+        <col style="width:280px;">   @* Nome *@
+        <col style="width:150px;">   @* Telefone *@
+        <col style="width:170px;">   @* CNPJ/CPF *@
+        <col style="width:240px;">   @* E-mail *@
+        <col>                        @* Endereço (flex) *@
+        <col style="width:90px;">    @* Ativo *@
+    </colgroup>
+    <thead>
+        <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Telefone</th>
+            <th>CNPJ/CPF</th>
+            <th>E-mail</th>
+            <th class="text-nowrap">Endereço</th>
+            <th class="text-center">Ativo</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (dt?.Rows?.Count > 0)
+        {
+            foreach (System.Data.DataRow row in dt.Rows)
+            {
+                var codigo = dt.Columns.Contains("Código") ? Get(row["Código"]) : (dt.Columns.Contains("CardCode") ? Get(row["CardCode"]) : "");
+                var nome = dt.Columns.Contains("Nome") ? Get(row["Nome"]) : (dt.Columns.Contains("CardName") ? Get(row["CardName"]) : "");
+                var tel = dt.Columns.Contains("Telefone") ? Get(row["Telefone"]) : (dt.Columns.Contains("Phone1") ? Get(row["Phone1"]) : "");
+                var lic = dt.Columns.Contains("LicTradNum") ? Get(row["LicTradNum"]) : (dt.Columns.Contains("LicTradNum") ? Get(row["LicTradNum"]) : "");
+                var mail = dt.Columns.Contains("E_Mail") ? Get(row["E_Mail"]) : (dt.Columns.Contains("E_Mail") ? Get(row["E_Mail"]) : "");
+                var end = dt.Columns.Contains("Endereço") ? Get(row["Endereço"]) : "";
+                var ativo = dt.Columns.Contains("Ativo") ? Get(row["Ativo"]) : "";
+
+                <tr>
+                    <td><span class="font-monospace text-body-secondary">@codigo</span></td>
+                    <td class="text-truncate">@nome</td>
+                    <td>@tel</td>
+                    <td>@lic</td>
+                    <td class="text-truncate">@mail</td>
+                    <td class="text-truncate">@end</td>
+                    <td class="text-center">
+                        @if (string.Equals(ativo, "Sim", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <span class="badge bg-success">Sim</span>
+                        }
+                        else if (string.Equals(ativo, "Não", StringComparison.OrdinalIgnoreCase) || string.Equals(ativo, "Nao", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <span class="badge bg-danger">Não</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">@ativo</span>
+                        }
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">Sem resultados.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (total > pageSize)
+{
+    <div class="d-flex justify-content-between align-items-center py-2">
+        <a href="#" class="btn btn-sm btn-outline-secondary" data-page="@(curPage > 1 ? curPage - 1 : 1)">« Anterior</a>
+        <div class="small text-muted">Página <strong>@curPage</strong> de <strong>@(last == 0 ? 1 : last)</strong></div>
+        <a href="#" class="btn btn-sm btn-outline-secondary" data-page="@(curPage<last? curPage + 1 : last)">Próxima »</a>
+    </div>
+}
+<div class="d-flex justify-content-between align-items-center mt-3 small text-muted">
+    <div>Total: <strong>@total</strong></div>
+    <div>Página <strong>@curPage</strong> de @last</div>
+</div>

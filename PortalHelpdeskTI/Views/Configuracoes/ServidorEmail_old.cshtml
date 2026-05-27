@@ -1,0 +1,53 @@
+﻿@model PortalHelpdeskTI.Models.EmailSettingsViewModel
+
+@{
+    ViewData["Title"] = "Configurações de Email";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4">Servidor de Email</h2>
+
+    @if (TempData["MensagemSucesso"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["MensagemSucesso"]
+        </div>
+    }
+
+    <form asp-action="ServidorEmail" method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="mb-3">
+            <label class="form-label">Servidor SMTP</label>
+            <input asp-for="SmtpServer" class="form-control" />
+            <span asp-validation-for="SmtpServer" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Porta</label>
+            <input asp-for="SmtpPort" class="form-control" />
+            <span asp-validation-for="SmtpPort" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Usuário SMTP</label>
+            <input asp-for="SmtpUser" class="form-control" />
+            <span asp-validation-for="SmtpUser" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Senha SMTP</label>
+            <input asp-for="SmtpPass" class="form-control" type="password" />
+            <span asp-validation-for="SmtpPass" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Email Remetente</label>
+            <input asp-for="FromEmail" class="form-control" />
+            <span asp-validation-for="FromEmail" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Salvar</button>
+    </form>
+</div>

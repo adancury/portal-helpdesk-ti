@@ -1,0 +1,170 @@
+﻿@model PortalHelpdeskTI.Models.AvaliacaoChamado
+@{
+    ViewData["Title"] = "Avaliar Chamado";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link rel="stylesheet" href="~/css/avaliacao-chamado.css" />
+
+<div class="eva-wrap">
+    <div class="container py-4 py-md-5">
+        <!-- Cabeçalho -->
+        <div class="card eva-card mb-3 mb-md-4">
+            <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                <div>
+                    <h1 class="h3 mb-1 eva-title">Avaliação de Chamado</h1>
+                    <p class="mb-0 eva-subtitle">Sua opinião nos ajuda a melhorar 💙</p>
+                </div>
+
+                <div class="text-md-end">
+                    <span class="badge rounded-pill eva-badge-brand me-2">
+                        @(ViewBag.Codigo ?? $"Chamado #{Model.ChamadoId}")
+                    </span>
+                    @if (ViewBag.DataResolvido != null)
+                    {
+                        <div class="small text-muted mt-1">
+                            Resolvido em @(((DateTime)ViewBag.DataResolvido).ToString("dd/MM/yyyy HH:mm"))
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Detalhes (renderiza só se tiver dados) -->
+        @if (ViewBag.Descricao != null || ViewBag.Tecnico != null || ViewBag.Categoria != null || ViewBag.TempoResolucao != null)
+        {
+            <div class="card eva-card mb-3 mb-md-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Detalhes do Chamado</h2>
+                    <div class="row g-3">
+                        @if (ViewBag.Descricao != null)
+                        {
+                            <div class="col-12 col-md-6">
+                                <div class="eva-meta-label">Problema</div>
+                                <div class="eva-meta-value">@ViewBag.Descricao</div>
+                            </div>
+                        }
+                        @if (ViewBag.Tecnico != null)
+                        {
+                            <div class="col-12 col-md-6">
+                                <div class="eva-meta-label">Técnico Responsável</div>
+                                <div class="eva-meta-value">@ViewBag.Tecnico</div>
+                            </div>
+                        }
+                        @if (ViewBag.Categoria != null)
+                        {
+                            <div class="col-12 col-md-6">
+                                <div class="eva-meta-label">Categoria</div>
+                                <div class="eva-meta-value">@ViewBag.Categoria</div>
+                            </div>
+                        }
+                        @if (ViewBag.TempoResolucao != null)
+                        {
+                            <div class="col-12 col-md-6">
+                                <div class="eva-meta-label">Tempo de Resolução</div>
+                                <div class="eva-meta-value">@ViewBag.TempoResolucao</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Formulário -->
+        <div class="card eva-card">
+            <div class="card-body">
+                <h2 class="h5 mb-4">Como você avalia nosso atendimento?</h2>
+
+                <form asp-controller="Chamados"
+                      asp-action="AvaliarChamado"
+                      method="post"
+                      novalidate>
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="ChamadoId" />
+
+                    <!-- Nota -->
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">
+                            Satisfação Geral <span class="text-danger">*</span>
+                        </label>
+
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="eva-stars" aria-label="Avaliação de 1 a 5 estrelas">
+                                @for (int i = 5; i >= 1; i--)
+                                {
+                                    <input type="radio" asp-for="Nota" id="star-@i" value="@i" />
+                                    <label for="star-@i" title="@i de 5">★</label>
+                                }
+                            </div>
+                            <span id="notaLegenda" class="small text-muted">Clique nas estrelas para avaliar</span>
+                        </div>
+
+                        <span asp-validation-for="Nota" class="invalid-feedback d-block"></span>
+                    </div>
+
+                    <!-- Comentário -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label mb-1">Comentário (opcional)</label>
+                            <small id="contador" class="text-muted">0 / 1000</small>
+                        </div>
+                        <textarea asp-for="Comentario"
+                                  maxlength="1000"
+                                  rows="4"
+                                  class="form-control eva-textarea"
+                                  placeholder="Conte-nos mais sobre sua experiência..."></textarea>
+                        <span asp-validation-for="Comentario" class="invalid-feedback d-block"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" id="btnClear" class="btn btn-outline-secondary">Limpar</button>
+                        <button type="submit" class="btn btn-primary">Enviar Avaliação</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Resumo de erros custom (opcional; usa se quiser) -->
+        <div id="errorBox" class="alert alert-danger mt-3 d-none"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Legenda da nota
+        const legendas = { 1: 'Péssimo', 2: 'Ruim', 3: 'Regular', 4: 'Bom', 5: 'Excelente' };
+        const radios = document.querySelectorAll('input[name="Nota"]');
+        const notaLegenda = document.getElementById('notaLegenda');
+
+        radios.forEach(r => {
+            r.addEventListener('change', () => {
+                const v = parseInt(r.value);
+                notaLegenda.textContent = legendas[v] || 'Clique nas estrelas para avaliar';
+            });
+        });
+        const marcado = document.querySelector('input[name="Nota"]:checked');
+        if (marcado) {
+            const v = parseInt(marcado.value);
+            notaLegenda.textContent = legendas[v] || 'Clique nas estrelas para avaliar';
+        }
+
+        // Contador de caracteres
+        const txt = document.getElementById('@Html.IdFor(m => m.Comentario)');
+        const contador = document.getElementById('contador');
+        function updCount() {
+            const len = (txt.value || '').length;
+            contador.textContent = `${len} / 1000`;
+        }
+        if (txt) { txt.addEventListener('input', updCount); updCount(); }
+
+        // Limpar
+        document.getElementById('btnClear').addEventListener('click', () => {
+            document.querySelectorAll('input[name="Nota"]').forEach(r => r.checked = false);
+            notaLegenda.textContent = 'Clique nas estrelas para avaliar';
+            if (txt) { txt.value = ''; updCount(); }
+            const box = document.getElementById('errorBox');
+            box.classList.add('d-none');
+        });
+    </script>
+}

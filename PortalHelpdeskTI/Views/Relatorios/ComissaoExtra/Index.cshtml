@@ -1,0 +1,228 @@
+﻿@model PortalHelpdeskTI.Models.Relatorios.ComissaoExtraVm
+@{
+    ViewData["Title"] = "Comissão Extra";
+}
+
+@functions {
+    private (DateTime ini, DateTime fim) FiscalQuarterRange(int anoFiscal, int trimestre)
+    {
+        int startYear, startMonth;
+        switch (trimestre)
+        {
+            case 1: startYear = anoFiscal; startMonth = 8; break; // Ago-Out (anoFiscal)
+            case 2: startYear = anoFiscal; startMonth = 11; break; // Nov-Jan (anoFiscal -> anoFiscal+1)
+            case 3: startYear = anoFiscal + 1; startMonth = 2; break; // Fev-Abr (anoFiscal+1)
+            case 4: startYear = anoFiscal + 1; startMonth = 5; break; // Mai-Jul (anoFiscal+1)
+            default: startYear = anoFiscal; startMonth = 8; break;
+        }
+
+        var ini = new DateTime(startYear, startMonth, 1);
+        var fim = ini.AddMonths(3).AddDays(-1);
+        return (ini, fim);
+    }
+}
+
+@{
+    // Model.Ano agora é "Ano Fiscal"
+    var periodo = FiscalQuarterRange(Model.Ano, Model.Trimestre);
+    var textoPeriodo = $"{periodo.ini:dd/MM/yyyy} até {periodo.fim:dd/MM/yyyy}";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+        <div class="d-flex flex-column">
+            <div class="d-flex align-items-center gap-2">
+                <strong>Comissão Extra</strong>
+                <span class="badge text-bg-secondary">Não cumulativa</span>
+            </div>
+            <div class="small text-muted">
+                Ano Fiscal: <strong id="txtAnoFiscal">@Model.Ano</strong> • Trimestre: <strong id="txtTri">@Model.Trimestre</strong> •
+                Período: <strong id="txtPeriodo">@textoPeriodo</strong>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <select id="anoFiscal" class="form-select form-select-sm" style="width:140px;" aria-label="Ano Fiscal">
+                @{
+                    var anoAtual = DateTime.Now.Year;
+                    for (var a = anoAtual - 2; a <= anoAtual + 1; a++)
+                    {
+                        <option value="@a" selected="@(a == Model.Ano)">@a</option>
+                    }
+                }
+            </select>
+
+            <select id="tri" class="form-select form-select-sm" style="width:140px;" aria-label="Trimestre Fiscal">
+                <option value="1" selected="@(Model.Trimestre == 1)">1º Tri (Ago-Out)</option>
+                <option value="2" selected="@(Model.Trimestre == 2)">2º Tri (Nov-Jan)</option>
+                <option value="3" selected="@(Model.Trimestre == 3)">3º Tri (Fev-Abr)</option>
+                <option value="4" selected="@(Model.Trimestre == 4)">4º Tri (Mai-Jul)</option>
+            </select>
+
+            <select id="tipoVendedor" class="form-select form-select-sm" style="min-width:180px;">
+                <option value="">Todos os tipos</option>
+                @foreach (var t in Model.TiposVendedor)
+                {
+                    <option value="@t" selected="@(t == Model.TipoVendedor)">@t</option>
+                }
+            </select>
+
+            <form id="anti" method="post">
+                @Html.AntiForgeryToken()
+            </form>
+
+            <button id="btnAplicarFiltros" class="btn btn-sm btn-outline-primary">
+                Aplicar
+            </button>
+
+            <button id="btnAtualizarSap" class="btn btn-sm btn-primary">
+                Atualizar SAP
+            </button>
+        </div>
+    </div>
+
+    <div id="gridArea" class="card-body p-0">
+        @await Html.PartialAsync("~/Views/Relatorios/ComissaoExtra/_Grid.cshtml", Model)
+    </div>
+
+    <div class="card-footer small text-muted">
+        Dica: edite a <strong>Meta</strong> direto na tabela (Enter salva).
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const gridArea = document.getElementById('gridArea');
+            const token = document.querySelector('#anti input[name="__RequestVerificationToken"]').value;
+
+            function pad2(n){ return String(n).padStart(2,'0'); }
+
+            function fiscalQuarterRange(anoFiscal, tri){
+                anoFiscal = parseInt(anoFiscal, 10);
+                tri = parseInt(tri, 10);
+
+                let startYear = anoFiscal;
+                let startMonth = 8;
+
+                switch (tri) {
+                    case 1: startYear = anoFiscal;     startMonth = 8;  break; // Ago
+                    case 2: startYear = anoFiscal;     startMonth = 11; break; // Nov
+                    case 3: startYear = anoFiscal + 1; startMonth = 2;  break; // Fev
+                    case 4: startYear = anoFiscal + 1; startMonth = 5;  break; // Mai
+                }
+
+                const ini = new Date(startYear, startMonth - 1, 1);
+                const fim = new Date(startYear, startMonth - 1 + 3, 0); // último dia do 3º mês
+
+                const fmt = d => `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
+                return { ini, fim, texto: `${fmt(ini)} até ${fmt(fim)}` };
+            }
+
+            function updateHeaderPeriodo(){
+                const anoFiscal = document.getElementById('anoFiscal').value;
+                const tri = document.getElementById('tri').value;
+                const r = fiscalQuarterRange(anoFiscal, tri);
+
+                document.getElementById('txtAnoFiscal').textContent = anoFiscal;
+                document.getElementById('txtTri').textContent = tri;
+                document.getElementById('txtPeriodo').textContent = r.texto;
+            }
+
+            function qs() {
+                const anoFiscal = document.getElementById('anoFiscal').value;
+                const tri = document.getElementById('tri').value;
+                const tipo = document.getElementById('tipoVendedor').value || '';
+                return { anoFiscal, tri, tipo };
+            }
+
+            async function reloadGrid() {
+                const { anoFiscal, tri, tipo } = qs();
+                updateHeaderPeriodo();
+
+                const url = `/Relatorios/ComissaoExtra/Grid?anoFiscal=${encodeURIComponent(anoFiscal)}&trimestre=${encodeURIComponent(tri)}&tipoVendedor=${encodeURIComponent(tipo)}`;
+                const html = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(r => r.text());
+                gridArea.innerHTML = html;
+                wireMetaInputs();
+            }
+
+            async function post(url, bodyObj) {
+                const form = new URLSearchParams();
+                for (const k in bodyObj) form.append(k, bodyObj[k]);
+
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'RequestVerificationToken': token
+                    },
+                    body: form.toString()
+                });
+
+                if (!resp.ok) {
+                    const txt = await resp.text();
+                    throw new Error(txt || 'Falha na requisição');
+                }
+
+                return resp.json().catch(() => ({}));
+            }
+
+            function wireMetaInputs() {
+                document.querySelectorAll('input[data-meta="1"]').forEach(inp => {
+                    inp.addEventListener('keydown', async (e) => {
+                        if (e.key !== 'Enter') return;
+                        e.preventDefault();
+
+                        const vendedorId = inp.dataset.vendedorId;
+                        const { anoFiscal, tri } = qs();
+                        const meta = (inp.value || '0').replace(',', '.');
+
+                        inp.disabled = true;
+                        try {
+                            await post('/Relatorios/ComissaoExtra/SalvarMeta', {
+                                vendedorId,
+                                anoFiscal,
+                                trimestre: tri,
+                                meta
+                            });
+                            await reloadGrid();
+                        } finally {
+                            inp.disabled = false;
+                        }
+                    });
+                });
+            }
+
+            document.getElementById('btnAplicarFiltros').addEventListener('click', reloadGrid);
+
+                    document.getElementById('btnAtualizarSap').addEventListener('click', async () => {
+            const { anoFiscal, tri } = qs();
+            const btn = document.getElementById('btnAtualizarSap');
+            btn.disabled = true;
+
+            try {
+                const r = await post('/Relatorios/ComissaoExtra/AtualizarRealizadoSap', {
+                    anoFiscal,
+                    trimestre: tri
+                });
+
+                alert(`Atualização SAP concluída. Registros atualizados: ${r?.atualizados ?? 0}`);
+                await reloadGrid();
+            } catch (e) {
+                console.error(e);
+                alert('Erro ao atualizar SAP: ' + (e?.message || e));
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+
+            // Atualiza período ao trocar selects (sem precisar clicar em aplicar)
+            document.getElementById('anoFiscal').addEventListener('change', updateHeaderPeriodo);
+            document.getElementById('tri').addEventListener('change', updateHeaderPeriodo);
+
+            updateHeaderPeriodo();
+            wireMetaInputs();
+        })();
+    </script>
+}

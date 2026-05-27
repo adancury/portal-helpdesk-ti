@@ -1,0 +1,278 @@
+﻿@model PortalHelpdeskTI.ViewModels.Comissoes.ComissaoVendedorManutencaoVm
+@{
+    ViewData["Title"] = "Manutenção - Comissão (Vendedores)";
+    var embed = (ViewData["Embed"] as bool?) == true;
+
+    // ✅ IMPORTANTE: embed precisa de layout (senão não carrega CSS/JS)
+    Layout = embed ? "~/Views/Shared/_LayoutEmbed.cshtml"
+                   : "~/Views/Shared/_Layout.cshtml";
+
+    var urlAtualizar = "/ComissaoVendedor/Atualizar" + (embed ? "?embed=1" : "");
+}
+
+<div class="container-fluid">
+    <div class="card shadow-sm rounded-3">
+        <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between gap-2 flex-wrap">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a class="btn btn-light btn-sm" href="javascript:history.back();">
+                    Voltar
+                </a>
+
+                <div class="d-flex flex-column">
+                    <strong class="lh-1">Manutenção - Comissão (Vendedores)</strong>
+                    <span class="small opacity-75">Edite apenas BaseCálculo, Tipo e Email</span>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <form method="get" class="d-flex gap-2 align-items-center m-0">
+                    <input type="hidden" name="embed" value="@(embed ? "1" : "0")" />
+                    <input class="form-control form-control-sm"
+                           style="min-width:260px"
+                           name="filtro"
+                           value="@Model.Filtro"
+                           placeholder="Filtrar por nome ou código..." />
+                    <button class="btn btn-sm btn-outline-light" type="submit">Filtrar</button>
+                </form>
+
+                <form method="post" action="@urlAtualizar" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn-sm btn-outline-light" type="submit">
+                        Atualizar (HANA → SQL)
+                    </button>
+                </form>
+
+                <button type="button"
+                        class="btn btn-sm btn-success d-flex align-items-center gap-2"
+                        id="btnSalvar">
+                    <span class="spinner-border spinner-border-sm d-none"
+                          role="status"
+                          aria-hidden="true"
+                          id="btnSalvarSpinner"></span>
+
+                    <span id="btnSalvarText">Salvar alterações</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+
+                @* 🔐 Token para o fetch (usaremos o ÚLTIMO token da página) *@
+                @Html.AntiForgeryToken()
+
+                <table class="table table-sm mb-0 align-middle" id="tblVendedores">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width:90px;">SlpCode</th>
+                            <th style="min-width:280px;">Nome</th>
+                            <th style="min-width:90px;">Ativo</th>
+                            <th style="min-width:130px;">No Relatório</th>
+                            <th style="min-width:170px;">Base Cálculo</th>
+                            <th style="min-width:190px;">Tipo</th>
+                            <th style="min-width:140px;">Destacar IR</th>
+                            <th style="min-width:320px;">Email (portal)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var x in Model.Itens)
+                        {
+                            var isInativo = !x.Ativo;
+
+                            var baseAtual = string.IsNullOrWhiteSpace(x.BaseCalculo)
+                            ? "FATURAMENTO"
+                            : x.BaseCalculo.Trim().ToUpperInvariant();
+
+                            var tipoAtual = string.IsNullOrWhiteSpace(x.TipoVendedor)
+                            ? "REPRESENTANTE"
+                            : x.TipoVendedor.Trim().ToUpperInvariant();
+
+                            <tr data-id="@x.Id"
+                                data-slp="@x.SlpCode"
+                                data-ativo="@(x.Ativo ? "1" : "0")"
+                                data-base="@baseAtual"
+                                data-tipo="@tipoAtual">
+
+                                <td>@x.SlpCode</td>
+
+                                <td>
+                                    <span class="@(isInativo ? "text-muted" : "")">@x.SlpName</span>
+                                    @if (!isInativo && !x.ParticipaRelatorio)
+                                    {
+                                        <span class="badge bg-secondary ms-1">Fora do relatório</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <span class="badge @(x.Ativo ? "bg-success" : "bg-danger")">
+                                        @(x.Ativo ? "Sim" : "Não")
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <input class="form-check-input inp-participa"
+                                           type="checkbox"
+                                           @(x.Ativo && x.ParticipaRelatorio ? "checked" : "")
+                                           @(x.Ativo ? "" : "disabled") />
+                                </td>
+
+                                <td>
+                                    <select class="form-select form-select-sm inp-base" @(x.Ativo ? "" : "disabled")>
+                                        @if (baseAtual == "FATURAMENTO")
+                                        {
+                                            <option value="FATURAMENTO" selected="selected">FATURAMENTO</option>
+                                            <option value="BOLETO">BOLETO</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="FATURAMENTO">FATURAMENTO</option>
+                                            <option value="BOLETO" selected="selected">BOLETO</option>
+                                        }
+                                    </select>
+                                </td>
+
+                                <td>
+                                    <select class="form-select form-select-sm inp-tipo" @(x.Ativo ? "" : "disabled")>
+                                        @if (tipoAtual == "REPRESENTANTE")
+                                        {
+                                            <option value="REPRESENTANTE" selected="selected">REPRESENTANTE</option>
+                                            <option value="INTERNO">INTERNO</option>
+                                            <option value="EXTERNO">EXTERNO</option>
+                                        }
+                                        else if (tipoAtual == "INTERNO")
+                                        {
+                                            <option value="REPRESENTANTE">REPRESENTANTE</option>
+                                            <option value="INTERNO" selected="selected">INTERNO</option>
+                                            <option value="EXTERNO">EXTERNO</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="REPRESENTANTE">REPRESENTANTE</option>
+                                            <option value="INTERNO">INTERNO</option>
+                                            <option value="EXTERNO" selected="selected">EXTERNO</option>
+                                        }
+                                    </select>
+                                </td>
+
+                                <td>
+                                    @{
+                                        var ehRep = tipoAtual == "REPRESENTANTE";
+                                    }
+
+                                    @if (!ehRep)
+                                    {
+                                        <span class="text-muted">—</span>
+                                        <div class="form-text text-muted">Somente para representante</div>
+                                    }
+                                    else
+                                    {
+                                        <select class="form-select form-select-sm inp-ir">
+                                            @if (x.DestacarIR)
+                                            {
+                                                <option value="true" selected="selected">Sim</option>
+                                                <option value="false">Não</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="true">Sim</option>
+                                                <option value="false" selected="selected">Não</option>
+                                            }
+                                        </select>
+                                    }
+                                </td>
+
+                                <td>
+                                    <input class="form-control form-control-sm inp-email"
+                                           value="@x.Email"
+                                           placeholder="email@dominio.com"
+                                           @(x.Ativo ? "" : "disabled") />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-footer d-flex justify-content-between">
+            <span class="text-muted small">Total: <strong>@Model.Itens.Count</strong></span>
+            <span class="text-muted small" id="saveStatus"></span>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+
+            // 🔐 garante ID fixo no token do fetch (pega o ÚLTIMO token da página)
+            document.addEventListener("DOMContentLoaded", function () {
+                const tokens = document.querySelectorAll('input[name="__RequestVerificationToken"]');
+                if (tokens.length > 0) {
+                    tokens[tokens.length - 1].id = "csrfToken";
+                }
+            });
+
+            const btn = document.getElementById("btnSalvar");
+            if (!btn) return;
+
+            btn.addEventListener("click", async function () {
+                const status = document.getElementById("saveStatus");
+                const spinner = document.getElementById("btnSalvarSpinner");
+                const text = document.getElementById("btnSalvarText");
+
+                btn.disabled = true;
+                spinner.classList.remove("d-none");
+                text.textContent = "Salvando...";
+                status.textContent = "Processando alterações...";
+
+                const rows = Array.from(document.querySelectorAll("#tblVendedores tbody tr"));
+                const payload = {
+                    itens: rows.map(tr => {
+                        const ativo = tr.dataset.ativo === "1";
+
+                        const baseSel = tr.querySelector(".inp-base")?.value || tr.dataset.base;
+                        const tipoSel = tr.querySelector(".inp-tipo")?.value || tr.dataset.tipo;
+
+                        const tipo = tipoSel.trim().toUpperCase();
+                        const ehRep = tipo === "REPRESENTANTE";
+                        const irVal = tr.querySelector(".inp-ir")?.value;
+
+                        return {
+                            id: parseInt(tr.dataset.id),
+                            slpCode: parseInt(tr.dataset.slp),
+                            baseCalculo: baseSel,
+                            tipoVendedor: tipoSel,
+                            email: tr.querySelector(".inp-email")?.value || "",
+                            destacarIR: ehRep ? (irVal === "true") : true,
+                            participaRelatorio: ativo && tr.querySelector(".inp-participa")?.checked
+                        };
+                    })
+                };
+
+                try {
+                    const token = document.getElementById("csrfToken")?.value || "";
+
+                    const resp = await fetch("/ComissaoVendedor/Salvar", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "RequestVerificationToken": token,
+                            "X-RequestVerificationToken": token
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await resp.json();
+                    status.textContent = data.message || "Concluído.";
+                } catch {
+                    status.textContent = "Erro ao salvar.";
+                } finally {
+                    btn.disabled = false;
+                    spinner.classList.add("d-none");
+                    text.textContent = "Salvar alterações";
+                }
+            });
+        })();
+    </script>
+}

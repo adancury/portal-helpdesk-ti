@@ -1,43 +1,107 @@
+/* === Tema: variáveis base (claro) === */
+:root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #d1d5db;
+    --primary: #003366; /* azul BRW navbar/botões */
+    --primary-contrast: #ffffff;
+    --primary-hover: #0055a5;
+    --accent: #F37021; /* laranja BRW */
+    --accent-contrast: #ffffff;
+    --surface-alt: #f8f9fa; /* fundos suaves */
+    --heading-fg: var(--primary); /* Títulos = cor da marca no LIGHT */
+    --label-fg: var(--heading-fg); /* Labels = igual ao título no LIGHT */
+}
+
+/* === Tema: override escuro === */
+html.dark, [data-bs-theme="dark"] {
+    --bg: #0b0f19;
+    --surface: #111827;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --border: #1f2937;
+    --primary: #0b2948; /* azul escuro afinado para dark */
+    --primary-contrast: #e5e7eb;
+    --primary-hover: #10447a;
+    --accent: #f59e0b; /* laranja mais claro no dark */
+    --accent-contrast: #111827;
+    --surface-alt: #0f1623;
+    --heading-fg: #60a5fa; /* azul claro no dark (boa leitura) */
+    --label-fg: #93c5fd; /* um tom acima para labels (contraste suave) */
+}
+
+/* helpers */
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+}
+
+body {
+font-family: Arial, sans-serif;
+margin: 0;
+padding: 0;
 }
 
 header {
-    background-color: #003366;
-    color: white;
+    background-color: var(--primary);
+    color: var(--primary-contrast);
     padding: 10px;
 }
 
-    header h1 {
-        margin: 0;
-        font-size: 1.5em;
-    }
-
-nav a {
-    color: white;
-    text-decoration: none;
-    margin-right: 10px;
+header h1 {
+    margin: 0;
+    font-size: 1.5em;
 }
 
-    nav a:hover {
-        text-decoration: underline;
+nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: var(--primary);
+    padding: 10px;
+    color: var(--primary-contrast);
+    z-index: 1030;
+}
+
+    nav a {
+        color: var(--primary-contrast);
+        text-decoration: none;
+        margin-right: 10px;
     }
+
+        /* Sublinha apenas links do tipo nav-link */
+        nav a.nav-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Nunca sublinhar os "botões" da navbar */
+        nav a.btn-theme,
+        nav a.btn-theme:hover,
+        nav a.btn-theme:focus {
+            text-decoration: none !important;
+        }
 
 main.content {
-    padding: 20px;
+padding-top: 60px; /* compensa a altura do menu fixo */
 }
 
+/* já no seu site.css */
 footer {
-    background-color: #f2f2f2;
-    color: #333;
-    text-align: center;
-    padding: 10px;
-    position: fixed;
-    width: 100%;
-    bottom: 0;
+    background-color: var(--surface-alt);
+    color: var(--muted);
+    border-top: 1px solid var(--border);
 }
+
+/* (opcional) se quiser o footer ligeiramente mais escuro no tema escuro */
+html.dark footer, [data-bs-theme="dark"] footer {
+    background-color: var(--surface);
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+}
+
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -45,7 +109,7 @@ table {
 }
 
 table, th, td {
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
 }
 
 th, td {
@@ -54,7 +118,771 @@ th, td {
 }
 
 h2, h3 {
-    color: #003366;
+    color: var(--heading-fg);
+}
+
+textarea {
+width: 100%;
+height: 100px;
+}
+
+select {
+padding: 5px;
+}
+
+button {
+    background-color: var(--primary);
+    color: var(--primary-contrast);
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+    button:hover {
+        background-color: var(--primary-hover);
+    }
+
+/* Ajustes para modal e backdrop */
+.modal {
+z-index: 1055; /* acima do navbar */
+}
+
+.modal-backdrop {
+z-index: 1040; /* entre navbar e modal */
+}
+.grid-chamados {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.95rem;
+    color: var(--text);
+}
+
+    .grid-chamados th {
+        background-color: var(--accent);
+        color: var(--accent-contrast);
+        padding: 10px;
+        font-weight: 700;
+        vertical-align: middle;
+    }
+
+    .grid-chamados td {
+        padding: 10px;
+        vertical-align: middle;
+        white-space: nowrap;
+        text-align: center;
+    }
+
+.grid-chamados a.btn {
+    font-size: 0.85rem;
+    padding: 4px 8px;
+}
+.grid-chamados td {
+    white-space: nowrap; /* evita quebra de linha no conteúdo */
+    text-align: center;
+    vertical-align: middle;
+}
+
+    .grid-chamados td:first-child {
+        text-align: left;
+    }
+/* estados/realces que funcionam nos dois temas */
+.table-warning {
+    background-color: rgba(250, 204, 21, 0.15) !important;
+}
+
+.grid-chamados .badge {
+    display: inline-block;
+    min-width: 60px; /* força um tamanho mínimo para alinhamento */
+}
+/* Para garantir alinhamento central nos botões */
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+/* Botão de alternância de tema guiado por variáveis */
+.btn-theme {
+    /* estado normal */
+    --bs-btn-color: #fff; /* texto/ícone SEMPRE branco */
+    --bs-btn-bg: transparent; /* fundo transparente */
+    --bs-btn-border-color: rgba(255,255,255,.45);
+    /* hover/focus */
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: rgba(255,255,255,.12);
+    --bs-btn-hover-border-color: rgba(255,255,255,.7);
+    /* active */
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: rgba(255,255,255,.18);
+    --bs-btn-active-border-color: rgba(255,255,255,.75);
+    /* disabled (se um dia usar) */
+    --bs-btn-disabled-color: rgba(255,255,255,.6);
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: rgba(255,255,255,.25);
+    /* aplica as vars acima */
+    color: var(--bs-btn-color) !important;
+    background: var(--bs-btn-bg) !important;
+    border-color: var(--bs-btn-border-color) !important;
+}
+
+/* Em telas fora da navbar, use cores do tema para ficar legível nos 2 modos */
+.btn-theme:not(.in-navbar) {
+  --btn-fg: var(--text);
+  --btn-br: var(--border);
+  --btn-bg-hover: rgba(0,0,0,.06);
+}
+html.dark .btn-theme:not(.in-navbar) {
+  --btn-fg: var(--text);
+  --btn-br: var(--border);
+  --btn-bg-hover: rgba(255,255,255,.08);
+}
+
+.btn-theme:hover,
+.btn-theme:focus {
+  background: var(--btn-bg-hover);
+}
+
+.btn-theme:focus-visible {
+    outline: none !important;
+    outline-offset: 2px;
+}
+
+/* garante que o ícone/label sigam a cor */
+.btn-theme .theme-icon,
+.btn-theme .theme-label {
+    color: inherit !important;
+}
+
+.badge-notificacao {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 12px;
+    height: 12px;
+    background-color: red;
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+}
+.historico-interacoes {
+    max-height: 392px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    padding: 10px;
+    background-color: var(--surface-alt);
+    color: var(--text);
+}
+.btn-anexo {
+    height: 30px;
+    width: 120px;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--accent);
+    color: var(--accent-contrast);
+    border: none;
+    transition: background-color 0.3s ease;
+}
+
+    .btn-anexo:hover {
+        background-color: #ff8a4c; /* opcional; pode usar calc de var se quiser */
+        color: var(--accent-contrast);
+    }
+.scroll-tabela {
+    max-height: 60vh; /* ou ajuste como 50vh, 70vh, conforme desejar */
+    overflow-y: auto;
+    display: block;
+    width: 100%;
+}
+iframe#anexoFrame {
+    object-fit: contain;
+}
+.list-group-item-action:hover {
+    background-color: var(--surface-alt);
+    font-weight: bold;
+}
+.menu-configuracoes .list-group-item {
+    background-color: var(--primary);
+    color: var(--primary-contrast);
+    border: none;
+    font-weight: 500;
+}
+
+    .menu-configuracoes .list-group-item:hover,
+    .menu-configuracoes .list-group-item.active {
+        background-color: var(--primary-hover);
+        color: var(--primary-contrast);
+    }
+.menu-lateral-sticky {
+    position: sticky;
+    top: 90px;
+    z-index: 100;
+}
+
+.menu-configuracoes .list-group-item {
+    background-color: #004A80;
+    color: white;
+    border: none;
+    font-weight: 500;
+}
+
+    .menu-configuracoes .list-group-item:hover,
+    .menu-configuracoes .list-group-item.active {
+        background-color: #006bb3;
+        color: #fff;
+    }
+
+/* Correção para alinhamento e altura do conteúdo dinâmico */
+#conteudo-configuracoes {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    min-height: calc(100vh - 160px); /* espaço visível - navbar e margin */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+#overlay-bloqueio {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 9999;
+    display: none; /* ou flex para testar */
+    align-items: center;
+    justify-content: center;
+}
+
+.overlay-conteudo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+    font-size: 1.2rem;
+    color: #333;
+}
+.conteudo-configuracoes {
+    min-height: 0;
+}
+
+.scroll-tabela {
+    max-height: 500px; /* ou a altura desejada */
+    overflow-y: auto;
+}
+
+    .scroll-tabela table {
+        border-collapse: separate;
+        width: 100%;
+    }
+
+    .scroll-tabela thead th {
+        position: sticky;
+        top: 0;
+        background-color: var(--surface-alt);
+        z-index: 10;
+        box-shadow: 0 6px 8px -4px rgba(0, 0, 0, 0.4);
+    }
+
+.scroll-tabela {
+    overflow-x: auto;
+}
+/* Novo Chamado – ajustes de identidade visual */
+.novo-chamado .card {
+    border-radius: .6rem;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.novo-chamado .card-header {
+    border-bottom: 1px solid rgba(0,0,0,.06);
+}
+html.dark .novo-chamado .card-header {
+    border-bottom-color: var(--border);
+}
+
+.novo-chamado .form-label {
+    color: var(--muted);
+}
+
+.novo-chamado .form-control, .novo-chamado .form-select {
+    border-radius: .45rem;
+}
+
+.novo-chamado .alert-info {
+    background: #eef7ff;
+    color: #0c4a6e;
+}
+
+html.dark .novo-chamado .alert-info {
+    background: #0f2236;
+    color: #cfe3ff;
+}
+
+.novo-chamado .alert-warning {
+    border: 0;
+    background: #fff7ed;
+    color: #7c2d12;
+}
+
+html.dark .novo-chamado .alert-warning {
+    background: #2c1a09;
+    color: #f3d4b6;
+}
+
+.novo-chamado .btn-primary.btn-sm {
+    padding: .375rem .75rem;
+}
+
+.novo-chamado .btn-outline-secondary.btn-sm {
+    padding: .375rem .75rem;
+}
+
+/* Placeholders mais suaves */
+.novo-chamado ::placeholder {
+    color: #9ca3af;
+}
+/* estados (usando as vars) */
+.btn-theme:hover,
+.btn-theme:focus {
+    color: var(--bs-btn-hover-color) !important;
+    background: var(--bs-btn-hover-bg) !important;
+    border-color: var(--bs-btn-hover-border-color) !important;
+}
+.btn-theme:active {
+    color: var(--bs-btn-active-color) !important;
+    background: var(--bs-btn-active-bg) !important;
+    border-color: var(--bs-btn-active-border-color) !important;
+}
+
+/* garante que o ícone acompanhe a cor do texto */
+.btn-theme .theme-icon {
+    color: inherit !important;
+}
+
+/* no modo light, também força branco */
+html[data-bs-theme="light"] .btn-theme:hover,
+html[data-bs-theme="light"] .btn-theme:focus {
+    color: #ffffff !important;
+}
+/* se um dia usar o mesmo botão FORA da navbar, você pode suavizar o contorno: */
+.btn-theme:not(.in-navbar) {
+    --bs-btn-border-color: var(--border);
+    --bs-btn-hover-bg: rgba(0,0,0,.06);
+    --bs-btn-hover-border-color: var(--border);
+}
+
+html.dark .btn-theme:not(.in-navbar) {
+    --bs-btn-border-color: var(--border);
+    --bs-btn-hover-bg: rgba(255,255,255,.08);
+    --bs-btn-hover-border-color: var(--border);
+}
+/* Evitar sublinhado nos botões da navbar e manter nos demais links */
+nav a.btn-theme {
+    text-decoration: none !important;
+}
+
+nav a:not(.btn-theme):hover {
+    text-decoration: underline;
+}
+/* (Opcional) se quiser remover o sublinhado de todos os links da navbar: */
+/* nav a:hover { text-decoration: none; } */
+
+/* Ajustes de espaçamento e aparência para botões na navbar */
+nav .btn.btn-theme.btn-sm {
+    padding: .375rem .6rem; /* compacto como o botão de tema */
+    border-radius: .5rem; /* mesmo raio do theme toggle */
+    line-height: 1.2;
+}
+
+/* Garantir contraste e efeito de foco/hover, reutilizando as vars já definidas */
+nav .btn-theme:hover,
+nav .btn-theme:focus {
+    color: var(--bs-btn-hover-color) !important;
+    background: var(--bs-btn-hover-bg) !important;
+    border-color: var(--bs-btn-hover-border-color) !important;
+    box-shadow: 0 0 0 .2rem rgba(255,255,255,.25); /* halo sutil como no Dark */
+}
+
+nav .btn-theme:active {
+    color: var(--bs-btn-active-color) !important;
+    background: var(--bs-btn-active-bg) !important;
+    border-color: var(--bs-btn-active-border-color) !important;
+}
+/* Aparência idêntica ao botão Dark/Light na navbar */
+.navbar .btn.btn-theme.btn-sm {
+    padding: .375rem .6rem;
+    border-radius: .5rem;
+    line-height: 1.2;
+}
+
+.navbar .btn-theme:hover,
+.navbar .btn-theme:focus {
+    color: var(--bs-btn-hover-color) !important;
+    background: var(--bs-btn-hover-bg) !important;
+    border-color: var(--bs-btn-hover-border-color) !important;
+    box-shadow: 0 0 0 .2rem rgba(255,255,255,.25); /* halo igual ao botão Dark */
+}
+
+.navbar .btn-theme:active {
+    color: var(--bs-btn-active-color) !important;
+    background: var(--bs-btn-active-bg) !important;
+    border-color: var(--bs-btn-active-border-color) !important;
+}
+/* Remover o contorno (borda) dos botões da navbar */
+nav.navbar .btn-theme,
+nav.navbar .btn-theme:hover,
+nav.navbar .btn-theme:focus,
+nav.navbar .btn-theme:active {
+    /* zera as variáveis de borda do Bootstrap */
+    --bs-btn-border-color: transparent !important;
+    --bs-btn-hover-border-color: transparent !important;
+    --bs-btn-active-border-color: transparent !important;
+    /* e garante na propriedade computada */
+    border-color: transparent !important;
+    border-width: 0 !important;
+    /* se também quiser sem halo/focus ring */
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+    /* (opcional) manter halo só no foco por teclado */
+    nav.navbar .btn-theme:focus-visible {
+        box-shadow: 0 0 0 .2rem rgba(255,255,255,.25) !important;
+    }
+/* === Dropdown com "cara" de btn-theme na NAVBAR === */
+.navbar .dropdown-toggle.btn-theme {
+    /* mesmo sizing dos outros botões da barra */
+    padding: .375rem .6rem;
+    border-radius: .5rem;
+    line-height: 1.2;
+    /* sem borda/halo (já alinhado ao que você pediu) */
+    --bs-btn-border-color: transparent !important;
+    --bs-btn-hover-border-color: transparent !important;
+    --bs-btn-active-border-color: transparent !important;
+    border-color: transparent !important;
+    border-width: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    text-decoration: none !important;
+}
+
+    /* caret (setinha) branca e discreta */
+    .navbar .dropdown-toggle.btn-theme::after {
+        filter: invert(1) opacity(.9);
+        margin-left: .35rem;
+    }
+
+    /* hover/focus/active iguais aos outros botões */
+    .navbar .dropdown-toggle.btn-theme:hover,
+    .navbar .dropdown-toggle.btn-theme:focus {
+        color: var(--bs-btn-hover-color) !important;
+        background: var(--bs-btn-hover-bg) !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .navbar .dropdown.show .dropdown-toggle.btn-theme,
+    .navbar .dropdown-toggle.btn-theme:active {
+        color: var(--bs-btn-active-color) !important;
+        background: var(--bs-btn-active-bg) !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+    }
+
+    /* Acessibilidade: mostrar halo só no foco por teclado */
+    .navbar .dropdown-toggle.btn-theme:focus-visible {
+        box-shadow: 0 0 0 .2rem rgba(255,255,255,.25) !important;
+    }
+
+/* === Menu do dropdown: cores que respeitam claro/escuro === */
+.navbar .dropdown-menu {
+    /* usa sua paleta */
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: .6rem;
+    box-shadow: 0 10px 24px rgba(0,0,0,.25);
+    overflow: hidden; /* para radius efetivo no primeiro/último item */
+}
+
+.navbar .dropdown-item {
+    color: var(--text);
+    padding: .5rem .75rem;
+}
+
+    .navbar .dropdown-item i {
+        opacity: .9;
+    }
+
+/* hover/active do item do menu (leve translucidez, funciona nos 2 temas) */
+html:not(.dark) .navbar .dropdown-item:hover,
+html[data-bs-theme="light"] .navbar .dropdown-item:hover {
+    background: rgba(0,0,0,.06);
+}
+
+html.dark .navbar .dropdown-item:hover,
+html[data-bs-theme="dark"] .navbar .dropdown-item:hover {
+    background: rgba(255,255,255,.08);
+}
+
+.navbar .dropdown-item:active {
+    background: var(--primary-hover);
+    color: var(--primary-contrast);
+}
+
+/* divider e header coerentes com a paleta */
+.navbar .dropdown-divider {
+    border-top-color: var(--border);
+}
+
+.navbar .dropdown-header {
+    color: var(--muted);
+}
+/* Bootstrap 5.3+: caret branco no dropdown da navbar */
+.navbar .dropdown-toggle.btn-theme {
+    --bs-dropdown-toggle-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M3.2 5h9.6L8 10.5 3.2 5z'/%3e%3c/svg%3e");
+    --bs-dropdown-toggle-hover-icon: var(--bs-dropdown-toggle-icon);
+    --bs-dropdown-toggle-active-icon: var(--bs-dropdown-toggle-icon);
+    --bs-dropdown-toggle-disabled-icon: var(--bs-dropdown-toggle-icon);
+}
+
+    /* Fallback p/ versões antigas do Bootstrap (caret via borda) */
+    .navbar .dropdown-toggle.btn-theme::after {
+        border-top-color: #fff !important;
+    }
+/* Esconde o caret padrão do Bootstrap */
+.navbar .dropdown-toggle.no-caret::after {
+    display: none !important;
+}
+
+/* Ícone da seta: usa a cor do botão (branco) e anima rotação ao abrir */
+.navbar .dropdown-toggle .caret {
+    color: inherit; /* herda #fff do .btn-theme */
+    font-size: .85em;
+    line-height: 1;
+    transition: transform .15s ease;
+}
+
+.navbar .dropdown-toggle[aria-expanded="true"] .caret {
+    transform: rotate(180deg);
+}
+/* Bloqueia qualquer pseudo-conteúdo no botão de tema 
+#themeToggle .theme-label::before,
+#themeToggle .theme-label::after,
+#themeToggle .theme-icon::before,
+#themeToggle .theme-icon::after {
+    content: none !important;
+    background: none !important;
+}*/
+/* Botão com as mesmas cores do alert-warning (respeita data-bs-theme) */
+/* usa as mesmas vars do alert-warning (BS 5.3+) */
+.btn-like-alert-warning {
+    background-color: var(--bs-warning-bg-subtle) !important;
+    color: var(--bs-warning-text-emphasis) !important;
+    border-color: rgba(var(--bs-warning-rgb), var(--bs-border-opacity, 1)) !important; /* combinando com .border-warning */
+}
+
+    .btn-like-alert-warning:hover,
+    .btn-like-alert-warning:focus {
+        background-color: var(--bs-warning-bg-subtle) !important;
+        color: var(--bs-warning-text-emphasis) !important;
+        border-color: rgba(var(--bs-warning-rgb), 1) !important;
+        filter: brightness(0.97);
+    }
+
+:root {
+    --bs-warning-bg-subtle: #fff3cd;
+    --bs-warning-text-emphasis: #664d03;
+    --bs-warning-border-subtle: #ffe69c;
+}
+
+[data-bs-theme="dark"] {
+    --bs-warning-bg-subtle: #2b2002;
+    --bs-warning-text-emphasis: #f8e3a2;
+    --bs-warning-border-subtle: #4d3b05;
+}
+.kpi-card-btn:disabled,
+.kpi-card-btn[aria-disabled="true"],
+.kpi-card-btn.disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    pointer-events: none; /* evita hover/click */
+    filter: none;
+}
+.menu-configuracoes .submenu .list-group-item {
+    padding-left: 2rem; /* indentação do subitem */
+    border-left: 2px solid rgba(0,0,0,.05);
+}
+
+[data-bs-theme="dark"] .menu-configuracoes .submenu .list-group-item,
+html.dark .menu-configuracoes .submenu .list-group-item {
+    border-left-color: rgba(255,255,255,.08);
+}
+/* Legenda do SLA sempre legível, mesmo com destaque (table-warning) e tema escuro */
+.sla-legend {
+    color: #adb5bd;
+}
+/* padrão equivalente a text-muted */
+.table-dark .sla-legend {
+    color: #f8f9fa;
+}
+/* se a tabela/linha for escura */
+tr.table-warning .sla-legend {
+    color: #212529 !important;
+}
+/* a linha principal não deve forçar altura infinita */
+.row.flex-grow-1 {
+    min-height: 0;
+}
+
+/* coluna direita vira flex column e NÃO deixa a página rolar */
+.col-md-9 {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* o container onde entra o relatório ocupa o espaço e bloqueia o scroll do body */
+#conteudo-configuracoes {
+    flex: 1 1 auto;
+    min-height: 0; /* crucial para o scroll interno funcionar */
+    overflow: hidden; /* NADA aqui rola; quem rola é o filho (tbody) no relatório */
+}
+
+/* coluna direita vira flex column e NÃO deixa a página rolar */
+.col-md-9 {
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* importante pro filho poder rolar */
+}
+
+/* container onde entram as telas via AJAX (Configurações) */
+#conteudo-configuracoes {
+    flex: 1 1 auto; /* ocupa o restante da coluna */
+    min-height: 0; /* permite scroll interno dos filhos */
+    overflow: hidden; /* NADA aqui rola; quem rola é o filho do relatório */
+    padding: 1rem;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--text);
+    border-radius: .25rem;
+}
+
+/* NÃO deixe mais NENHUMA outra regra para .conteudo-configuracoes */
+
+/* === Tema: variáveis base (claro) === */
+:root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #d1d5db;
+    --primary: #003366;
+    --primary-contrast: #ffffff;
+    --primary-hover: #0055a5;
+    --accent: #F37021;
+    --accent-contrast: #ffffff;
+    --surface-alt: #f8f9fa;
+    --heading-fg: var(--primary);
+    --label-fg: var(--heading-fg);
+}
+
+/* === Tema escuro === */
+html.dark, [data-bs-theme="dark"] {
+    --bg: #0b0f19;
+    --surface: #111827;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --border: #1f2937;
+    --primary: #0b2948;
+    --primary-contrast: #e5e7eb;
+    --primary-hover: #10447a;
+    --accent: #f59e0b;
+    --accent-contrast: #111827;
+    --surface-alt: #0f1623;
+    --heading-fg: #60a5fa;
+    --label-fg: #93c5fd;
+}
+
+/* Base */
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial,sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: var(--primary);
+    color: var(--primary-contrast);
+    padding: 10px;
+}
+
+    header h1 {
+        margin: 0;
+        font-size: 1.5em;
+    }
+
+nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: var(--primary);
+    padding: 10px;
+    color: var(--primary-contrast);
+    z-index: 1030;
+}
+
+    nav a {
+        color: var(--primary-contrast);
+        text-decoration: none;
+        margin-right: 10px;
+    }
+
+        nav a.nav-link:hover {
+            text-decoration: underline;
+        }
+
+        nav a.btn-theme, nav a.btn-theme:hover, nav a.btn-theme:focus {
+            text-decoration: none !important;
+        }
+
+main.content {
+    padding-top: 60px;
+}
+
+footer {
+    background-color: var(--surface-alt);
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+}
+
+html.dark footer, [data-bs-theme="dark"] footer {
+    background-color: var(--surface);
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+table, th, td {
+    border: 1px solid var(--border);
+}
+
+th, td {
+    padding: 8px;
+    text-align: left;
+}
+
+h2, h3 {
+    color: var(--heading-fg);
 }
 
 textarea {
@@ -67,36 +895,1015 @@ select {
 }
 
 button {
-    background-color: #003366;
-    color: white;
+    background-color: var(--primary);
+    color: var(--primary-contrast);
     border: none;
     padding: 8px 12px;
     cursor: pointer;
 }
 
     button:hover {
-        background-color: #0055a5;
+        background-color: var(--primary-hover);
     }
-nav {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    background: #003366;
-    padding: 10px;
-    color: white;
+
+/* Modal */
+.modal {
+    z-index: 1055;
 }
 
-    nav a {
-        color: white;
-        margin-right: 10px;
-        text-decoration: none;
+.modal-backdrop {
+    z-index: 1040;
+}
+
+/* Grid (exemplos que você já usava) */
+.grid-chamados {
+    font-family: "Segoe UI",Tahoma,Geneva,Verdana,sans-serif;
+    font-size: .95rem;
+    color: var(--text);
+}
+
+    .grid-chamados th {
+        background-color: var(--accent);
+        color: var(--accent-contrast);
+        padding: 10px;
+        font-weight: 700;
+        vertical-align: middle;
     }
 
-        nav a:hover {
-            text-decoration: underline;
+    .grid-chamados td {
+        padding: 10px;
+        vertical-align: middle;
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .grid-chamados a.btn {
+        font-size: .85rem;
+        padding: 4px 8px;
+    }
+
+    .grid-chamados td:first-child {
+        text-align: left;
+    }
+
+.table-warning {
+    background-color: rgba(250,204,21,.15) !important;
+}
+
+.grid-chamados .badge {
+    display: inline-block;
+    min-width: 60px;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Botão de tema (navbar + fora dela) */
+.btn-theme {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: transparent;
+    --bs-btn-border-color: rgba(255,255,255,.45);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: rgba(255,255,255,.12);
+    --bs-btn-hover-border-color: rgba(255,255,255,.7);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: rgba(255,255,255,.18);
+    --bs-btn-active-border-color: rgba(255,255,255,.75);
+    --bs-btn-disabled-color: rgba(255,255,255,.6);
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: rgba(255,255,255,.25);
+    color: var(--bs-btn-color) !important;
+    background: var(--bs-btn-bg) !important;
+    border-color: var(--bs-btn-border-color) !important;
+}
+
+    .btn-theme:not(.in-navbar) {
+        --btn-fg: var(--text);
+        --btn-br: var(--border);
+        --btn-bg-hover: rgba(0,0,0,.06);
+    }
+
+html.dark .btn-theme:not(.in-navbar) {
+    --btn-fg: var(--text);
+    --btn-br: var(--border);
+    --btn-bg-hover: rgba(255,255,255,.08);
+}
+
+.btn-theme:hover, .btn-theme:focus {
+    background: var(--btn-bg-hover);
+}
+
+.btn-theme:focus-visible {
+    outline: none !important;
+    outline-offset: 2px;
+}
+
+.btn-theme .theme-icon, .btn-theme .theme-label {
+    color: inherit !important;
+}
+
+nav a.btn-theme {
+    text-decoration: none !important;
+}
+
+nav a:not(.btn-theme):hover {
+    text-decoration: underline;
+}
+
+nav .btn.btn-theme.btn-sm, .navbar .btn.btn-theme.btn-sm {
+    padding: .375rem .6rem;
+    border-radius: .5rem;
+    line-height: 1.2;
+}
+
+nav .btn-theme:hover, nav .btn-theme:focus, .navbar .btn-theme:hover, .navbar .btn-theme:focus {
+    color: var(--bs-btn-hover-color) !important;
+    background: var(--bs-btn-hover-bg) !important;
+    border-color: var(--bs-btn-hover-border-color) !important;
+    box-shadow: 0 0 0 .2rem rgba(255,255,255,.25);
+}
+
+nav .btn-theme:active, .navbar .btn-theme:active {
+    color: var(--bs-btn-active-color) !important;
+    background: var(--bs-btn-active-bg) !important;
+    border-color: var(--bs-btn-active-border-color) !important;
+}
+
+nav.navbar .btn-theme, nav.navbar .btn-theme:hover, nav.navbar .btn-theme:focus, nav.navbar .btn-theme:active {
+    --bs-btn-border-color: transparent !important;
+    --bs-btn-hover-border-color: transparent !important;
+    --bs-btn-active-border-color: transparent !important;
+    border-color: transparent !important;
+    border-width: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+    nav.navbar .btn-theme:focus-visible {
+        box-shadow: 0 0 0 .2rem rgba(255,255,255,.25) !important;
+    }
+
+.navbar .dropdown-toggle.btn-theme {
+    padding: .375rem .6rem;
+    border-radius: .5rem;
+    line-height: 1.2;
+    --bs-btn-border-color: transparent !important;
+    --bs-btn-hover-border-color: transparent !important;
+    --bs-btn-active-border-color: transparent !important;
+    border-color: transparent !important;
+    border-width: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    text-decoration: none !important;
+}
+
+    .navbar .dropdown-toggle.btn-theme::after {
+        filter: invert(1) opacity(.9);
+        margin-left: .35rem;
+        border-top-color: #fff !important;
+    }
+
+.navbar .dropdown-toggle[aria-expanded="true"] .caret {
+    transform: rotate(180deg);
+}
+
+.navbar .dropdown-menu {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: .6rem;
+    box-shadow: 0 10px 24px rgba(0,0,0,.25);
+    overflow: hidden;
+}
+
+.navbar .dropdown-item {
+    color: var(--text);
+    padding: .5rem .75rem;
+}
+
+html:not(.dark) .navbar .dropdown-item:hover, html[data-bs-theme="light"] .navbar .dropdown-item:hover {
+    background: rgba(0,0,0,.06);
+}
+
+html.dark .navbar .dropdown-item:hover, html[data-bs-theme="dark"] .navbar .dropdown-item:hover {
+    background: rgba(255,255,255,.08);
+}
+
+.navbar .dropdown-item:active {
+    background: var(--primary-hover);
+    color: var(--primary-contrast);
+}
+
+.navbar .dropdown-divider {
+    border-top-color: var(--border);
+}
+
+.navbar .dropdown-header {
+    color: var(--muted);
+}
+
+.navbar .dropdown-toggle.btn-theme {
+    --bs-dropdown-toggle-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M3.2 5h9.6L8 10.5 3.2 5z'/%3e%3c/svg%3e");
+}
+
+/* List-group (menu configurações) */
+.menu-configuracoes .list-group-item {
+    background-color: #004A80;
+    color: #fff;
+    border: none;
+    font-weight: 500;
+}
+
+    .menu-configuracoes .list-group-item:hover, .menu-configuracoes .list-group-item.active {
+        background-color: #006bb3;
+        color: #fff;
+    }
+
+.menu-configuracoes .submenu .list-group-item {
+    padding-left: 2rem;
+    border-left: 2px solid rgba(0,0,0,.05);
+}
+
+[data-bs-theme="dark"] .menu-configuracoes .submenu .list-group-item, html.dark .menu-configuracoes .submenu .list-group-item {
+    border-left-color: rgba(255,255,255,.08);
+}
+
+/* Área de conteúdo do painel Configurações (fixo e sem scroll próprio) */
+.row.flex-grow-1 {
+    min-height: 0;
+}
+
+.col-md-9 {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#conteudo-configuracoes {
+    flex: 1 1 auto;
+    min-height: 0; /* permite o filho rolar */
+    overflow: hidden; /* quem rola é o filho (tabela do relatório) */
+    padding: 1rem;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--text);
+    border-radius: .25rem;
+}
+
+/* Vários utilitários que você já tinha */
+.badge-notificacao {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 12px;
+    height: 12px;
+    background-color: red;
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+}
+
+.historico-interacoes {
+    max-height: 392px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    padding: 10px;
+    background-color: var(--surface-alt);
+    color: var(--text);
+}
+
+.btn-anexo {
+    height: 30px;
+    width: 120px;
+    font-size: .8rem;
+    padding: .25rem .5rem;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--accent);
+    color: var(--accent-contrast);
+    border: none;
+    transition: background-color .3s ease;
+}
+
+    .btn-anexo:hover {
+        background-color: #ff8a4c;
+        color: var(--accent-contrast);
+    }
+
+iframe#anexoFrame {
+    object-fit: contain;
+}
+
+.list-group-item-action:hover {
+    background-color: var(--surface-alt);
+    font-weight: bold;
+}
+
+.sla-legend {
+    color: #adb5bd;
+}
+
+.table-dark .sla-legend {
+    color: #f8f9fa;
+}
+
+tr.table-warning .sla-legend {
+    color: #212529 !important;
+}
+/* coluna direita vira flex column e NÃO deixa a página rolar */
+.col-md-9 {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* container onde entram as telas via AJAX (Configurações) */
+#conteudo-configuracoes {
+    flex: 1 1 auto;
+    min-height: 0; /* permite scroll interno dos filhos */
+    overflow: hidden; /* o scroll é do conteúdo dentro, ex: relatorio-tempo */
+    padding: 1rem;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--text);
+    border-radius: .25rem;
+}
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+/* ======== Home (Início) ======== */
+
+/* Utilitário BRW (opcional) */
+.badge-brw {
+    background-color: #F37021;
+    color: #fff;
+}
+/* ======== Home (Início) – layout ======== */
+.home-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .25rem;
+    padding: 0 0 1rem 0;
+}
+
+.home-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+}
+
+/* Ícones dos cards (imagem ou emoji) */
+.home-card .icon {
+    width: 2.5rem; /* mesmo “box” para todos */
+    height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    flex: 0 0 auto;
+    font-size: 2.1rem; /* deixa os EMOJIS grandes como o PNG */
+}
+
+    /* Imagem dentro do ícone ocupa o box inteiro */
+    .home-card .icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+    }
+
+/* ======== Home – cores baseadas nas variáveis do tema ======== */
+.home-card {
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    border-radius: 1rem;
+    overflow: hidden;
+    /* usa as variáveis que você já definiu em :root e html.dark */
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 20px rgba(15,23,42,0.05);
+}
+
+    .home-card .card-body {
+        padding: 1.25rem;
+    }
+
+    .home-card .card-title {
+        color: var(--text);
+    }
+
+    .home-card .card-text {
+        color: var(--muted);
+    }
+
+    .home-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(15,23,42,0.12);
+        border-color: var(--accent);
+    }
+
+/* No dark só reforça a sombra – as cores já vêm das variáveis */
+html.dark .home-card,
+[data-bs-theme="dark"] .home-card {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+}
+#btnSairSL {
+    white-space: nowrap;
+}
+/* Card do filtro e card da grid (serve pros dois relatórios) */
+.card-ruptura-prev,
+.card-ruptura-grid {
+    border-radius: 0.75rem;
+}
+
+/* Tabelas respeitarem o raio do card */
+.card-ruptura-grid {
+    overflow: hidden;
+}
+
+    /* Evita espaço sobrando abaixo da tabela */
+    .card-ruptura-grid .table {
+        margin-bottom: 0;
+    }
+.bg-brw {
+    background-color: #022743 !important;
+}
+
+.brw-navbar {
+    height: 56px;
+}
+
+.brw-offcanvas {
+    width: 260px;
+}
+
+    .brw-offcanvas .nav-link {
+        color: #fff;
+        padding: 0.6rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+
+        .brw-offcanvas .nav-link:hover {
+            background: rgba(255,255,255,0.1);
+        }
+.card-aprovacao-linhas {
+    border-radius: 0.75rem;
+    overflow: hidden; /* tabela respeita o raio */
+}
+
+    .card-aprovacao-linhas .table {
+        margin-bottom: 0;
+    }
+
+/* opcional: evitar quebra feia no mobile */
+@media (max-width: 576px) {
+    .card-aprovacao-linhas .table th,
+    .card-aprovacao-linhas .table td {
+        white-space: nowrap;
+    }
+}
+.col-creator {
+    max-width: 140px; /* ajuste conforme o layout */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* Força as linhas da grid de aprovações */
+#tabela-painel {
+    border-collapse: collapse;
+}
+
+    /* Cabeçalho + corpo com mesma linha de grade */
+    #tabela-painel thead th,
+    #tabela-painel tbody td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+    }
+
+    /* Opcional: linha de topo do header */
+    #tabela-painel thead th {
+        border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+    }
+
+    /* Opcional: deixa um pouco mais “marcada” a última linha */
+    #tabela-painel tbody tr:last-child td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.25) !important;
+    }
+@media (max-width: 576px) {
+    #tabela-painel {
+        font-size: 0.85rem;
+    }
+
+        #tabela-painel td,
+        #tabela-painel th {
+            padding-top: 0.35rem;
+            padding-bottom: 0.35rem;
+        }
+}
+.table-previsao-ruptura td .text-wrap {
+    white-space: normal;
+}
+.ruptura-card {
+    border-radius: 0.75rem;
+    border-width: 0;
+    box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,.08);
+}
+
+.ruptura-alto {
+    background: #fff5f5;
+    border-left: 4px solid #e03131;
+}
+
+.ruptura-medio {
+    background: #fff4e6;
+    border-left: 4px solid #f08c00;
+}
+
+.ruptura-baixo {
+    background: #fff9db;
+    border-left: 4px solid #f59f00;
+}
+
+.ruptura-ok {
+    background: #ebfbee;
+    border-left: 4px solid #2b8a3e;
+}
+
+.ruptura-card .fs-4 {
+    line-height: 1.1;
+}
+/* Faz a tabela caber na largura do container, sem scroll horizontal */
+.table-no-scroll {
+    overflow-x: hidden !important; /* mata a barra */
+}
+
+.table-fit {
+    width: 100% !important;
+    table-layout: fixed; /* força as colunas a respeitarem a largura disponível */
+}
+
+    /* Evita que textos estourem a coluna */
+    .table-fit th,
+    .table-fit td {
+        white-space: nowrap; /* mantém em uma linha */
+        overflow: hidden; /* corta excesso */
+        text-overflow: ellipsis; /* ... */
+        vertical-align: middle;
+    }
+
+        /* Deixe a coluna "Nome do Cliente" mais flexível */
+        .table-fit th:nth-child(4),
+        .table-fit td:nth-child(4) {
+            width: 30%;
         }
 
-main.content {
-    padding-top: 60px; /* Compensa a altura do menu fixo */
+        /* Ajuste fino: colunas numéricas menores */
+        .table-fit th:nth-child(1),
+        .table-fit td:nth-child(1) {
+            width: 10%;
+        }
+
+        .table-fit th:nth-child(2),
+        .table-fit td:nth-child(2) {
+            width: 7%;
+        }
+
+        .table-fit th:nth-child(3),
+        .table-fit td:nth-child(3) {
+            width: 9%;
+        }
+
+        .table-fit th:nth-child(5),
+        .table-fit td:nth-child(5) {
+            width: 11%;
+        }
+
+        .table-fit th:nth-child(6),
+        .table-fit td:nth-child(6) {
+            width: 11%;
+        }
+
+        .table-fit th:nth-child(7),
+        .table-fit td:nth-child(7) {
+            width: 10%;
+        }
+
+        .table-fit th:nth-child(8),
+        .table-fit td:nth-child(8) {
+            width: 9%;
+        }
+
+        .table-fit th:nth-child(9),
+        .table-fit td:nth-child(9) {
+            width: 13%;
+        }
+/* ===============================
+   Relatório de Comissões - Tabela
+   Opção 1: sem scroll + ellipsis
+   =============================== */
+
+.table-no-scroll {
+    overflow-x: hidden !important;
 }
 
+.table-fit {
+    width: 100% !important;
+    table-layout: fixed;
+}
+
+    /* Regra base para todas as células */
+    .table-fit th,
+    .table-fit td {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
+    }
+
+        /* Distribuição de largura por coluna */
+        .table-fit th:nth-child(1),
+        .table-fit td:nth-child(1) {
+            width: 10%;
+        }
+        /* Data */
+
+        .table-fit th:nth-child(2),
+        .table-fit td:nth-child(2) {
+            width: 7%;
+        }
+        /* NF */
+
+        .table-fit th:nth-child(3),
+        .table-fit td:nth-child(3) {
+            width: 9%;
+        }
+        /* Cliente */
+
+        .table-fit th:nth-child(4),
+        .table-fit td:nth-child(4) {
+            width: 30%;
+        }
+        /* Nome do Cliente */
+
+        .table-fit th:nth-child(5),
+        .table-fit td:nth-child(5) {
+            width: 11%;
+        }
+        /* Venda Bruta */
+
+        .table-fit th:nth-child(6),
+        .table-fit td:nth-child(6) {
+            width: 11%;
+        }
+        /* Venda Líquida */
+
+        .table-fit th:nth-child(7),
+        .table-fit td:nth-child(7) {
+            width: 10%;
+        }
+        /* Desc. Médio % */
+
+        .table-fit th:nth-child(8),
+        .table-fit td:nth-child(8) {
+            width: 9%;
+        }
+        /* % Efetivo */
+
+        .table-fit th:nth-child(9),
+        .table-fit td:nth-child(9) {
+            width: 13%;
+        }
+/* Comissão (R$) */
+        .table-fit td.text-end {
+            font-variant-numeric: tabular-nums;
+        }
+.kpi-box {
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: .5rem;
+    padding: .6rem .75rem;
+    height: 72px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.kpi-label {
+    font-size: .78rem;
+    opacity: .75;
+    margin-bottom: .25rem;
+}
+
+.kpi-value {
+    font-weight: 700;
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+}
+/* Grid estável para KPIs + ações */
+.kpi-grid {
+    display: grid;
+    gap: 12px;
+    /* desktop: 5 KPIs + 1 coluna de botões */
+    grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(160px, 220px);
+    align-items: stretch;
+}
+
+/* em telas menores, reduz colunas automaticamente */
+@media (max-width: 1400px) {
+    .kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .kpi-actions {
+        grid-column: span 3;
+        flex-direction: row;
+    }
+
+        .kpi-actions .btn {
+            width: auto !important;
+            flex: 1 1 0;
+        }
+}
+
+@media (max-width: 768px) {
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .kpi-actions {
+        grid-column: auto;
+        flex-direction: column;
+    }
+
+        .kpi-actions .btn {
+            width: 100% !important;
+        }
+}
+
+.kpi-box {
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: .5rem;
+    padding: .6rem .75rem;
+    height: 76px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0; /* importante para ellipsis */
+}
+
+.kpi-label {
+    font-size: .78rem;
+    opacity: .75;
+    margin-bottom: .25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpi-value {
+    font-weight: 700;
+    font-size: 1.15rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpi-actions {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+.kpi-ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+.ellipsis-tooltip {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+/* =========================
+   Admin UI helpers (reuso)
+   ========================= */
+
+.admin-card {
+    border-radius: 1rem;
+}
+
+    .admin-card .card-header {
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+
+.admin-badge {
+    font-size: .75rem;
+    border-radius: .75rem;
+    font-weight: 600;
+}
+
+.admin-toolbar {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr auto auto;
+    gap: .75rem;
+    align-items: end;
+}
+
+    .admin-toolbar > * {
+        min-width: 0;
+    }
+
+@media (max-width: 992px) {
+    .admin-toolbar {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-actions {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+@media (max-width: 992px) {
+    .admin-actions {
+        justify-content: flex-start;
+    }
+}
+
+.admin-btn-nowrap {
+    white-space: nowrap;
+}
+
+.admin-table-wrap {
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.08);
+}
+
+.admin-table-scroll {
+    max-height: 62vh;
+    overflow: auto;
+}
+
+.table-sticky thead th {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: rgba(18, 22, 28, 0.98);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid rgba(255,255,255,.12) !important;
+}
+
+.sticky-col-1,
+.table-sticky th:first-child,
+.table-sticky td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: rgba(18, 22, 28, 0.98);
+    border-right: 1px solid rgba(255,255,255,.08);
+}
+
+.table-sticky td, .table-sticky th {
+    border-color: rgba(255,255,255,.08) !important;
+    vertical-align: middle;
+}
+
+.table-sticky tbody tr:hover td {
+    background: rgba(255,255,255,.03);
+}
+
+.mini-actions .btn {
+    padding: .10rem .35rem;
+    border-radius: .6rem;
+    line-height: 1.1;
+}
+
+.mono-key {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: .78rem;
+    opacity: .55;
+}
+button[disabled] {
+    cursor: not-allowed;
+    opacity: 0.85;
+}
+/* Cards com grid: altura fixa + scroll interno */
+.card-grid-scroll {
+    max-height: 520px; /* exemplo */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+
+    /* Mantém cabeçalho da tabela fixo durante o scroll (opcional, ajuda muito) */
+    .card-grid-scroll thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+/* container com scroll */
+.card-grid-scroll {
+    max-height: 420px;
+    overflow: auto;
+}
+
+    /* congela cabeçalho */
+    .card-grid-scroll table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: var(--bs-body-bg); /* ou uma cor do seu tema */
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+/* evita quebra dos títulos */
+.table thead th,
+.table tbody td {
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* opcional: melhora leitura quando a tabela é larga */
+.table-responsive {
+    overflow: auto;
+}
+.card-grid-scroll {
+    max-height: 420px;
+    overflow: auto; /* vertical + horizontal */
+}
+
+    /* Congela o cabeçalho no scroll do card */
+    .card-grid-scroll table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: var(--bs-body-bg);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* Não quebrar texto (títulos e células) */
+    .card-grid-scroll table thead th,
+    .card-grid-scroll table tbody td {
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+.card-grid-scroll {
+    max-height: 420px;
+    overflow: auto;
+}
+
+    .card-grid-scroll table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: var(--bs-body-bg);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .card-grid-scroll table thead th,
+    .card-grid-scroll table tbody td {
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+.card-grid-scroll {
+    max-height: 420px;
+    overflow: auto;
+}
+
+    .card-grid-scroll table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: var(--bs-body-bg);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .card-grid-scroll table thead th,
+    .card-grid-scroll table tbody td {
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+/* Coluna Nome do cliente: corta com ... */
+/* Nome do cliente – largura fixa com reticências */
+.cliente-nome {
+    max-width: 260px;
+    width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

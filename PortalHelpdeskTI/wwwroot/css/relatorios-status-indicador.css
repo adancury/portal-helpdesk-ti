@@ -1,0 +1,185 @@
+﻿/* Card geral do relatório */
+.rel-status-card {
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: #111827; /* bem próximo do resto do portal escuro */
+}
+
+    /* Cabeçalho do card */
+    .rel-status-card .card-header {
+        background: #020617;
+        color: #e5e7eb;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
+/* Form de filtro encaixado no cabeçalho */
+.rel-status-filter .form-control {
+    background-color: #020617;
+    border-color: #334155;
+    color: #e5e7eb;
+}
+
+/* Wrapper da tabela, com scroll horizontal/vertical se precisar */
+.rel-status-table-wrapper {
+    max-height: calc(100vh - 230px);
+    overflow: auto;
+}
+
+/* Fonte um pouco menor em tudo da tabela */
+.rel-status-table,
+.rel-status-table table {
+    font-size: 0.85rem;
+}
+
+    /* Não quebrar linhas: tudo em uma linha só */
+    .rel-status-table th,
+    .rel-status-table td,
+    .rel-status-child-wrapper th,
+    .rel-status-child-wrapper td {
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+/* Linha PAI (pedido) */
+.rel-status-parent-row {
+    background: rgba(15, 23, 42, 0.9);
+    color: #f9fafb;
+}
+
+    .rel-status-parent-row td {
+        border-bottom-width: 0;
+    }
+
+/* Botão (+/-) compacto */
+.rel-status-toggle {
+    padding: 2px 6px;
+    line-height: 1;
+    font-size: 0.75rem;
+}
+
+/* Linha FILHA com recuo visual */
+.rel-status-child-row td {
+    border-top-width: 0;
+}
+
+.rel-status-child-wrapper {
+    margin-left: 1.8rem; /* recuo pra "dentro" da linha pai */
+    padding-left: 0.75rem;
+    padding-top: 0.30rem;
+    padding-bottom: 0.50rem;
+    border-left: 2px solid #f97316; /* laranja BRW como guia visual */
+    background: rgba(15, 23, 42, 0.8);
+}
+
+/* Cabeçalho da tabela filha */
+.rel-status-child-header {
+    background: rgba(15, 23, 42, 0.95);
+    color: #e5e7eb;
+}
+
+/* Colunas da tabela filha */
+.rel-status-child-wrapper table th,
+.rel-status-child-wrapper table td {
+    border-color: rgba(55, 65, 81, 0.7);
+}
+
+/* Resizer de coluna no header principal */
+.rel-status-table thead th {
+    position: relative;
+}
+
+.rel-col-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    /* linha fininha para indicar o resizer */
+    border-right: 1px solid rgba(148, 163, 184, 0.7);
+}
+
+    .rel-col-resizer:hover {
+        border-right-color: #f97316; /* destaque alaranjado ao passar o mouse */
+    }
+.rel-status-filter .form-label {
+    white-space: nowrap;
+}
+.rel-status-actions {
+    gap: 0.5rem;
+}
+
+/* =============================
+   RESPONSIVO – Status de Indicador
+   ============================= */
+@media (max-width: 768px) {
+
+    /* Cabeçalho empilhado no mobile */
+    .rel-status-card .card-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.5rem;
+    }
+
+    /* Bloco do filtro + botão Voltar também em coluna */
+    .rel-status-actions {
+        width: 100%;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.5rem;
+    }
+
+    /* Filtro ocupa a linha inteira */
+    .rel-status-filter {
+        flex: 1 0 100%;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+        /* Label em linha própria e podendo quebrar */
+        .rel-status-filter .form-label {
+            flex: 0 0 100%;
+            white-space: normal !important;
+        }
+
+        .rel-status-filter .form-control {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .rel-status-filter .btn {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+    /* Botão Voltar vem embaixo, alinhado à direita */
+    .rel-status-actions > .btn {
+        align-self: flex-end;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    /* Tabela com scroll horizontal e sem limite de altura */
+    .rel-status-table-wrapper {
+        max-height: none;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .rel-status-table {
+        min-width: 720px; /* ajuste fino se quiser */
+        font-size: 0.85rem;
+    }
+
+        .rel-status-table th,
+        .rel-status-table td {
+            white-space: nowrap;
+        }
+
+    /* Esconde o "resizer" de coluna no mobile */
+    .rel-col-resizer {
+        display: none;
+    }
+}

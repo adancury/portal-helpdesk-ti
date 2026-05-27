@@ -1,0 +1,302 @@
+﻿@model PortalHelpdeskTI.ViewModels.Relatorios.DataTablePage
+
+@{
+    ViewData["Title"] = "Ruptura – Previsão";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    string itemFiltro = Context.Request.Query["item"];
+}
+
+<div class="card mb-3 card-ruptura-prev">
+    <!-- CABEÇALHO: título + botão Voltar à direita -->
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Ruptura – Previsão</h5>
+
+        <button type="button"
+                class="btn btn-sm btn-outline-light"
+                onclick="history.back()">
+            ← Voltar
+        </button>
+    </div>
+
+    <div class="card-body">
+        <form id="filtro-previsao" class="row g-2">
+            <div class="col-md-4">
+                <label class="form-label mb-0">Código do Produto</label>
+                <input name="item" id="item" value="@itemFiltro"
+                       class="form-control form-control-sm"
+                       placeholder="Ex: GR5000">
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button id="btn-buscar-previsao" class="btn btn-sm btn-primary w-100">
+                    Buscar
+                </button>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button"
+                        id="btn-export-csv"
+                        class="btn btn-sm btn-outline-secondary"
+                        onclick="exportCsvRupturaPrevisao()"
+                        disabled>
+                    Exportar CSV
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="grid-previsao-wrapper">
+    @await Html.PartialAsync("_GridRupturaPrevisao", Model)
+</div>
+@section Scripts {
+    <script>
+        function initPaginacaoPrevisao() {
+            const wrapper = document.getElementById("grid-previsao-wrapper");
+            if (!wrapper) return;
+
+            // usa o ID fixo da tabela
+            const table = document.getElementById("tabela-previsao");
+            if (!table) return;
+
+            const rows = [...table.querySelectorAll("tbody tr")];
+            const pageSize = 50;
+            let page = 1;
+            const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+
+            const prev = wrapper.querySelector("[data-prev]");
+            const next = wrapper.querySelector("[data-next]");
+            const lblAtual = wrapper.querySelector("[data-atual]");
+            const lblTotal = wrapper.querySelector("[data-total]");
+            const lblRodape = wrapper.querySelector("[data-rodape]");
+
+            if (!prev || !next || !lblAtual || !lblTotal || !lblRodape) {
+                return;
+            }
+
+            function render(p) {
+                if (p < 1) p = 1;
+                if (p > totalPages) p = totalPages;
+                page = p;
+
+                const start = (p - 1) * pageSize;
+                const end = p * pageSize;
+
+                rows.forEach((r, i) => {
+                    r.style.display = (i >= start && i < end) ? "" : "none";
+                });
+
+                lblAtual.textContent = p;
+                lblTotal.textContent = totalPages;
+                lblRodape.textContent = "Página " + p;
+
+                prev.disabled = (p === 1);
+                next.disabled = (p === totalPages);
+            }
+
+            prev.onclick = () => render(page - 1);
+            next.onclick = () => render(page + 1);
+
+            render(1);
+        }
+
+        // habilita/desabilita o botão de exportar conforme a grid
+        function atualizarEstadoBotaoExportacao() {
+            const btn = document.getElementById("btn-export-csv");
+            if (!btn) return;
+
+            // pega direto a tabela pelo ID informado
+            const table = document.getElementById("tabela-previsao");
+            if (!table) {
+                btn.disabled = true;
+                return;
+            }
+
+            let rows = table.querySelectorAll("tbody tr");
+
+            // se você tiver uma linha "Nenhum registro encontrado" e quiser ignorar:
+            // rows = table.querySelectorAll("tbody tr:not(.row-empty)");
+
+            const hasRows = rows.length > 0;
+            btn.disabled = !hasRows;
+        }
+
+        // AJAX CARREGAMENTO
+        (function () {
+            const form = document.getElementById("filtro-previsao");
+            const btn = document.getElementById("btn-buscar-previsao");
+            const wrapper = document.getElementById("grid-previsao-wrapper");
+            const url = "@Url.Action("RupturaPrevisao", "Relatorios")";
+
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = "Carregando...";
+
+                const params = new URLSearchParams(new FormData(form));
+                params.set("load", "true");
+
+                fetch(url + "?" + params.toString(), {
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                })
+                    .then(r => r.text())
+                    .then(html => {
+                        wrapper.innerHTML = html;
+                        initPaginacaoPrevisao();
+                        atualizarEstadoBotaoExportacao();
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = original;
+                    });
+            });
+
+            // chamada inicial (caso a view venha com dados já carregados)
+            document.addEventListener("DOMContentLoaded", function () {
+                initPaginacaoPrevisao();
+                atualizarEstadoBotaoExportacao();
+            });
+        })();
+    </script>
+
+    <script>
+        function exportCsvRupturaPrevisao() {
+            var item = document.getElementById('item')?.value || '';
+
+            var url = '@Url.Action("ExportCsv_RupturaPrevisao", "Relatorios")'
+                + '?item=' + encodeURIComponent(item);
+
+            window.location.href = url;
+        }
+    </script>
+}
+
+@*@section Scripts {
+    <script>
+        function initPaginacaoPrevisao() {
+            const wrapper = document.getElementById("grid-previsao-wrapper");
+            if (!wrapper) return;
+
+            const table = wrapper.querySelector("table");
+            if (!table) return;
+
+            const rows = [...table.querySelectorAll("tbody tr")];
+            const pageSize = 50;
+            let page = 1;
+            const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+
+            const prev = wrapper.querySelector("[data-prev]");
+            const next = wrapper.querySelector("[data-next]");
+            const lblAtual = wrapper.querySelector("[data-atual]");
+            const lblTotal = wrapper.querySelector("[data-total]");
+            const lblRodape = wrapper.querySelector("[data-rodape]");
+
+            if (!prev || !next || !lblAtual || !lblTotal || !lblRodape) {
+                return;
+            }
+
+            function render(p) {
+                if (p < 1) p = 1;
+                if (p > totalPages) p = totalPages;
+                page = p;
+
+                const start = (p - 1) * pageSize;
+                const end = p * pageSize;
+
+                rows.forEach((r, i) => {
+                    r.style.display = (i >= start && i < end) ? "" : "none";
+                });
+
+                lblAtual.textContent = p;
+                lblTotal.textContent = totalPages;
+                lblRodape.textContent = "Página " + p;
+
+                prev.disabled = (p === 1);
+                next.disabled = (p === totalPages);
+            }
+
+            prev.onclick = () => render(page - 1);
+            next.onclick = () => render(page + 1);
+
+            render(1);
+        }
+
+        // habilita/desabilita o botão de exportar conforme a grid
+        function atualizarEstadoBotaoExportacao() {
+            const btn = document.getElementById("btn-export-csv");
+            if (!btn) return;
+
+            const wrapper = document.getElementById("grid-previsao-wrapper");
+            if (!wrapper) {
+                btn.disabled = true;
+                return;
+            }
+
+            const table = wrapper.querySelector("table");
+            if (!table) {
+                btn.disabled = true;
+                return;
+            }
+
+            let rows = table.querySelectorAll("tbody tr");
+
+            // se você usar uma linha "Nenhum registro encontrado" com classe row-empty, dá pra ignorar:
+            // rows = table.querySelectorAll("tbody tr:not(.row-empty)");
+
+            const hasRows = rows.length > 0;
+
+            btn.disabled = !hasRows;
+        }
+
+        // AJAX CARREGAMENTO
+        (function () {
+            const form = document.getElementById("filtro-previsao");
+            const btn = document.getElementById("btn-buscar-previsao");
+            const wrapper = document.getElementById("grid-previsao-wrapper");
+            const url = "@Url.Action("RupturaPrevisao", "Relatorios")";
+
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = "Carregando...";
+
+                const params = new URLSearchParams(new FormData(form));
+                params.set("load", "true");
+
+                fetch(url + "?" + params.toString(), {
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                })
+                    .then(r => r.text())
+                    .then(html => {
+                        wrapper.innerHTML = html;
+                        initPaginacaoPrevisao();
+                        atualizarEstadoBotaoExportacao();
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = original;
+                    });
+            });
+
+            // chamada inicial (caso a view venha com dados já carregados)
+            document.addEventListener("DOMContentLoaded", function () {
+                initPaginacaoPrevisao();
+                atualizarEstadoBotaoExportacao();
+            });
+        })();
+    </script>
+
+    <script>
+        function exportCsvRupturaPrevisao() {
+            var item = document.getElementById('item')?.value || '';
+
+            var url = '@Url.Action("ExportCsv_RupturaPrevisao", "Relatorios")'
+                + '?item=' + encodeURIComponent(item);
+
+            window.location.href = url;
+        }
+    </script>
+}*@

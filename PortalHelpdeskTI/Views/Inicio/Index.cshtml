@@ -1,0 +1,163 @@
+﻿@using Microsoft.Extensions.Configuration
+@inject IConfiguration Cfg
+
+@{
+    ViewData["Title"] = "BRW Hub One";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // Perfil salvo na sessão: "Tecnico" | "Usuario"
+    var perfil = Context.Session.GetString("Perfil");
+
+    // Flag opcional vinda do appsettings.json:
+    // "FeatureFlags": { "ShowApprovals": true, "ShowQuizzes": true }
+    var showApprovals = bool.TryParse(Cfg["FeatureFlags:ShowApprovals"], out var sa) && sa;
+    var showQuizzes = bool.TryParse(Cfg["FeatureFlags:ShowQuizzes"], out var sq) && sq;
+}
+
+<div class="container">
+    <div class="home-hero">
+        <h2 class="page-title">@ViewData["Title"]</h2>
+        <p class="text-muted mb-2">Portal de aplicações BRW</p>
+    </div>
+    @if ((ViewBag.QtdPendentesAvaliacao ?? 0) > 0)
+    {
+        <div class="alert alert-warning d-flex align-items-center justify-content-between" role="alert">
+            <div>
+                <strong>Você tem @ViewBag.QtdPendentesAvaliacao chamado(s) pendente(s) de avaliação.</strong>
+                <span class="ms-2 text-muted">Leva menos de 10 segundos.</span>
+            </div>
+            <a class="btn btn-sm btn-dark" href="~/Chamados/Index?pendenteAvaliacao=1">
+                Avaliar agora
+            </a>
+        </div>
+    }
+    <div class="home-cards">
+        <!-- Abrir Chamado -->
+        <a class="card home-card text-decoration-none" href="~/Chamados/Novo">
+            <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="icon">
+                        <img src="~/images/New_ticketIcon.png" alt="Abrir Chamado">
+                    </div>
+                    <div>
+                        <h5 class="card-title mb-1">Abrir Chamado</h5>
+                        <p class="card-text text-muted mb-0">
+                            Registre um novo chamado para TI em poucos passos.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <!-- Meus Chamados -->
+        <a class="card home-card text-decoration-none" href="~/Chamados/Index">
+            <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="icon">🧾</div>
+                    <div>
+                        <h5 class="card-title mb-1">Meus Chamados</h5>
+                        <p class="card-text text-muted mb-0">
+                            Acompanhe o status e interaja com seus chamados.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <!-- Aprovações -->
+        <a class="card home-card text-decoration-none" href="~/aprovacoes/index">
+            <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="icon">✅</div>
+                    <div>
+                        <h5 class="card-title mb-1">Aprovações</h5>
+                        <p class="card-text text-muted mb-0">
+                            Visualize e execute aprovações pendentes.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <!-- Quizzes / Treinamentos -->
+        @if (showApprovals && (perfil == "Tecnico"))
+        {
+            <a class="card home-card text-decoration-none" href="~/Quizzes">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="icon">🎓</div>
+                        <div>
+                            <h5 class="card-title mb-1">Quizzes & Treinamentos</h5>
+                            <p class="card-text text-muted mb-0">
+                                Participe dos treinamentos e avalie seus conhecimentos.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        }
+        <!-- Relatórios -->
+        <!--<a class="card home-card text-decoration-none" href="~/Inicio/Index">-->
+        <a class="card home-card text-decoration-none" href="~/Relatorios/Index">
+            <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="icon">
+                        <img src="~/images/ReportIcon.png" alt="Relatórios">
+                    </div>
+                    <div>
+                        <h5 class="card-title mb-1">Relatórios</h5>
+                        <p class="card-text text-muted mb-0">
+                            Acesse relatórios operacionais e gerenciais em um só lugar.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <!-- WMS -->
+        <!--<a class="card home-card text-decoration-none" href="~/Inicio/Index">-->
+        <a class="card home-card text-decoration-none" href="~/Integracoes/Index">
+            <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="icon">
+                        <img src="~/images/api.png" alt="Relatórios">
+                    </div>
+                    <div>
+                        <h5 class="card-title mb-1">API</h5>
+                        <p class="card-text text-muted mb-0">
+                            Integrações & Monitoramento
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <!-- Tecnico Painel -->
+        @{
+            var tituloPainel = perfil == "Manutencao"
+            ? "Painel da Manutenção"
+            : "Painel do Técnico";
+        }
+
+        @if (
+                string.Equals(perfil, "Tecnico", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(perfil, "Manutencao", StringComparison.OrdinalIgnoreCase)
+                )
+        {
+            <a class="card home-card text-decoration-none" href="~/Chamados/TecnicoPainel">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="icon">🛠️</div>
+                        <div>
+                            <h5 class="card-title mb-1">@tituloPainel</h5>
+                            <p class="card-text text-muted mb-0">
+                                Acompanhe chamados, interações e pendências do setor.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        }
+
+    </div>
+</div>

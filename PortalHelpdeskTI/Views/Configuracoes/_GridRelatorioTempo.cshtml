@@ -1,0 +1,19 @@
+﻿@model List<PortalHelpdeskTI.Models.Relatorios.TempoAtendimentoDto>
+
+@foreach (var i in Model)
+{
+    <tr>
+        <td>@i.ChamadoId</td>
+        <td>@i.Titulo</td>
+        <td>@i.Solicitante</td>
+        <td>@i.Tecnico</td>
+        <td>@i.DataAbertura?.ToString("dd/MM/yyyy HH:mm")</td>
+        <td>@i.DataConclusao?.ToString("dd/MM/yyyy HH:mm")</td>
+        <td>@i.TempoBrutoFmt</td>
+        <td>@i.TempoPausadoFmt</td>
+        <td><strong>@i.TempoUtilFmt</strong></td>
+        <td>@i.SlaPercent%</td>
+        <td>@(i.SlaDentroPrazo ? "Sim" : "Não")</td>
+        <td>@i.SlaResumo</td>
+    </tr>
+}

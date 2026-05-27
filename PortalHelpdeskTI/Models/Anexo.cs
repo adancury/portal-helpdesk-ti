@@ -6,4 +6,7 @@ public class Anexo
     public Chamado Chamado { get; set; }
     public string CaminhoArquivo { get; set; }
     public string NomeOriginal { get; set; }
+    public int? InteracaoId { get; set; }
+    public Interacao? Interacao { get; set; }
+
 }

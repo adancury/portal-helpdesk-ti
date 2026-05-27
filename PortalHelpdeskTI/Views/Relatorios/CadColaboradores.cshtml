@@ -1,0 +1,280 @@
+﻿@model PortalHelpdeskTI.ViewModels.Relatorios.DataTablePage
+@using System.Data
+
+@{
+    ViewData["Title"] = "Cadastro de Colaboradores";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var dt = Model?.Data;
+    string Get(object? v) => v == null || v == System.DBNull.Value ? string.Empty : v.ToString();
+
+    var total = Model?.Total ?? 0;
+    var curPage = Model?.Page ?? 1;
+    var pageSize = Model?.PageSize ?? 20;
+    var last = (int)Math.Ceiling(total / (double)(pageSize == 0 ? 1 : pageSize));
+    if (last == 0) last = 1;
+
+    var q = Context.Request.Query["q"].ToString();
+
+    // 🔹 Mapear índices das colunas (com fallback pelo índice conhecido do Excel)
+    int idxId = (dt != null && dt.Columns.Contains("ID Interno")) ? dt.Columns["ID Interno"].Ordinal : 0;
+    int idxMat = (dt != null && dt.Columns.Contains("Matrícula")) ? dt.Columns["Matrícula"].Ordinal : 1;
+    int idxNome = (dt != null && dt.Columns.Contains("Nome Completo")) ? dt.Columns["Nome Completo"].Ordinal : 2;
+    int idxCargo = (dt != null && dt.Columns.Contains("Cargo")) ? dt.Columns["Cargo"].Ordinal : 13;
+    int idxDepto = (dt != null && dt.Columns.Contains("Departamento")) ? dt.Columns["Departamento"].Ordinal : 15;
+    int idxAdm = (dt != null && dt.Columns.Contains("Data Admissão")) ? dt.Columns["Data Admissão"].Ordinal : 22;
+    int idxStatus = (dt != null && dt.Columns.Contains("Status Código")) ? dt.Columns["Status Código"].Ordinal : 24;
+    int idxFerias = (dt != null && dt.Columns.Contains("Férias Programadas")) ? dt.Columns["Férias Programadas"].Ordinal : 41;
+
+    // helper por índice
+    Func<DataRow, int, string> ByIdx = (DataRow r, int idx) =>
+    {
+        if (dt == null) return string.Empty;
+        if (idx < 0 || idx >= dt.Columns.Count) return string.Empty;
+        return Get(r[idx]);
+    };
+}
+
+
+<div class="card mb-3">
+    <!-- CABEÇALHO: título + filtro igual representante -->
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="mb-0">Cadastro de Colaboradores</h5>
+            <small class="text-body-secondary">
+                Fonte: ConsultasSQL/CadColaborador.sql
+            </small>
+        </div>
+
+        <form method="get"
+              class="d-flex flex-wrap align-items-end justify-content-end gap-2">
+            <!-- Buscar -->
+            <div class="d-flex flex-column">
+                <label class="form-label mb-0 small">Buscar</label>
+                <input type="text"
+                       name="q"
+                       value="@q"
+                       class="form-control form-control-sm"
+                       style="min-width: 220px;"
+                       placeholder="Matrícula, Nome, Departamento..." />
+            </div>
+
+            <!-- Página -->
+            <div class="d-flex flex-column">
+                <label class="form-label mb-0 small">Página</label>
+                <select name="page" class="form-select form-select-sm" style="width:80px;">
+                    @if (last == 0)
+                    {
+                        <option value="1" selected>1</option>
+                    }
+                    else
+                    {
+                        for (var p = 1; p <= last; p++)
+                        {
+                            if (p == curPage)
+                            {
+                                @:
+                                <option value="@p" selected>@p</option>
+                            }
+                            else
+                            {
+                                @:
+                                <option value="@p">@p</option>
+                            }
+                        }
+                    }
+                </select>
+            </div>
+
+            <!-- Itens/página -->
+            <div class="d-flex flex-column">
+                <label class="form-label mb-0 small">Itens/página</label>
+                <select name="pageSize" class="form-select form-select-sm" style="width:90px;">
+                    @{
+                        int[] opts = new[] { 20, 50, 100 };
+                        foreach (var opt in opts)
+                        {
+                            if (opt == pageSize)
+                            {
+                                @:
+                                <option value="@opt" selected>@opt</option>
+                            }
+                            else
+                            {
+                                @:
+                                <option value="@opt">@opt</option>
+                            }
+                        }
+                    }
+                </select>
+            </div>
+
+            <!-- Botões -->
+            <div class="d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-sm btn-primary">
+                    Aplicar
+                </button>
+
+                <!-- CSV (placeholder por enquanto, só visual) -->
+                <button type="submit"
+                        class="btn btn-sm btn-outline-secondary"
+                        formaction="~/Relatorios/CadColaboradoresCsv"
+                        formmethod="get">
+                    Exportar CSV
+                </button>
+
+                <button type="button"
+                        class="btn btn-sm btn-outline-light"
+                        onclick="history.back()">
+                    ← Voltar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- CORPO: tabela -->
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table id="tabela-colaboradores"
+                   class="table table-sm align-middle mb-0"
+                   style="table-layout:fixed;">
+                <colgroup>
+                    <col style="width:90px;">    @* Matrícula *@
+                    <col style="width:80px;">    @* ID Interno *@
+                    <col style="width:90px;">    @* Nome Completo *@
+                    <col style="width:160px;">   @* Departamento *@
+                    <col style="width:170px;">   @* Cargo *@
+                    <col style="width:120px;">   @* Admissão *@
+                    <col style="width:80px;">    @* Ativo *@
+                    <col style="width:200px;">   @* Férias Programadas *@
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Matrícula</th>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Departamento</th>
+                        <th>Cargo</th>
+                        <th>Admissão</th>
+                        <th>Ativo</th>
+                        <th>Férias Programadas</th>
+                    </tr>
+                </thead>
+
+
+                <tbody>
+                    @if (dt == null || dt.Rows.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-3">
+                                Nenhum colaborador encontrado.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (DataRow row in dt.Rows)
+                        {
+                            var id = ByIdx(row, idxId);
+                            var matricula = ByIdx(row, idxMat);
+                            var nome = ByIdx(row, idxNome);
+                            var depto = ByIdx(row, idxDepto);
+                            var cargo = ByIdx(row, idxCargo);
+                            var adm = ByIdx(row, idxAdm);
+                            var ferias = ByIdx(row, idxFerias);
+
+                            // Status como número (para decidir se está ativo)
+                            int? statusNum = null;
+                            if (idxStatus >= 0 && dt.Columns.Count > idxStatus)
+                            {
+                                var o = row[idxStatus];
+                                if (o != null && o != DBNull.Value)
+                                {
+                                    try
+                                    {
+                                        statusNum = Convert.ToInt32(o);
+                                    }
+                                    catch
+                                    {
+                                        var s = o.ToString() ?? "";
+                                        s = s.Replace(",0", "").Replace(".0", "");
+                                        if (int.TryParse(s, out var tmp))
+                                            statusNum = tmp;
+                                    }
+                                }
+                            }
+
+                            // Ativo Sim/Não
+                            var isAtivo = statusNum == 1;
+                            var ativoTexto = isAtivo ? "Sim" : "Não";
+                            var ativoCss = isAtivo ? "badge bg-success" : "badge bg-danger";
+
+                            // Formatar admissão só como data (dd/MM/yyyy)
+                            var admDisplay = adm;
+                            if (DateTime.TryParse(adm, out var admDt))
+                            {
+                                admDisplay = admDt.ToString("dd/MM/yyyy");
+                            }
+
+                            <tr>
+                                <td class="text-nowrap">@matricula</td>
+                                <td class="text-nowrap">@id</td>
+                                <td class="text-truncate" style="max-width:260px;" title="@nome">@nome</td>
+                                <td class="text-truncate" style="max-width:180px;" title="@depto">@depto</td>
+                                <td class="text-truncate" style="max-width:180px;" title="@cargo">@cargo</td>
+                                <td class="text-nowrap">@admDisplay</td>
+                                <td class="text-nowrap">
+                                    <span class="@ativoCss">@ativoTexto</span>
+                                </td>
+                                <td class="text-nowrap">@ferias</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- RODAPÉ: paginação igual representantes -->
+        <div class="px-3 py-2 border-top">
+            <div class="d-flex justify-content-between align-items-center">
+                <!-- Anterior -->
+                @{
+                    var prevDisabled = curPage <= 1;
+                    var prevHref = prevDisabled
+                    ? "#"
+                    : $"?q={q}&page={curPage - 1}&pageSize={pageSize}";
+                }
+                <a class="btn btn-sm btn-outline-secondary @(prevDisabled ? "disabled" : "")"
+                   href="@prevHref">
+                    « Anterior
+                </a>
+
+                <!-- Página X de Y -->
+                <div class="small text-body-secondary">
+                    Página <strong>@curPage</strong> de <strong>@last</strong>
+                </div>
+
+                <!-- Próxima -->
+                @{
+                    var nextDisabled = curPage >= last;
+                    var nextHref = nextDisabled
+                    ? "#"
+                    : $"?q={q}&page={curPage + 1}&pageSize={pageSize}";
+                }
+                <a class="btn btn-sm btn-outline-secondary @(nextDisabled ? "disabled" : "")"
+                   href="@nextHref">
+                    Próxima »
+                </a>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-1 small text-body-secondary">
+                <div>
+                    Total: <strong>@total</strong>
+                </div>
+                <div>
+                    Página <strong>@curPage</strong> de <strong>@last</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

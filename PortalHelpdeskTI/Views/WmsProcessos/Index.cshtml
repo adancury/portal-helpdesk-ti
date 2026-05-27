@@ -1,0 +1,214 @@
+@model PortalHelpdeskTI.ViewModels.IntegracoesWms.WmsProcessosIndexVm
+@{
+    ViewData["Title"] = "Processos WMS";
+}
+
+<link rel="stylesheet" href="~/css/wms-processos.css" />
+
+<div class="container-fluid py-3">
+    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+        <div>
+            <h3 class="mb-0">Processos WMS</h3>
+            <div class="text-body-secondary small">Acompanhamento operacional com histórico de mudanças por processo.</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" id="autoRefresh" @(Model.Filtro.AutoRefresh ? "checked" : "")>
+                <label class="form-check-label" for="autoRefresh">Auto-refresh</label>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" id="btnAtualizar" type="button">
+                <i class="bi bi-arrow-clockwise"></i> Atualizar
+            </button>
+            <button class="btn btn-primary btn-sm" id="btnSincronizar" type="button">
+                <i class="bi bi-cloud-arrow-down"></i> Sincronizar agora
+            </button>
+        </div>
+    </div>
+
+    <div class="wms-kpis mb-3">
+        <div class="wms-kpi">
+            <span>Processos no filtro</span>
+            <strong>@Model.Total.ToString("N0")</strong>
+        </div>
+        <div class="wms-kpi">
+            <span>Em aberto</span>
+            <strong>@Model.TotalAbertos.ToString("N0")</strong>
+        </div>
+        <div class="wms-kpi">
+            <span>Hoje</span>
+            <strong>@Model.TotalHoje.ToString("N0")</strong>
+        </div>
+        <div class="wms-kpi">
+            <span>Alterações 24h</span>
+            <strong>@Model.TotalAlterados24h.ToString("N0")</strong>
+        </div>
+        <div class="wms-kpi @(Model.TotalErrosSync24h > 0 ? "is-danger" : "")">
+            <span>Erros sync 24h</span>
+            <strong>@Model.TotalErrosSync24h.ToString("N0")</strong>
+        </div>
+    </div>
+
+    <div class="card shadow-sm wms-panel mb-3">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label mb-1">Tipo</label>
+                    <select class="form-select form-select-sm" id="tipo">
+                        <option value="">Todos</option>
+                        @foreach (var t in Model.Tipos)
+                        {
+                            <option value="@t" selected="@(Model.Filtro.Tipo == t)">@t</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1">Status</label>
+                    <select class="form-select form-select-sm" id="status">
+                        <option value="">Todos</option>
+                        @foreach (var s in Model.Status)
+                        {
+                            <option value="@s" selected="@(Model.Filtro.Status == s)">@s</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1">Data inicial</label>
+                    <input class="form-control form-control-sm" type="date" id="dataIni" value="@Model.Filtro.DataIni?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1">Data final</label>
+                    <input class="form-control form-control-sm" type="date" id="dataFim" value="@Model.Filtro.DataFim?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1">Busca</label>
+                    <input class="form-control form-control-sm" id="texto" value="@Model.Filtro.Texto" placeholder="pedido, NF, produto, cliente..." />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label mb-1">Linhas</label>
+                    <select class="form-select form-select-sm" id="pageSize">
+                        @foreach (var size in new[] { 25, 50, 100, 200 })
+                        {
+                            <option value="@size" selected="@(Model.Filtro.PageSize == size)">@size</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="gridArea">
+        @await Html.PartialAsync("_Grid", Model)
+    </div>
+
+    <div class="card shadow-sm wms-panel mt-3">
+        <div class="card-header bg-transparent fw-semibold">Últimas sincronizações</div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Início</th>
+                        <th>Status</th>
+                        <th>Recebidos</th>
+                        <th>Novos</th>
+                        <th>Alterados</th>
+                        <th>Mensagem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in Model.UltimasExecucoes)
+                    {
+                        <tr>
+                            <td>@e.Tipo</td>
+                            <td>@e.InicioEm.ToString("dd/MM HH:mm")</td>
+                            <td><span class="badge @(e.Status == "Sucesso" ? "bg-success" : e.Status == "Erro" ? "bg-danger" : "bg-secondary")">@e.Status</span></td>
+                            <td>@e.RegistrosRecebidos</td>
+                            <td>@e.RegistrosNovos</td>
+                            <td>@e.RegistrosAlterados</td>
+                            <td class="text-body-secondary small">@e.Mensagem</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<form id="syncForm" method="post" action="@Url.Action("Sincronizar", "WmsProcessos")">
+    @Html.AntiForgeryToken()
+</form>
+
+@section Scripts {
+    <script>
+        (() => {
+            let page = @Model.Filtro.Page;
+            let timer = null;
+
+            const gridArea = document.getElementById("gridArea");
+            const ids = ["tipo", "status", "dataIni", "dataFim", "texto", "pageSize", "autoRefresh"];
+            const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
+
+            function query() {
+                const q = new URLSearchParams();
+                q.set("Tipo", el.tipo.value || "");
+                q.set("Status", el.status.value || "");
+                q.set("DataIni", el.dataIni.value || "");
+                q.set("DataFim", el.dataFim.value || "");
+                q.set("Texto", el.texto.value || "");
+                q.set("Page", String(page));
+                q.set("PageSize", el.pageSize.value || "50");
+                q.set("AutoRefresh", el.autoRefresh.checked ? "true" : "false");
+                return q.toString();
+            }
+
+            async function load() {
+                const resp = await fetch("/WmsProcessos/Index?" + query(), {
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                    cache: "no-store"
+                });
+                gridArea.innerHTML = resp.ok ? await resp.text() : `<div class="alert alert-danger">Erro ao carregar processos.</div>`;
+                bindPager();
+            }
+
+            function bindPager() {
+                gridArea.querySelector("[data-page-prev]")?.addEventListener("click", () => {
+                    if (page > 1) { page--; load(); }
+                });
+                gridArea.querySelector("[data-page-next]")?.addEventListener("click", () => {
+                    page++; load();
+                });
+            }
+
+            function refreshTimer() {
+                if (timer) clearInterval(timer);
+                if (el.autoRefresh.checked) timer = setInterval(load, 30000);
+            }
+
+            ["tipo", "status", "dataIni", "dataFim", "pageSize"].forEach(id => {
+                el[id].addEventListener("change", () => { page = 1; load(); });
+            });
+            el.texto.addEventListener("keydown", e => {
+                if (e.key === "Enter") { page = 1; load(); }
+            });
+            el.autoRefresh.addEventListener("change", refreshTimer);
+            document.getElementById("btnAtualizar").addEventListener("click", () => { page = 1; load(); });
+            document.getElementById("btnSincronizar").addEventListener("click", async () => {
+                const fd = new FormData(document.getElementById("syncForm"));
+                fd.set("tipo", el.tipo.value || "SAIDAS");
+                fd.set("dataIni", el.dataIni.value || "");
+                fd.set("dataFim", el.dataFim.value || "");
+                gridArea.innerHTML = `<div class="p-3 text-muted">Sincronizando...</div>`;
+                await fetch("/WmsProcessos/Sincronizar", {
+                    method: "POST",
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                    body: fd
+                });
+                page = 1;
+                await load();
+            });
+
+            bindPager();
+            refreshTimer();
+        })();
+    </script>
+}

@@ -1,0 +1,73 @@
+@model PortalHelpdeskTI.ViewModels.IntegracoesWms.WmsProcessoDetalheVm
+@{
+    ViewData["Title"] = "Detalhe Processo WMS";
+    var p = Model.Processo;
+}
+
+<link rel="stylesheet" href="~/css/wms-processos.css" />
+
+<div class="container-fluid py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h3 class="mb-0">@p.Tipo - @p.ChaveProcesso</h3>
+            <div class="text-body-secondary small">@p.ChaveItem</div>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index", "WmsProcessos")">Voltar</a>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="card shadow-sm wms-panel">
+                <div class="card-header bg-transparent fw-semibold">Status atual</div>
+                <div class="card-body">
+                    <div class="wms-detail-list">
+                        <div><span>Status</span><strong>@(p.Status ?? "-")</strong></div>
+                        <div><span>Anterior</span><strong>@(p.StatusAnterior ?? "-")</strong></div>
+                        <div><span>Referência</span><strong>@(p.DataReferencia?.ToString("dd/MM/yyyy HH:mm") ?? "-")</strong></div>
+                        <div><span>Pedido</span><strong>@(p.NumeroPedido ?? "-")</strong></div>
+                        <div><span>Documento</span><strong>@(p.NumeroDocumento ?? "-")</strong></div>
+                        <div><span>Produto</span><strong>@(p.CodigoProduto ?? "-")</strong></div>
+                        <div><span>Atualizado</span><strong>@p.AtualizadoEm.ToString("dd/MM/yyyy HH:mm:ss")</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm wms-panel mt-3">
+                <div class="card-header bg-transparent fw-semibold">Payload atual</div>
+                <div class="card-body">
+                    <pre class="wms-json">@p.RawJson</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm wms-panel">
+                <div class="card-header bg-transparent fw-semibold">Linha do tempo</div>
+                <div class="card-body">
+                    <div class="wms-timeline">
+                        @foreach (var log in Model.Logs)
+                        {
+                            <div class="wms-timeline-item">
+                                <div class="wms-timeline-dot"></div>
+                                <div class="wms-timeline-content">
+                                    <div class="d-flex align-items-center justify-content-between gap-2">
+                                        <div class="fw-semibold">@log.Evento</div>
+                                        <div class="text-body-secondary small">@log.CriadoEm.ToString("dd/MM/yyyy HH:mm:ss")</div>
+                                    </div>
+                                    <div class="small">
+                                        <span class="text-body-secondary">Status:</span>
+                                        @(log.StatusAnterior ?? "-") -> @(log.StatusNovo ?? "-")
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(log.CamposAlteradosJson))
+                                    {
+                                        <pre class="wms-json mt-2">@log.CamposAlteradosJson</pre>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

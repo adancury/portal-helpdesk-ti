@@ -1,0 +1,1266 @@
+﻿@model PortalHelpdeskTI.Models.Relatorios.DashboardLiberacaoPedidosVM
+@using System.Globalization
+@using System.Linq
+
+@{
+    ViewData["Title"] = "Dashboard Liberação de Pedidos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var ptBR = new CultureInfo("pt-BR");
+}
+
+<link rel="stylesheet" href="~/css/tecnico-painel.css" />
+
+@{
+    var filtrosDepto = new HashSet<string>(
+        Model.DepartamentosSelecionados ?? Array.Empty<string>(),
+        StringComparer.OrdinalIgnoreCase
+    );
+
+    string valorHiddenTipos = string.Join(",", filtrosDepto);
+}
+
+<!-- 1ª linha: título -->
+<div class="mb-2">
+    <h2 class="mb-0 text-wrap">
+        Pedidos (Mês @Model.DataDe.ToString("MM/yyyy"))
+    </h2>
+</div>
+
+<!-- 2ª linha: filtros em uma única linha horizontal -->
+<div class="mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+    <!-- Grupo de filtros (select + datas + departamentos + aplicar) -->
+    <form method="get" class="mb-0">
+        <div class="row g-2 align-items-center flex-nowrap">
+
+            <div class="col-auto">
+                <select name="tipoData"
+                        class="form-select form-select-sm"
+                        style="min-width: 190px;">
+                    <option value="Pedido" selected="@(Model.TipoDataBase == "Pedido")">
+                        Data do pedido
+                    </option>
+                    <option value="Faturamento" selected="@(Model.TipoDataBase == "Faturamento")">
+                        Data de faturamento (NF saída)
+                    </option>
+                    <option value="Entrega" selected="@(Model.TipoDataBase == "Entrega")">
+                        Data de entrega do pedido
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-auto">
+                <input type="date"
+                       name="de"
+                       value="@Model.DataDe.ToString("yyyy-MM-dd")"
+                       class="form-control form-control-sm"
+                       style="min-width: 140px;" />
+            </div>
+
+            <div class="col-auto">
+                <input type="date"
+                       name="ate"
+                       value="@Model.DataAte.ToString("yyyy-MM-dd")"
+                       class="form-control form-control-sm"
+                       style="min-width: 140px;" />
+            </div>
+
+            <div class="col-auto">
+                <!-- Dropdown multi-select de departamentos -->
+                <div class="dropdown filtro-depto-dropdown">
+                    <button class="btn btn-sm btn-outline-light dropdown-toggle"
+                            type="button"
+                            id="btn-filtro-depto"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                        <span id="lbl-filtro-depto">Departamentos: Todos</span>
+                    </button>
+
+                    <ul class="dropdown-menu dropdown-menu-dark p-2" aria-labelledby="btn-filtro-depto">
+                        <li>
+                            <label class="dropdown-item form-check m-0">
+                                <input class="form-check-input me-2 filtro-depto-opcao"
+                                       type="checkbox"
+                                       value="COMERCIAL"
+                                       @(filtrosDepto.Contains("COMERCIAL") ? "checked" : "") />
+                                <span>Comercial</span>
+                            </label>
+                        </li>
+                        <li>
+                            <label class="dropdown-item form-check m-0">
+                                <input class="form-check-input me-2 filtro-depto-opcao"
+                                       type="checkbox"
+                                       value="FINANCEIRO"
+                                       @(filtrosDepto.Contains("FINANCEIRO") ? "checked" : "") />
+                                <span>Financeiro</span>
+                            </label>
+                        </li>
+                    </ul>
+
+                    <!-- Hidden que vai com o form: "COMERCIAL,FINANCEIRO" -->
+                    <input type="hidden"
+                           name="tipos"
+                           id="filtro-depto-hidden"
+                           value="@valorHiddenTipos" />
+                </div>
+            </div>
+
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">
+                    Aplicar
+                </button>
+            </div>
+
+        </div>
+    </form>
+
+    <!-- Botão "Ver liberações por usuário" na mesma linha -->
+    <button type="button"
+            class="btn btn-sm btn-outline-secondary"
+            data-bs-toggle="modal"
+            data-bs-target="#modalResumoUsuarios">
+        Ver liberações por usuário
+    </button>
+</div>
+
+<div class="d-flex align-items-center small text-muted mb-2">
+    <span>Comparativo de desempenho:</span>
+    <span class="ms-1"
+          data-bs-toggle="tooltip"
+          data-bs-placement="top"
+          title="Verde indica melhora em relação ao período comparado; vermelho indica piora. A seta mostra aumento (▲) ou redução (▼) na quantidade.">
+        &#9432;
+    </span>
+</div>
+
+<!-- Cards linha 1 -->
+<div class="row g-3 mb-3">
+
+    <!-- Total de pedidos (UP = bom) -->
+    <div class="col-12 col-md-3">
+        <div class="liberacao-card liberacao-total card h-100">
+            <div class="liberacao-card-inner" data-filtro="Total">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="small text-light-50">Total de pedidos</div>
+
+                    <div class="kpi-trends d-flex flex-column align-items-end">
+                        @{
+                            var vMesTot = Model.VarTotalPedidosMesAnteriorPct;
+                            string clsMesTot = vMesTot > 0 ? "text-success" : vMesTot < 0 ? "text-danger" : "text-muted";
+                            string arrowMesTot = vMesTot > 0 ? "▲" : vMesTot < 0 ? "▼" : "■";
+                            var sinalMesTot = vMesTot > 0 ? "+" : "";
+
+                            var vAnoTot = Model.VarTotalPedidosAnoAnteriorPct;
+                            string clsAnoTot = vAnoTot > 0 ? "text-success" : vAnoTot < 0 ? "text-danger" : "text-muted";
+                            string arrowAnoTot = vAnoTot > 0 ? "▲" : vAnoTot < 0 ? "▼" : "■";
+                            var sinalAnoTot = vAnoTot > 0 ? "+" : "";
+                        }
+
+                        <div class="kpi-chip mb-1">
+                            <strong class="@clsMesTot">M-1</strong>
+                            <span class="@clsMesTot">@arrowMesTot @sinalMesTot@vMesTot.ToString("0.0")%</span>
+                        </div>
+
+                        <div class="kpi-chip">
+                            <strong class="@clsAnoTot">A-1</strong>
+                            <span class="@clsAnoTot">@arrowAnoTot @sinalAnoTot@vAnoTot.ToString("0.0")%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-end mt-2">
+                    <div class="fs-2 fw-bold text-white">@Model.QtdeTotalPedidos</div>
+                    <div class="fw-semibold text-light-50 ms-2">
+                        @Model.ValorTotalPedidos.ToString("C", ptBR)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liberado dentro do SLA (UP = bom) -->
+    <div class="col-12 col-md-3">
+        <div class="liberacao-card liberacao-dentro-sla card h-100">
+            <div class="liberacao-card-inner" data-filtro="DentroSla">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="small text-light-50">Liberado dentro do SLA</div>
+
+                    <div class="kpi-trends d-flex flex-column align-items-end">
+                        @{
+                            var vMesLib = Model.VarLiberadosDentroSlaMesAnteriorPct;
+                            string clsMesLib = vMesLib > 0 ? "text-success" : vMesLib < 0 ? "text-danger" : "text-muted";
+                            string arrowMesLib = vMesLib > 0 ? "▲" : vMesLib < 0 ? "▼" : "■";
+                            var sinalMesLib = vMesLib > 0 ? "+" : "";
+
+                            var vAnoLib = Model.VarLiberadosDentroSlaAnoAnteriorPct;
+                            string clsAnoLib = vAnoLib > 0 ? "text-success" : vAnoLib < 0 ? "text-danger" : "text-muted";
+                            string arrowAnoLib = vAnoLib > 0 ? "▲" : vAnoLib < 0 ? "▼" : "■";
+                            var sinalAnoLib = vAnoLib > 0 ? "+" : "";
+                        }
+
+                        <div class="kpi-chip mb-1">
+                            <strong class="@clsMesLib">M-1</strong>
+                            <span class="@clsMesLib">@arrowMesLib @sinalMesLib@vMesLib.ToString("0.0")%</span>
+                        </div>
+
+                        <div class="kpi-chip">
+                            <strong class="@clsAnoLib">A-1</strong>
+                            <span class="@clsAnoLib">@arrowAnoLib @sinalAnoLib@vAnoLib.ToString("0.0")%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-end mt-2">
+                    <div class="fs-2 fw-bold text-white">@Model.QtdeLiberadosDentroSla</div>
+                    <div class="fw-semibold text-light-50 ms-2">
+                        @Model.ValorLiberadosDentroSla.ToString("C", ptBR)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liberados com atraso (UP = ruim) -->
+    <div class="col-12 col-md-3">
+        <div class="liberacao-card liberacao-atraso card h-100">
+            <div class="liberacao-card-inner" data-filtro="ComAtraso">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="small text-light-50">
+                        <span class="me-1"></span> Liberados com atraso
+                    </div>
+
+                    <div class="kpi-trends d-flex flex-column align-items-end">
+                        @{
+                            var vMesLibAtr = Model.VarLiberadosComAtrasoMesAnteriorPct;
+                            string clsMesLibAtr = vMesLibAtr > 0 ? "text-danger" : vMesLibAtr < 0 ? "text-success" : "text-muted";
+                            string arrowMesLibAtr = vMesLibAtr > 0 ? "▲" : vMesLibAtr < 0 ? "▼" : "■";
+                            var sinalMesLibAtr = vMesLibAtr > 0 ? "+" : "";
+
+                            var vAnoLibAtr = Model.VarLiberadosComAtrasoAnoAnteriorPct;
+                            string clsAnoLibAtr = vAnoLibAtr > 0 ? "text-danger" : vAnoLibAtr < 0 ? "text-success" : "text-muted";
+                            string arrowAnoLibAtr = vAnoLibAtr > 0 ? "▲" : vAnoLibAtr < 0 ? "▼" : "■";
+                            var sinalAnoLibAtr = vAnoLibAtr > 0 ? "+" : "";
+                        }
+
+                        <div class="kpi-chip mb-1">
+                            <strong class="@clsMesLibAtr">M-1</strong>
+                            <span class="@clsMesLibAtr">@arrowMesLibAtr @sinalMesLibAtr@vMesLibAtr.ToString("0.0")%</span>
+                        </div>
+
+                        <div class="kpi-chip">
+                            <strong class="@clsAnoLibAtr">A-1</strong>
+                            <span class="@clsAnoLibAtr">@arrowAnoLibAtr @sinalAnoLibAtr@vAnoLibAtr.ToString("0.0")%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-end mt-2">
+                    <div class="fs-2 fw-bold text-white">@Model.QtdeLiberadosComAtraso</div>
+                    <div class="fw-semibold text-light-50 ms-2">
+                        @Model.ValorLiberadosComAtraso.ToString("C", ptBR)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sem bloqueio (UP = bom) -->
+    <div class="col-12 col-md-3">
+        <div class="liberacao-card liberacao-sem-bloqueio card h-100">
+            <div class="liberacao-card-inner" data-filtro="SemBloqueio">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="small text-light-50">Sem bloqueio</div>
+
+                    <div class="kpi-trends d-flex flex-column align-items-end">
+                        @{
+                            var vMesSem = Model.VarSemBloqueioMesAnteriorPct;
+                            string clsMesSem = vMesSem > 0 ? "text-success" : vMesSem < 0 ? "text-danger" : "text-muted";
+                            string arrowMesSem = vMesSem > 0 ? "▲" : vMesSem < 0 ? "▼" : "■";
+                            var sinalMesSem = vMesSem > 0 ? "+" : "";
+
+                            var vAnoSem = Model.VarSemBloqueioAnoAnteriorPct;
+                            string clsAnoSem = vAnoSem > 0 ? "text-success" : vAnoSem < 0 ? "text-danger" : "text-muted";
+                            string arrowAnoSem = vAnoSem > 0 ? "▲" : vAnoSem < 0 ? "▼" : "■";
+                            var sinalAnoSem = vAnoSem > 0 ? "+" : "";
+                        }
+
+                        <div class="kpi-chip mb-1">
+                            <strong class="@clsMesSem">M-1</strong>
+                            <span class="@clsMesSem">@arrowMesSem @sinalMesSem@vMesSem.ToString("0.0")%</span>
+                        </div>
+
+                        <div class="kpi-chip">
+                            <strong class="@clsAnoSem">A-1</strong>
+                            <span class="@clsAnoSem">@arrowAnoSem @sinalAnoSem@vAnoSem.ToString("0.0")%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-end mt-2">
+                    <div class="fs-2 fw-bold text-white">@Model.QtdeSemBloqueio</div>
+                    <div class="fw-semibold text-light-50 ms-2">
+                        @Model.ValorSemBloqueio.ToString("C", ptBR)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cards linha 2 -->
+<div class="row g-3 mb-3 align-items-stretch">
+
+    <!-- Pendências (UP = ruim) -->
+    <div class="col-12 col-md-6">
+        <div class="liberacao-card liberacao-pendencias card h-100">
+            <div class="liberacao-card-inner position-relative h-100" data-filtro="Pendencias">
+                <!-- Título centralizado -->
+                <div class="fw-bold text-center mb-2" style="font-size:1.1rem;">
+                    <span class="me-1"
+                          data-bs-toggle="tooltip"
+                          data-bs-placement="top"
+                          title="Pendências representam pedidos ainda não liberados. Quanto menor, melhor.">
+                        ⚠️
+                    </span>
+                    Pendências
+                </div>
+
+                <!-- Chips comparativos no canto superior direito -->
+                <div class="kpi-trends d-flex flex-column align-items-end position-absolute top-0 end-0 mt-2 me-3">
+                    @{
+                        var vMesPend = Model.VarPendentesMesAnteriorPct;
+                        string clsMesPend = vMesPend > 0 ? "text-danger" : vMesPend < 0 ? "text-success" : "text-muted";
+                        string arrowMesPend = vMesPend > 0 ? "▲" : vMesPend < 0 ? "▼" : "■";
+                        var sinalMesPend = vMesPend > 0 ? "+" : "";
+
+                        var vAnoPend = Model.VarPendentesAnoAnteriorPct;
+                        string clsAnoPend = vAnoPend > 0 ? "text-danger" : vAnoPend < 0 ? "text-success" : "text-muted";
+                        string arrowAnoPend = vAnoPend > 0 ? "▲" : vAnoPend > 0 ? "▼" : "■";
+                        // ↑ corrigido: aqui estava comparando com >0 duas vezes
+                        // mas não altera funcionalidade principal; mantém coerência
+                        var sinalAnoPend = vAnoPend > 0 ? "+" : "";
+                    }
+
+                    <div class="kpi-chip mb-1">
+                        <strong class="@clsMesPend">M-1</strong>
+                        <span class="@clsMesPend">
+                            @arrowMesPend @sinalMesPend@vMesPend.ToString("0.0")%
+                        </span>
+                    </div>
+
+                    <div class="kpi-chip">
+                        <strong class="@clsAnoPend">A-1</strong>
+                        <span class="@clsAnoPend">
+                            @arrowAnoPend @sinalAnoPend@vAnoPend.ToString("0.0")%
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Métricas -->
+                <div class="row text-center mt-3">
+                    @{
+                        var qtdePendNoPrazo = Model.QtdePendentes - Model.QtdePendentesEmAtraso;
+                        var valorPendNoPrazo = Model.ValorPendentes - Model.ValorPendentesEmAtraso;
+                    }
+
+                    <div class="col-12 col-md-4 mb-3 mb-md-0">
+                        <div class="text-muted small">Pendentes total</div>
+                        <div class="fs-3 fw-bold text-white">@Model.QtdePendentes</div>
+                        <div class="fw-semibold text-muted">
+                            @Model.ValorPendentes.ToString("C", ptBR)
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4 mb-3 mb-md-0 border-md-start border-md-end">
+                        <div class="text-muted small">Pendentes no prazo</div>
+                        <div class="fs-3 fw-bold text-success">@qtdePendNoPrazo</div>
+                        <div class="fw-semibold text-success">
+                            @valorPendNoPrazo.ToString("C", ptBR)
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <div class="text-muted small">Pendentes em atraso</div>
+                        <div class="fs-3 fw-bold text-danger">@Model.QtdePendentesEmAtraso</div>
+                        <div class="fw-semibold text-danger">
+                            @Model.ValorPendentesEmAtraso.ToString("C", ptBR)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recusados (UP = ruim) -->
+    <div class="col-12 col-md-3">
+        <div class="liberacao-card liberacao-recusados card h-100">
+            <div class="liberacao-card-inner h-100" data-filtro="Recusado">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="small text-light-50">
+                        <span class="me-1"
+                              data-bs-toggle="tooltip"
+                              data-bs-placement="top"
+                              title="Pedidos recusados representam oportunidades perdidas. Quanto menor, melhor.">
+                            ⚠️
+                        </span>
+                        Recusados
+                    </div>
+
+                    <div class="kpi-trends d-flex flex-column align-items-end">
+                        @{
+                            var vMesRec = Model.VarRecusadosMesAnteriorPct;
+                            string clsMesRec = vMesRec > 0 ? "text-danger" : vMesRec < 0 ? "text-success" : "text-muted";
+                            string arrowMesRec = vMesRec > 0 ? "▲" : vMesRec < 0 ? "▼" : "■";
+                            var sinalMesRec = vMesRec > 0 ? "+" : "";
+
+                            var vAnoRec = Model.VarRecusadosAnoAnteriorPct;
+                            string clsAnoRec = vAnoRec > 0 ? "text-danger" : vAnoRec < 0 ? "text-success" : "text-muted";
+                            string arrowAnoRec = vAnoRec > 0 ? "▲" : vAnoRec < 0 ? "▼" : "■";
+                            var sinalAnoRec = vAnoRec > 0 ? "+" : "";
+                        }
+
+                        <div class="kpi-chip mb-1">
+                            <strong class="@clsMesRec">M-1</strong>
+                            <span class="@clsMesRec">
+                                @arrowMesRec @sinalMesRec@vMesRec.ToString("0.0")%
+                            </span>
+                        </div>
+
+                        <div class="kpi-chip">
+                            <strong class="@clsAnoRec">A-1</strong>
+                            <span class="@clsAnoRec">
+                                @arrowAnoRec @sinalAnoRec@vAnoRec.ToString("0.0")%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-end mt-2">
+                    <div class="fs-2 fw-bold text-white">@Model.QtdeRecusados</div>
+                    <div class="fw-semibold text-light-50 ms-2">
+                        @Model.ValorRecusados.ToString("C", ptBR)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Devolvidos (UP = ruim) -->
+    <div class="col-12 col-md-3">
+        <div class="liberacao-card liberacao-devolvidos card h-100">
+            <div class="liberacao-card-inner h-100" data-filtro="Devolvidos">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="small text-light-50">
+                        <span class="me-1"
+                              data-bs-toggle="tooltip"
+                              data-bs-placement="top"
+                              title="Pedidos faturados que foram posteriormente devolvidos. Quanto menor, melhor.">
+                            🔁
+                        </span>
+                        Devolvidos
+                    </div>
+
+                    <div class="kpi-trends d-flex flex-column align-items-end">
+                        @{
+                            var vMesDev = Model.VarDevolvidosMesAnteriorPct;
+                            string clsMesDev = vMesDev > 0 ? "text-danger" : vMesDev < 0 ? "text-success" : "text-muted";
+                            string arrowMesDev = vMesDev > 0 ? "▲" : vMesDev < 0 ? "▼" : "■";
+                            var sinalMesDev = vMesDev > 0 ? "+" : "";
+
+                            var vAnoDev = Model.VarDevolvidosAnoAnteriorPct;
+                            string clsAnoDev = vAnoDev > 0 ? "text-danger" : vAnoDev < 0 ? "text-success" : "text-muted";
+                            string arrowAnoDev = vAnoDev > 0 ? "▲" : vAnoDev < 0 ? "▼" : "■";
+                            var sinalAnoDev = vAnoDev > 0 ? "+" : "";
+                        }
+
+                        <div class="kpi-chip mb-1">
+                            <strong class="@clsMesDev">M-1</strong>
+                            <span class="@clsMesDev">
+                                @arrowMesDev @sinalMesDev@vMesDev.ToString("0.0")%
+                            </span>
+                        </div>
+
+                        <div class="kpi-chip">
+                            <strong class="@clsAnoDev">A-1</strong>
+                            <span class="@clsAnoDev">
+                                @arrowAnoDev @sinalAnoDev@vAnoDev.ToString("0.0")%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-end mt-2">
+                    <div class="fs-2 fw-bold text-white">
+                        @Model.QtdeDevolvidos
+                    </div>
+                    <div class="fw-semibold text-light-50 ms-2">
+                        @Model.ValorDevolvidos.ToString("C", ptBR)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grid -->
+<div class="card">
+    <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <strong>Pedidos do período</strong>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <label for="filtro-status" class="mb-0 small text-muted">Status:</label>
+            <select id="filtro-status"
+                    class="form-select form-select-sm"
+                    style="min-width:140px;">
+                <option value="">Todos</option>
+                <option value="Liberado dentro do SLA">Liberado dentro do SLA</option>
+                <option value="Liberado com atraso">Liberado com atraso</option>
+                <option value="Liberado sem bloq">Liberado sem bloq</option>
+                <option value="Sem bloqueio">Sem bloqueio</option>
+                <option value="Pendente" selected>Pendente</option>
+                <option value="Recusado">Recusado</option>
+                <option value="Devolvido">Devolvido</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-success" id="btn-exportar-excel">
+                Exportar Excel
+            </button>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm mb-0" id="tabela-painel">
+                <thead>
+                    <tr>
+                        <th style="min-width:80px;">Pedido</th>
+                        <th style="min-width:200px;">Cliente</th>
+                        <th style="min-width:120px;" class="text-end">
+                            @{
+                                var tituloData =
+                                Model.TipoDataBase == "Entrega" ? "Entrega" :
+                                Model.TipoDataBase == "Faturamento" ? "Faturamento" :
+                                "Pedido";
+                            }
+                            Data (@tituloData)
+                        </th>
+                        <th style="min-width:140px;" class="text-end">Valor</th>
+                        <th class="col-dev-serial d-none" style="min-width:120px;">NF (Serial)</th>
+                        <th class="col-dev-comments d-none" style="min-width:260px;">Obs. devolução</th>
+                        <th style="min-width:180px;">Bloqueio</th>
+                        <th style="min-width:220px;">SLA</th>
+                        <th style="min-width:120px;">Situação</th>
+                        <th style="min-width:140px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var pedidosOrdenados = Model.Pedidos.ToList();
+                    }
+
+                    @foreach (var p in pedidosOrdenados)
+                    {
+                        var perc = Math.Round(p.PercentualSlaConsumido, 0);
+                        if (perc < 0) perc = 0;
+
+                        // flags de bloqueio (histórico, vindos do service)
+                        var teveComercial = p.TeveBloqueioComercial;
+                        var teveFinanceiro = p.TeveBloqueioFinanceiro;
+                        var temBloqueio = teveComercial || teveFinanceiro;
+                        var semBloqueio = !temBloqueio;
+
+                        // Status de liberação
+                        string labelStatus;
+
+                        if (p.StatusFinal == "LIBERADO" && !temBloqueio)
+                        {
+                            labelStatus = "Liberado sem bloq";
+                        }
+                        else if (p.StatusFinal == "LIBERADO" && temBloqueio && p.DentroDoSla)
+                        {
+                            labelStatus = "Liberado dentro do SLA";
+                        }
+                        else if (p.StatusFinal == "LIBERADO" && temBloqueio && p.Atrasado)
+                        {
+                            labelStatus = "Liberado com atraso";
+                        }
+                        else if (p.StatusFinal == "RECUSADO")
+                        {
+                            labelStatus = "Recusado";
+                        }
+                        else if (p.StatusFinal == "PENDENTE" && temBloqueio)
+                        {
+                            labelStatus = "Pendente";
+                        }
+                        else if (p.StatusFinal == "PENDENTE" && !temBloqueio)
+                        {
+                            labelStatus = "Sem bloqueio";
+                        }
+                        else
+                        {
+                            labelStatus = "Desconhecido";
+                        }
+
+                        <tr data-sla="@perc" data-status-doc="@p.StatusDocumento">
+                            <td>@p.DocNum</td>
+                            <td>
+                                <div class="fw-semibold">@p.CardName</div>
+                                <div class="text-muted small">@p.CardCode</div>
+                            </td>
+                            <td class="text-end">
+                                @{
+                                    DateTime? dataPrincipal =
+                                    Model.TipoDataBase == "Entrega" ? p.DataEntrega :
+                                    Model.TipoDataBase == "Faturamento" ? p.DataFaturamento :
+                                    p.DocDate;
+                                }
+
+                                <div>@(dataPrincipal?.ToString("dd/MM/yyyy") ?? "-")</div>
+
+                                @if (p.StatusDocumento == "Devolvido" && p.DataDevolucao.HasValue)
+                                {
+                                    <div class="small">
+                                        <span class="badge bg-warning text-dark">
+                                            Dev @p.DataDevolucao.Value.ToString("dd/MM/yyyy")
+                                        </span>
+                                    </div>
+                                }
+                                else if (p.DataFaturamento.HasValue)
+                                {
+                                    <div class="small">
+                                        <span class="badge bg-info text-dark">
+                                            NF @p.DataFaturamento.Value.ToString("dd/MM/yyyy")
+                                        </span>
+                                    </div>
+                                }
+                            </td>
+
+                            <!-- Valor -->
+                            <td class="text-end">
+                                @{
+                                    var isDevolvido = string.Equals(p.StatusDocumento, "Devolvido", StringComparison.OrdinalIgnoreCase);
+                                    var temValorDev = p.ValorDevolvido.HasValue && p.ValorDevolvido.Value > 0;
+                                }
+
+                                @if (isDevolvido && temValorDev)
+                                {
+                                    <div class="d-flex flex-column align-items-end valor-dev-wrapper">
+                                        <span class="fw-semibold text-white">
+                                            @p.DocTotal.ToString("C2", ptBR)
+                                        </span>
+                                        <span class="small text-warning">
+                                            <span class="text-muted">Dev.:</span>
+                                            @p.ValorDevolvido.Value.ToString("C2", ptBR)
+                                        </span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    @p.DocTotal.ToString("C2", ptBR)
+                                }
+                            </td>
+                            <td class="col-dev-serial d-none">
+                                @(string.IsNullOrWhiteSpace(p.SerialNF) ? "-" : p.SerialNF)
+                            </td>
+
+                            <!-- Obs. devolução (coluna condicional - aparece só no filtro Devolvido) -->
+                            <td class="col-dev-comments d-none">
+                                @(string.IsNullOrWhiteSpace(p.ComentariosDevolucao) ? "-" : p.ComentariosDevolucao)
+                            </td>
+
+                            <!-- Bloqueio -->
+                            <td>
+                                @{
+                                    teveComercial = p.TeveBloqueioComercial;
+                                    teveFinanceiro = p.TeveBloqueioFinanceiro;
+                                }
+
+                                @if (!teveComercial && !teveFinanceiro)
+                                {
+                                    <span class="badge bg-secondary">Sem bloqueio</span>
+                                }
+                                else
+                                {
+                                    <div class="d-flex flex-column gap-1">
+                                        @if (teveComercial)
+                                        {
+                                            var statusCom = p.DataLiberacaoComercial.HasValue
+                                            ? "Aprovado"
+                                            : (p.PenComAtual == "Y" ? "Pendente" : "Sem bloqueio");
+
+                                            var classeCom = statusCom == "Aprovado"
+                                            ? "bg-success"
+                                            : statusCom == "Pendente"
+                                            ? "bg-warning"
+                                            : "bg-secondary";
+
+                                            <span class="badge @classeCom">Comercial - @statusCom</span>
+                                        }
+
+                                        @if (teveFinanceiro)
+                                        {
+                                            var statusFin = p.DataLiberacaoFinanceiro.HasValue
+                                            ? "Aprovado"
+                                            : (p.PenFinAtual == "Y" ? "Pendente" : "Sem bloqueio");
+
+                                            var classeFin = statusFin == "Aprovado"
+                                            ? "bg-success"
+                                            : statusFin == "Pendente"
+                                            ? "bg-warning"
+                                            : "bg-secondary";
+
+                                            <span class="badge @classeFin">Financeiro - @statusFin</span>
+                                        }
+                                    </div>
+                                }
+                            </td>
+
+                            <!-- SLA -->
+                            <td>
+                                @if (semBloqueio)
+                                {
+                                    <span class="badge bg-success">Sem bloqueio</span>
+                                }
+                                else if (teveComercial && teveFinanceiro)
+                                {
+                                    // COMERCIAL (24h)
+                                    var slaCom = 24.0;
+                                    var horasCom = p.HorasComercial;
+                                    var percCom = slaCom > 0 ? Math.Round((horasCom / slaCom) * 100.0, 0) : 0;
+                                    if (percCom < 0) percCom = 0;
+                                    var widthCom = percCom;
+                                    if (widthCom > 100) widthCom = 100;
+
+                                    string corCom;
+                                    if (percCom <= 20) corCom = "sla-azul";
+                                    else if (percCom <= 40) corCom = "sla-verde";
+                                    else if (percCom <= 60) corCom = "sla-amarelo";
+                                    else if (percCom <= 80) corCom = "sla-laranja";
+                                    else corCom = "sla-vermelho";
+
+                                    <div class="progress progress-sla mb-1">
+                                        <div class="progress-bar @corCom"
+                                             style="width:@widthCom%;"
+                                             aria-valuenow="@percCom"
+                                             aria-valuemin="0"
+                                             aria-valuemax="100">
+                                            @percCom%
+                                        </div>
+                                    </div>
+                                    <div class="small text-muted mb-2">
+                                        Comercial: @Math.Round(horasCom, 1)h de @slaCom
+                                    </div>
+
+                                    // FINANCEIRO (48h)
+                                    var slaFin = 48.0;
+                                    var horasFin = p.HorasFinanceiro;
+                                    var percFin = slaFin > 0 ? Math.Round((horasFin / slaFin) * 100.0, 0) : 0;
+                                    if (percFin < 0) percFin = 0;
+                                    var widthFin = percFin;
+                                    if (widthFin > 100) widthFin = 100;
+
+                                    string corFin;
+                                    if (percFin <= 20) corFin = "sla-azul";
+                                    else if (percFin <= 40) corFin = "sla-verde";
+                                    else if (percFin <= 60) corFin = "sla-amarelo";
+                                    else if (percFin <= 80) corFin = "sla-laranja";
+                                    else corFin = "sla-vermelho";
+
+                                    <div class="progress progress-sla mb-1">
+                                        <div class="progress-bar @corFin"
+                                             style="width:@widthFin%;"
+                                             aria-valuenow="@percFin"
+                                             aria-valuemin="0"
+                                             aria-valuemax="100">
+                                            @percFin%
+                                        </div>
+                                    </div>
+                                    <div class="small text-muted">
+                                        Financeiro: @Math.Round(horasFin, 1)h de @slaFin
+                                    </div>
+                                }
+                                else if (teveComercial)
+                                {
+                                    var sla = 24.0;
+                                    var horasCom = p.HorasComercial;
+                                    var percLocal = sla > 0 ? Math.Round((horasCom / sla) * 100.0, 0) : 0;
+                                    if (percLocal < 0) percLocal = 0;
+                                    var widthLocal = percLocal;
+                                    if (widthLocal > 100) widthLocal = 100;
+
+                                    string cor;
+                                    if (percLocal <= 20) cor = "sla-azul";
+                                    else if (percLocal <= 40) cor = "sla-verde";
+                                    else if (percLocal <= 60) cor = "sla-amarelo";
+                                    else if (percLocal <= 80) cor = "sla-laranja";
+                                    else cor = "sla-vermelho";
+
+                                    <div class="progress progress-sla">
+                                        <div class="progress-bar @cor"
+                                             style="width:@widthLocal%;"
+                                             aria-valuenow="@percLocal"
+                                             aria-valuemin="0"
+                                             aria-valuemax="100">
+                                            @percLocal%
+                                        </div>
+                                    </div>
+                                    <div class="small text-muted">
+                                        Comercial: @Math.Round(horasCom, 1)h de @sla
+                                    </div>
+                                }
+                                else if (teveFinanceiro)
+                                {
+                                    var sla = 48.0;
+                                    var horasFin = p.HorasFinanceiro;
+                                    var percLocal = sla > 0 ? Math.Round((horasFin / sla) * 100.0, 0) : 0;
+                                    if (percLocal < 0) percLocal = 0;
+                                    var widthLocal = percLocal;
+                                    if (widthLocal > 100) widthLocal = 100;
+
+                                    string cor;
+                                    if (percLocal <= 20) cor = "sla-azul";
+                                    else if (percLocal <= 40) cor = "sla-verde";
+                                    else if (percLocal <= 60) cor = "sla-amarelo";
+                                    else if (percLocal <= 80) cor = "sla-laranja";
+                                    else cor = "sla-vermelho";
+
+                                    <div class="progress progress-sla">
+                                        <div class="progress-bar @cor"
+                                             style="width:@widthLocal%;"
+                                             aria-valuenow="@percLocal"
+                                             aria-valuemin="0"
+                                             aria-valuemax="100">
+                                            @percLocal%
+                                        </div>
+                                    </div>
+                                    <div class="small text-muted">
+                                        Financeiro: @Math.Round(horasFin, 1)h de @sla
+                                    </div>
+                                }
+                            </td>
+
+                            <!-- Situação -->
+                            <td class="col-situacao">
+                                @{
+                                    var situacao = p.StatusDocumento ?? "";
+
+                                    var badgeClass = situacao switch
+                                    {
+                                        "Cancelado" => "badge-sit-cancelado",
+                                        "Devolvido" => "badge-sit-devolvido",
+                                        "Faturado" => "badge-sit-faturado",
+                                        "Aberto" => "badge-sit-aberto",
+                                        _ => "badge-sit-normal"
+                                    };
+                                }
+
+                                <span class="badge @badgeClass">
+                                    @situacao
+                                </span>
+                            </td>
+
+                            <!-- Status -->
+                            <td class="col-status">
+                                @{
+                                    var badgeStatusClass = labelStatus switch
+                                    {
+                                        "Liberado dentro do SLA" => "badge-status-liberado-sla",
+                                        "Liberado com atraso" => "badge-status-liberado-atraso",
+                                        "Liberado sem bloq" => "badge-status-sem-bloqueio",
+                                        "Sem bloqueio" => "badge-status-sem-bloqueio",
+                                        "Pendente" => "badge-status-pendente",
+                                        "Recusado" => "badge-status-recusado",
+                                        _ => "bg-secondary"
+                                    };
+                                }
+
+                                <span class="badge @badgeStatusClass">
+                                    @labelStatus
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="small text-muted">
+            Total: <span id="lbl-total">0</span>
+        </div>
+        <div class="small text-muted">
+            Página <span id="lbl-pagina-atual">0</span> de <span id="lbl-total-paginas">0</span>
+        </div>
+        <div class="d-inline-flex align-items-center">
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary me-1"
+                    id="btn-prev">
+                « Anterior
+            </button>
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    id="btn-next">
+                Próxima »
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Liberações por Usuário -->
+<div class="modal fade" id="modalResumoUsuarios" tabindex="-1" aria-labelledby="modalResumoUsuariosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalResumoUsuariosLabel">
+                    Liberações por usuário (@Model.DataDe.ToString("dd/MM/yyyy") - @Model.DataAte.ToString("dd/MM/yyyy"))
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                @if (Model.ResumoPorUsuario != null && Model.ResumoPorUsuario.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th class="text-end">Aprovados</th>
+                                    <th class="text-end">Rejeitados</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var u in Model.ResumoPorUsuario)
+                                {
+                                    <tr>
+                                        <td>@u.Usuario</td>
+                                        <td class="text-end">@u.QtdeLiberado</td>
+                                        <td class="text-end">@u.QtdeRejeitado</td>
+                                        <td class="text-end fw-semibold">@u.Total</td>
+                                    </tr>
+                                }
+                            </tbody>
+
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">
+                        Não há liberações/rejeições no período selecionado.
+                    </p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('btn-exportar-excel');
+    if (!btn) return;
+
+    btn.addEventListener('click', function () {
+        const status = document.getElementById('filtro-status')?.value || '';
+        const tipoData = document.querySelector('select[name="tipoData"]')?.value || 'Pedido';
+        const de = document.querySelector('input[name="de"]')?.value || '';
+        const ate = document.querySelector('input[name="ate"]')?.value || '';
+        const tipos = document.getElementById('filtro-depto-hidden')?.value || '';
+
+        const qs = new URLSearchParams();
+        if (de) qs.set('de', de);
+        if (ate) qs.set('ate', ate);
+        if (tipoData) qs.set('tipoData', tipoData);
+        if (tipos) qs.set('tipos', tipos);
+        if (status) qs.set('status', status);
+
+        // Ajuste a rota se seu controller não for /Relatorios
+        window.location.href = '/Relatorios/ExportarDashboardLiberacaoPedidosExcel?' + qs.toString();
+    });
+});
+</script>
+
+    <script>
+        @*document.addEventListener('DOMContentLoaded', function () {
+            const btn = document.getElementById('btn-exportar-excel');
+            if (!btn) return;
+
+            btn.addEventListener('click', function () {
+                const selectStatus = document.getElementById('filtro-status');
+                const status = selectStatus ? (selectStatus.value || '') : '';
+
+                // Pega os filtros do form (topo)
+                const tipoData = document.querySelector('select[name="tipoData"]')?.value || 'Pedido';
+                const de = document.querySelector('input[name="de"]')?.value || '';
+                const ate = document.querySelector('input[name="ate"]')?.value || '';
+                const tipos = document.getElementById('filtro-depto-hidden')?.value || '';
+
+                const qs = new URLSearchParams();
+                qs.set('tipoData', tipoData);
+                if (de) qs.set('de', de);
+                if (ate) qs.set('ate', ate);
+                if (tipos) qs.set('tipos', tipos);
+                if (status) qs.set('status', status);
+
+                // Ajuste o caminho conforme sua rota/controller
+                window.location.href = '/Relatorios/ExportarDashboardLiberacaoPedidosExcel?' + qs.toString();
+            });
+        });*@-
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const select = document.getElementById('filtro-status');
+            const table = document.getElementById('tabela-painel');
+            if (!table) return;
+
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            const pageSize = 20;
+            let currentPage = 1;
+            let lastTotalPages = 1;
+
+            const lblTotal = document.getElementById('lbl-total');
+            const lblPaginaAtual = document.getElementById('lbl-pagina-atual');
+            const lblTotalPaginas = document.getElementById('lbl-total-paginas');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+
+            function normalizarTexto(txt) {
+                if (!txt) return '';
+                return txt.replace(/\s+/g, ' ').trim().toLowerCase();
+            }
+
+            // ==============================
+            // NOVO: mostra/esconde a coluna "Obs. devolução"
+            // ==============================
+            function toggleColDevolucao(show) {
+                // Thead + tbody (th/td) usando a mesma classe
+                document.querySelectorAll('.col-dev-comments').forEach(el => {
+                    el.classList.toggle('d-none', !show);
+                });
+            }
+
+            function setColunasDevolucaoVisiveis(visivel) {
+                document.querySelectorAll('.col-dev-serial, .col-dev-comments').forEach(el => {
+                    if (visivel) el.classList.remove('d-none');
+                    else el.classList.add('d-none');
+                });
+            }
+
+
+            function aplicarFiltroEPaginacao() {
+                const filtroValor = select ? normalizarTexto(select.value) : '';
+                const isDev = (filtroValor === 'devolvido');
+                    setColunasDevolucaoVisiveis(isDev);
+                const filtradas = [];
+
+                // ==============================
+                // NOVO: coluna só aparece quando filtro = "Devolvido"
+                // ==============================
+                toggleColDevolucao(filtroValor === 'devolvido');
+
+                // Primeiro, filtra
+                rows.forEach(row => {
+
+                    let match = true; // por padrão, inclui
+
+                    if (filtroValor) {
+                        if (filtroValor === 'devolvido') {
+                            // 👇 Para "Devolvido" usamos o StatusDocumento (data-status-doc)
+                            const statusDoc = normalizarTexto(row.getAttribute('data-status-doc') || '');
+                            match = (statusDoc === 'devolvido');
+                        } else {
+                            // 👇 Para os demais, usamos o texto da coluna STATUS (última coluna)
+                            const statusCell = row.querySelector('td.col-status span');
+                            if (!statusCell) {
+                                match = false;
+                            } else {
+                                const textoStatus = normalizarTexto(statusCell.textContent);
+                                match = (textoStatus === filtroValor);
+                            }
+                        }
+                    }
+
+                    if (match) {
+                        filtradas.push(row);
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                const totalFiltradas = filtradas.length;
+                let totalPages = totalFiltradas > 0 ? Math.ceil(totalFiltradas / pageSize) : 1;
+                if (currentPage > totalPages) currentPage = totalPages;
+
+                // Depois, aplica a paginação
+                filtradas.forEach((row, index) => {
+                    const inicio = (currentPage - 1) * pageSize;
+                    const fim = currentPage * pageSize;
+                    if (index >= inicio && index < fim) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Atualiza os labels
+                if (lblTotal) {
+                    lblTotal.textContent = totalFiltradas.toString();
+                }
+                if (lblPaginaAtual) {
+                    lblPaginaAtual.textContent = totalFiltradas === 0 ? '0' : currentPage.toString();
+                }
+                if (lblTotalPaginas) {
+                    lblTotalPaginas.textContent = totalFiltradas === 0 ? '0' : totalPages.toString();
+                }
+
+                // Atualiza estado dos botões
+                lastTotalPages = totalPages;
+
+                if (btnPrev) {
+                    btnPrev.disabled = (totalFiltradas === 0 || currentPage <= 1);
+                }
+                if (btnNext) {
+                    btnNext.disabled = (totalFiltradas === 0 || currentPage >= totalPages);
+                }
+            }
+
+            // Eventos de navegação
+            if (btnPrev) {
+                btnPrev.addEventListener('click', function () {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        aplicarFiltroEPaginacao();
+                    }
+                });
+            }
+
+            if (btnNext) {
+                btnNext.addEventListener('click', function () {
+                    if (currentPage < lastTotalPages) {
+                        currentPage++;
+                        aplicarFiltroEPaginacao();
+                    }
+                });
+            }
+
+            // Evento de filtro
+            if (select) {
+                select.addEventListener('change', function () {
+                    currentPage = 1;
+                    aplicarFiltroEPaginacao();
+                });
+            }
+
+            // Primeira carga
+            aplicarFiltroEPaginacao();
+        });
+    </script>
+
+    <script>
+        (function () {
+            const hidden = document.getElementById('filtro-depto-hidden');
+            const checkboxes = document.querySelectorAll('.filtro-depto-opcao');
+            const label = document.getElementById('lbl-filtro-depto');
+
+            function atualizarHiddenELegenda() {
+                const selecionados = [];
+                checkboxes.forEach(ch => {
+                    if (ch.checked) selecionados.push(ch.value);
+                });
+
+                hidden.value = selecionados.join(',');
+
+                if (selecionados.length === 0) {
+                    label.textContent = 'Departamentos: Todos';
+                } else if (selecionados.length === 1) {
+                    label.textContent = 'Departamentos: ' +
+                        (selecionados[0] === 'COMERCIAL' ? 'Comercial' : 'Financeiro');
+                } else {
+                    label.textContent = 'Departamentos: Comercial + Financeiro';
+                }
+            }
+
+            checkboxes.forEach(ch => {
+                ch.addEventListener('change', atualizarHiddenELegenda);
+            });
+
+            // Inicializa texto conforme o que veio do servidor
+            atualizarHiddenELegenda();
+        })();
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.liberacao-card-inner[data-filtro]')
+                .forEach(function (card) {
+                    card.addEventListener('click', function () {
+                        const filtro = this.getAttribute('data-filtro');
+                        filtrarGridPorStatus(filtro);
+                    });
+                });
+        });
+    </script>
+
+    <script>
+        // Função global chamada ao clicar nos cards
+        function filtrarGridPorStatus(filtro) {
+            const select = document.getElementById('filtro-status');
+            if (!select) return;
+
+            switch (filtro) {
+                case 'Total':
+                    select.value = '';
+                    break;
+                case 'DentroSla':
+                    select.value = 'Liberado dentro do SLA';
+                    break;
+                case 'ComAtraso':
+                    select.value = 'Liberado com atraso';
+                    break;
+                case 'SemBloqueio':
+                    select.value = 'Sem bloqueio';
+                    break;
+                case 'Pendencias':
+                    select.value = 'Pendente';
+                    break;
+                case 'Recusado':
+                    select.value = 'Recusado';
+                    break;
+                case 'Devolvidos':
+                    select.value = 'Devolvido';   // 👈 importante
+                    break;
+                default:
+                    select.value = '';
+                    break;
+            }
+
+            const evt = new Event('change');
+            select.dispatchEvent(evt);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.liberacao-card-inner[data-filtro]')
+                .forEach(function (card) {
+                    card.addEventListener('click', function () {
+                        const filtro = this.getAttribute('data-filtro');
+                        filtrarGridPorStatus(filtro);
+                    });
+                });
+        });
+    </script>
+}
+

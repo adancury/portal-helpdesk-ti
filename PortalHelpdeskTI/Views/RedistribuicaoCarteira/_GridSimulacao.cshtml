@@ -1,0 +1,46 @@
+﻿@model List<PortalHelpdeskTI.ViewModels.Redistribuicao.ClienteRedistribuicaoSimuladoVm>
+
+<div class="table-responsive">
+    <table class="table table-sm mb-0">
+        <thead>
+            <tr>
+                <th>CodPN</th>
+                <th>Nome</th>
+                <th>UF</th>
+                <th>Status</th>
+                <th class="text-end">Kpi TkM</th>
+                <th class="text-center">Vendedor Atual</th>
+                <th class="text-center">Novo Vendedor</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model == null || Model.Count == 0)
+            {
+                <tr><td colspan="7" class="text-muted p-3">Nenhuma simulação executada.</td></tr>
+            }
+            else
+            {
+                foreach (var x in Model)
+                {
+                    var mesmaCarteira = x.SlpCodeAtual.HasValue && x.SlpCodeAtual == x.SlpCodeNovo;
+
+                    <tr class="@(mesmaCarteira ? "table-warning" : "")">
+                        <td>@x.CodPN</td>
+                        <td>@x.NomeFantasia</td>
+                        <td>@x.Estado</td>
+                        <td>@x.Status</td>
+                        <td class="text-end">@x.KpiTkm.ToString("N2")</td>
+
+                        <td class="text-center">
+                            @(x.SlpCodeAtual.HasValue ? $"{x.SlpCodeAtual} - {x.VendedorAtualNome}" : "Sem vendedor")
+                        </td>
+
+                        <td class="text-center">
+                            @($"{x.SlpCodeNovo} - {x.VendedorNovoNome}")
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

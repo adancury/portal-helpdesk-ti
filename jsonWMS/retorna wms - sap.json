@@ -1,0 +1,41 @@
+{
+	"NUM_ORD_ENT": 900308918,
+	"COD_PROPRIET": 100,
+	"FLAG_DIVERGENCIA": "S",
+	"LISTA_ITENS": [
+		{
+			"COD_PRODUTO": "FI3004",
+			"QTDE_EMBAL": 1,
+			"QTDE_RECEBIDA": 34,
+			"QTDE_AVARIA": 0,
+			"QTDE_VENCIDOS": 0,
+			"LISTA_LOTES": [
+				{
+					"NUM_LOTE": "0523",
+					"DATA_VALIDADE": "2999-01-01T03:00:00.000Z",
+					"DATA_FABRICACAO": "2025-05-05T03:00:00.000Z",
+					"QTDE_RECEBIDA": 34,
+					"QTDE_AVARIA": 0,
+					"QTDE_VENCIDOS": 0
+				}
+			]
+		},
+		{
+			"COD_PRODUTO": "RE2012",
+			"QTDE_EMBAL": 1,
+			"QTDE_RECEBIDA": 4,
+			"QTDE_AVARIA": 0,
+			"QTDE_VENCIDOS": 0,
+			"LISTA_LOTES": [
+				{
+					"NUM_LOTE": "B0225N",
+					"DATA_VALIDADE": "2999-01-01T03:00:00.000Z",
+					"DATA_FABRICACAO": "2025-03-31T03:00:00.000Z",
+					"QTDE_RECEBIDA": 4,
+					"QTDE_AVARIA": 0,
+					"QTDE_VENCIDOS": 0
+				}
+			]
+		}
+	]
+}

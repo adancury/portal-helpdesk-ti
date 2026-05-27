@@ -1,0 +1,197 @@
+﻿/* ========== Login – tema-aware (usa as variáveis do site.css) ========== */
+/* Remova QUALQUER :root daqui. As cores vêm TODAS de:
+   --surface, --text, --muted, --border, --primary, --primary-hover, --heading-fg, etc. */
+
+.auth-wrap {
+    min-height: calc(100vh - 120px);
+    display: grid;
+    place-items: center;
+    padding: 32px 16px;
+}
+
+/* Card */
+.auth-card {
+    width: 100%;
+    max-width: 480px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    overflow: hidden;
+}
+
+/* Cabeçalho */
+.auth-header {
+    padding: 28px 28px 12px 28px;
+    text-align: center;
+}
+
+    .auth-header .brand {
+        width: 84px;
+        height: 84px;
+        object-fit: contain;
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,.08));
+        margin-bottom: 10px;
+    }
+
+.auth-title {
+    margin: 0;
+    font-weight: 800;
+    color: var(--heading-fg); /* mesmo azul dos títulos do site */
+}
+
+.auth-sub {
+    color: var(--muted);
+    font-size: .95rem;
+    margin-top: 4px;
+}
+
+/* Corpo */
+.auth-body {
+    padding: 22px 24px 8px 24px;
+}
+
+/* Inputs */
+.form-floating > .form-control {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+    .form-floating > .form-control::placeholder {
+        color: transparent !important;
+    }
+    .form-floating > .form-control:focus::placeholder {
+        color: transparent !important;
+    }
+
+.form-floating > label {
+    color: var(--muted);
+}
+
+.form-floating > .form-control:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 .2rem rgba(245,158,11,.25); /* baseado em --accent */
+}
+
+/* Ícone mostrar/ocultar senha */
+.input-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    user-select: none;
+    opacity: .7;
+    color: var(--muted);
+}
+
+    .input-icon:hover {
+        opacity: 1;
+        color: var(--text);
+    }
+
+/* Botão primário no padrão da marca */
+.btn-brand {
+    width: 100%;
+    border-radius: 10px;
+    padding: .7rem 1rem;
+    font-weight: 700;
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-contrast) !important;
+}
+
+    .btn-brand:hover,
+    .btn-brand:focus,
+    .btn-brand:active {
+        background: var(--primary-hover);
+        border-color: var(--primary-hover);
+        color: var(--primary-contrast) !important;
+    }
+
+/* Links e divisórias */
+.auth-links {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+    .auth-links a,
+    .btn.btn-link {
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+        .auth-links a:hover,
+        .btn.btn-link:hover {
+            text-decoration: underline;
+        }
+
+.divider {
+    margin: 14px 0;
+    border-top: 1px solid var(--border);
+}
+
+.small-muted {
+    color: var(--muted);
+    font-size: .9rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Ajuste de sombra no dark para destacar o card */
+html.dark .auth-card {
+    box-shadow: 0 10px 28px rgba(0,0,0,.45);
+}
+/* Links no DARK com a mesma cor do subtítulo (muted) */
+html.dark .auth-links a,
+html.dark .btn.btn-link {
+    color: var(--muted);
+}
+
+    html.dark .auth-links a:hover,
+    html.dark .btn.btn-link:hover {
+        color: var(--label-fg); /* dá um destaque leve no hover */
+        text-decoration: underline;
+    }
+/* Botão/ícone do campo de senha (usa currentColor) */
+.btn-eye {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    color: var(--muted); /* herda do tema */
+    cursor: pointer;
+    border-radius: .5rem;
+}
+
+    .btn-eye:hover,
+    .btn-eye:focus {
+        color: var(--text);
+        outline: none;
+    }
+
+    .btn-eye:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+    }
+
+    .btn-eye i {
+        font-size: 1.05rem;
+        line-height: 1;
+    }

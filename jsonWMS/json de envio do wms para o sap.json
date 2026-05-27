@@ -1,0 +1,58 @@
+{
+    "NUM_ORD_ENT": 900309045,
+    "COD_PROPRIET": 100,
+    "FLAG_DIVERGENCIA": "S",
+    "LISTA_ITENS": [
+        {
+            "COD_PRODUTO": "GP1000",
+            "QTDE_EMBAL": 1,
+            "QTDE_RECEBIDA": 10,
+            "QTDE_AVARIA": 0,
+            "QTDE_VENCIDOS": 0,
+            "LISTA_LOTES": [
+                {
+                    "NUM_LOTE": "B0825N",
+                    "DATA_VALIDADE": "2999-01-01T03:00:00.000Z",
+                    "DATA_FABRICACAO": "2025-05-18T03:00:00.000Z",
+                    "QTDE_RECEBIDA": 10,
+                    "QTDE_AVARIA": 0,
+                    "QTDE_VENCIDOS": 0
+                }
+            ]
+        },
+        {
+            "COD_PRODUTO": "GP2007",
+            "QTDE_EMBAL": 1,
+            "QTDE_RECEBIDA": 2,
+            "QTDE_AVARIA": 0,
+            "QTDE_VENCIDOS": 0,
+            "LISTA_LOTES": [
+                {
+                    "NUM_LOTE": "Y0925R",
+                    "DATA_VALIDADE": "2999-01-01T03:00:00.000Z",
+                    "DATA_FABRICACAO": "2025-03-25T03:00:00.000Z",
+                    "QTDE_RECEBIDA": 2,
+                    "QTDE_AVARIA": 0,
+                    "QTDE_VENCIDOS": 0
+                }
+            ]
+        },
+        {
+            "COD_PRODUTO": "TE1701",
+            "QTDE_EMBAL": 1,
+            "QTDE_RECEBIDA": 188,
+            "QTDE_AVARIA": 0,
+            "QTDE_VENCIDOS": 0,
+            "LISTA_LOTES": [
+                {
+                    "NUM_LOTE": "K1025S",
+                    "DATA_VALIDADE": "2999-01-01T03:00:00.000Z",
+                    "DATA_FABRICACAO": "2025-03-28T03:00:00.000Z",
+                    "QTDE_RECEBIDA": 188,
+                    "QTDE_AVARIA": 0,
+                    "QTDE_VENCIDOS": 0
+                }
+            ]
+        }
+    ]
+}

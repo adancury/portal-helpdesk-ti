@@ -1,0 +1,34 @@
+﻿@model List<PortalHelpdeskTI.ViewModels.Redistribuicao.ResumoVendedorRedistribuicaoVm>
+
+<div class="table-responsive">
+    <table class="table table-sm mb-0">
+        <thead>
+            <tr>
+                <th>Vendedor</th>
+                <th>SlpCode</th>
+                <th>Qtd Clientes</th>
+                <th>Soma Kpi TkM</th>
+                <th>Qtd UFs</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model == null || Model.Count == 0)
+            {
+                <tr><td colspan="5" class="text-muted p-3">Nenhuma simulação executada.</td></tr>
+            }
+            else
+            {
+                foreach (var x in Model)
+                {
+                    <tr>
+                        <td>@x.SlpName</td>
+                        <td>@x.SlpCode</td>
+                        <td>@x.QtdClientes</td>
+                        <td>@x.SomaKpiTkm</td>
+                        <td>@x.QtdUFs</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

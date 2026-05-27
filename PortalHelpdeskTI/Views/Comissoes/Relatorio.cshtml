@@ -1,0 +1,336 @@
+﻿@model PortalHelpdeskTI.Models.Comissoes.RelatorioComissaoVm
+@{
+    ViewData["Title"] = "Relatório de Comissões";
+    var periodoResumo = (string?)ViewBag.PeriodoResumo;
+
+    // ============================
+    // Opção 2: unificar vendas + devoluções no MESMO grid
+    // - Devoluções aparecem como valores negativos
+    // - Valores negativos ficam em vermelho para evidenciar estorno
+    // ============================
+    var unificado = Model.Linhas
+        .Select(x => new { Linha = x, EhDev = false })
+        .Concat((Model.Devolucoes ?? new List<PortalHelpdeskTI.Models.Comissoes.RelatorioComissaoLinhaVm>())
+            .Select(x => new { Linha = x, EhDev = true }))
+        .OrderBy(x => x.Linha.Data)
+        .ThenBy(x => x.Linha.Nf)
+        .ToList();
+
+    // ============================
+    // CÁLCULO FINAL DO RELATÓRIO
+    // Regra correta:
+    // Comissão Bruta   = soma das comissões de venda - soma das comissões de devolução
+    // Comissão Líquida = Comissão Bruta - descontos lançados
+    // IR               = 1,5% sobre a Comissão Líquida
+    // Valor a Receber  = Comissão Líquida - IR
+    //
+    // IMPORTANTE:
+    // Model.ComissaoBruta já vem do service com as devoluções abatidas.
+    // Portanto NÃO pode subtrair Model.ComissaoDevolucoes novamente aqui.
+    // ============================
+    var totalDescontos = Model.DescontoCondicionado + Model.DescontosRepresentante;
+    var comissaoLiquida = Model.ComissaoBruta - totalDescontos;
+
+    if (comissaoLiquida < 0)
+        comissaoLiquida = 0m;
+
+    var valorAReceber = comissaoLiquida - Model.Tributos;
+}
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <img src="~/images/logo.png" style="height:34px;" />
+            <div>
+                <div class="fw-bold">Relatório de comissões @Model.DataIni.Year</div>
+                <div class="text-muted small">
+                    @Model.SlpName (@Model.SlpCode) •
+                    @Model.DataIni.ToString("dd/MM/yyyy") a @Model.DataFim.ToString("dd/MM/yyyy") •
+                    Regra: comissão por faixa de desconto (linha a linha)
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <div class="text-end">
+                <div class="text-muted small">Valor a Receber</div>
+                <div class="fs-4 fw-bold">@valorAReceber.ToString("C")</div>
+            </div>
+
+            <a class="btn btn-outline-secondary"
+               href="@Url.Action("Resumo", "Comissoes", new {
+                    periodo = (string)ViewBag.PeriodoResumo,
+                    refreshSlpCode = Model.SlpCode
+               })">
+                Voltar
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="kpi-grid">
+            <div class="kpi-box">
+                <div class="kpi-label">Receita Bruta</div>
+                <div class="kpi-value">@Model.ReceitaBruta.ToString("C")</div>
+            </div>
+
+            <div class="kpi-box">
+                <div class="kpi-label">Receita Líquida</div>
+                <div class="kpi-value">@Model.ReceitaLiquida.ToString("C")</div>
+            </div>
+
+            <div class="kpi-box">
+                <div class="kpi-label">Comissão Bruta</div>
+                <div class="kpi-value">@Model.ComissaoBruta.ToString("C")</div>
+            </div>
+
+            <div class="kpi-box">
+                <div class="kpi-label">Comissão Líquida</div>
+                <div class="kpi-value">@comissaoLiquida.ToString("C")</div>
+            </div>
+
+            <div class="kpi-box">
+                <div class="kpi-label">Tributos (IR 1,5%)</div>
+                <div class="kpi-value">@Model.Tributos.ToString("C")</div>
+            </div>
+
+            <div class="kpi-box">
+                <div class="kpi-label">Descontos do representante</div>
+                <div class="kpi-value text-danger">@Model.DescontosRepresentante.ToString("C")</div>
+            </div>
+
+            <div class="kpi-box">
+                <div class="kpi-label">Devoluções (débito)</div>
+                <div class="kpi-value text-danger">@Model.ComissaoDevolucoes.ToString("C")</div>
+            </div>
+
+            <div class="kpi-actions">
+                <button class="btn btn-outline-warning w-100"
+                        type="button"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalDesconto">
+                    + Desconto
+                </button>
+
+                <a class="btn btn-outline-secondary w-100"
+                   href="@Url.Action("RelatorioPdf", "Comissoes", new {
+                       slpCode = Model.SlpCode,
+                       ini = Model.DataIni.ToString("yyyy-MM-dd"),
+                       fim = Model.DataFim.ToString("yyyy-MM-dd")
+                   })">
+                    PDF
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive table-no-scroll">
+            <table class="table table-sm mb-0 table-fit">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Data</th>
+                        <th>NF-e</th>
+                        <th>Código</th>
+                        <th style="min-width:260px;">Nome</th>
+                        <th class="text-end">Venda Bruta</th>
+                        <th class="text-end">Venda Líquida</th>
+                        @*<th class="text-end">Desc. Médio(%)</th>*@
+                        <th class="text-end">% Efetivo</th>
+                        <th class="text-end">Comissão (R$)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (unificado.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted p-3">Nenhuma nota encontrada para o período.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in unificado)
+                        {
+                            var l = item.Linha;
+                            var ehDev = item.EhDev;
+
+                            // Devolução: exibir como negativo (estorno visual)
+                            var vendaBrutaExib = ehDev ? -Math.Abs(l.VendaBruta) : l.VendaBruta;
+                            var vendaLiqExib = ehDev ? -Math.Abs(l.VendaLiquida) : l.VendaLiquida;
+                            var comissaoExib = ehDev ? -Math.Abs(l.Comissao) : l.Comissao;
+
+                            // Pintar de vermelho SOMENTE os valores de estorno (devolução)
+                            var clsValorDev = ehDev ? "text-danger" : "";
+                            var clsComissaoDev = ehDev ? "text-danger fw-bold" : "fw-bold";
+
+                            <tr>
+                                <td>@l.Data.ToString("dd/MM/yyyy")</td>
+                                <td>@l.Nf</td>
+                                <td>@l.ClienteCodigo</td>
+
+                                <!-- Tooltip só se estourar -->
+                                <td class="ellipsis-tooltip">@l.ClienteNome</td>
+
+                                <td class="text-end @clsValorDev">@vendaBrutaExib.ToString("C")</td>
+                                <td class="text-end @clsValorDev">@vendaLiqExib.ToString("C")</td>
+                                @*<td class="text-end">@($"{l.DescontoMedioPct:N2}%")</td>*@
+                                <td class="text-end">@l.Percentual.ToString("P2")</td>
+                                <td class="text-end @clsComissaoDev">@comissaoExib.ToString("C")</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @if (Model.Observacoes.Any())
+    {
+        <div class="card-body">
+            <div class="fw-bold mb-1">Observações</div>
+            <ul class="mb-0 small">
+                @foreach (var o in Model.Observacoes)
+                {
+                    <li>@o</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <!-- Modal: Desconto -->
+    <div class="modal fade" id="modalDesconto" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="post" action="@Url.Action("AdicionarDesconto","Comissoes")">
+                    @Html.AntiForgeryToken()
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Adicionar desconto do representante</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <input type="hidden" name="slpCode" value="@Model.SlpCode" />
+                        <input type="hidden" name="ini" value="@Model.DataIni.ToString("yyyy-MM-dd")" />
+                        <input type="hidden" name="fim" value="@Model.DataFim.ToString("yyyy-MM-dd")" />
+                        <input type="hidden" name="periodo" value="@((string?)ViewBag.PeriodoResumo)" />
+
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label">Tipo</label>
+                                <select name="tipo" class="form-select" required>
+                                    <option value="DESCONTO_REP_DEVOLUCAO">Devolução (frete/custos)</option>
+                                    <option value="DESCONTO_REP_FRETE">Frete adicional (falha do representante)</option>
+                                    <option value="DESCONTO_REP_OUTROS">Outros</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Valor (R$)</label>
+                                <input name="valor" type="number" step="0.01" min="0.01" class="form-control" required />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Competência (mês do desconto)</label>
+                                <input name="competencia" type="month" class="form-control"
+                                       value="@DateTime.Today.ToString("yyyy-MM")" />
+                                <div class="form-text">Se vazio, usa o período atual do relatório.</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Parcelas</label>
+                                <input name="parcelas" id="parcelas" type="number" min="1" max="36"
+                                       value="1" class="form-control" />
+                                <div class="form-text">Ex.: 3 = lança 1 parcela neste mês e as demais nos próximos meses.</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">NFs relacionadas (opcional)</label>
+                                <input name="nfsRelacionadas" class="form-control" placeholder="Ex.: 145266,145743" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Observação</label>
+                                <textarea name="observacao" class="form-control" rows="3"
+                                          placeholder="Descreva o motivo e o acordo (ex.: devolução total, frete cobrado, etc.)"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">Lançar desconto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.DescontosItens.Any())
+    {
+        <div class="card-body">
+            <div class="fw-bold mb-2">Descontos lançados no período</div>
+
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th style="min-width:220px;">Tipo</th>
+                            <th style="min-width:160px;">NFs</th>
+                            <th>Observação</th>
+                            <th class="text-end" style="min-width:120px;">Valor</th>
+                            <th style="width:90px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in Model.DescontosItens)
+                        {
+                            <tr>
+                                <td class="ellipsis-tooltip">@d.Tipo</td>
+                                <td class="ellipsis-tooltip">@d.NFsRelacionadas</td>
+                                <td class="ellipsis-tooltip">@d.Observacao</td>
+                                <td class="text-end">@d.Valor.ToString("C")</td>
+                                <td class="text-end">
+                                    <form method="post" action="@Url.Action("ExcluirDesconto","Comissoes")" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@d.Id" />
+                                        <input type="hidden" name="slpCode" value="@Model.SlpCode" />
+                                        <input type="hidden" name="ini" value="@Model.DataIni.ToString("yyyy-MM-dd")" />
+                                        <input type="hidden" name="fim" value="@Model.DataFim.ToString("yyyy-MM-dd")" />
+                                        <input type="hidden" name="periodo" value="@((string?)ViewBag.PeriodoResumo)" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Tooltip SOMENTE quando o texto estoura (ellipsis)
+    const els = document.querySelectorAll('.ellipsis-tooltip');
+
+    els.forEach(el => {
+        const texto = (el.textContent || "").trim();
+        if (!texto) return;
+
+        // precisa estar visível
+        if (el.offsetParent === null) return;
+
+        // só se estourou
+        if (el.scrollWidth > el.clientWidth) {
+            el.setAttribute('title', texto);
+            el.setAttribute('data-bs-toggle', 'tooltip');
+            el.setAttribute('data-bs-placement', 'top');
+            new bootstrap.Tooltip(el);
+        }
+    });
+});
+</script>
+}

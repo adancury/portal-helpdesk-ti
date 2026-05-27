@@ -1,0 +1,89 @@
+﻿@model PortalHelpdeskTI.Models.Relatorios.ComissaoExtraVm
+
+<div class="table-responsive">
+    <table class="table table-sm table-hover mb-0 align-middle">
+        <thead class="table-light">
+            <tr>
+                <th style="min-width:260px;">Vendedor</th>
+                <th style="min-width:140px;">Tipo</th>
+                <th style="min-width:150px;" class="text-end">Meta trimestral</th>
+                <th style="min-width:150px;" class="text-end">Realizado</th>
+                <th style="min-width:110px;" class="text-end">% Desv.</th>
+                <th style="min-width:150px;" class="text-end">Desvio (R$)</th>
+
+                <th style="min-width:170px;">0,5%</th>
+                <th style="min-width:170px;">0,7%</th>
+                <th style="min-width:170px;">1,0%</th>
+
+                <th style="min-width:170px;" class="text-end">Comissão Final</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.Linhas == null || Model.Linhas.Count == 0)
+            {
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-4">Sem dados para o período selecionado.</td>
+                </tr>
+            }
+            else
+            {
+                foreach (var l in Model.Linhas)
+                {
+                    string cls05 = l.Atingiu05 ? "text-success" : "text-danger";
+                    string cls07 = l.Atingiu07 ? "text-success" : "text-danger";
+                    string cls10 = l.Atingiu10 ? "text-success" : "text-danger";
+
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@l.SlpName</div>
+                            <div class="small text-muted">SlpCode: @l.SlpCode</div>
+                        </td>
+
+                        <td>@(l.TipoVendedor ?? "-")</td>
+
+                        <td class="text-end">
+                            <input type="text"
+                                   class="form-control form-control-sm text-end"
+                                   style="max-width:140px; margin-left:auto;"
+                                   value="@l.Meta.ToString("N2")"
+                                   data-meta="1"
+                                   data-vendedor-id="@l.ComissaoVendedorId"
+                                   title="Enter para salvar" />
+                        </td>
+
+                        <td class="text-end">@l.Realizado.ToString("C")</td>
+
+                        <td class="text-end">
+                            @(l.DesvioPercentual.HasValue ? (l.DesvioPercentual.Value.ToString("N2") + " %") : "-")
+                        </td>
+
+                        <td class="text-end">@l.DesvioValor.ToString("C")</td>
+
+                        <td class="@cls05">
+                            <div class="fw-semibold">@(l.Atingiu05 ? "ATINGIDO" : "NÃO ATINGIDO")</div>
+                            <div class="small">@l.Valor05.ToString("C")</div>
+                        </td>
+
+                        <td class="@cls07">
+                            <div class="fw-semibold">@(l.Atingiu07 ? "ATINGIDO" : "NÃO ATINGIDO")</div>
+                            <div class="small">@l.Valor07.ToString("C")</div>
+                        </td>
+
+                        <td class="@cls10">
+                            <div class="fw-semibold">@(l.Atingiu10 ? "ATINGIDO" : "NÃO ATINGIDO")</div>
+                            <div class="small">@l.Valor10.ToString("C")</div>
+                        </td>
+
+                        <td class="text-end">
+                            <div class="fw-semibold">@l.ComissaoExtraValor.ToString("C")</div>
+                            <div class="small text-muted">
+                                @(l.PercentualAplicado.HasValue ? $"{(l.PercentualAplicado.Value * 100m):N1}%" : "-")
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

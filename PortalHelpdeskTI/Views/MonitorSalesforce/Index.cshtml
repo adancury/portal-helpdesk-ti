@@ -1,0 +1,543 @@
+﻿@model PortalHelpdeskTI.Models.IntegracoesSL.MonitorSalesforceVm
+@{
+    ViewData["Title"] = "Monitoramento - Salesforce";
+    var aba = (Model?.Aba ?? "events").ToLowerInvariant();
+}
+
+<div class="container-fluid">
+    <div class="card shadow-sm rounded-3">
+        <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <h5 class="mb-0">Monitoramento - Integração Salesforce</h5>
+                <span class="badge bg-secondary">NEXX</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button id="btnAtualizar" class="btn btn-outline-primary btn-sm" type="button">
+                    <i class="bi bi-arrow-clockwise"></i> Atualizar
+                </button>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <!-- Tabs -->
+            <ul class="nav nav-tabs" id="tabsSf">
+                <li class="nav-item">
+                    <a class="nav-link @(aba == "events" ? "active" : "")" href="#" data-aba="events">
+                        Eventos (Fila)
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(aba == "logs" ? "active" : "")" href="#" data-aba="logs">
+                        Logs (Execuções)
+                    </a>
+                </li>
+            </ul>
+
+            <!-- ✅ Painel que será atualizado via AJAX (KPIs + Filtros + Grid) -->
+            <div id="panelArea">
+
+                <!-- KPIs -->
+                <div class="row g-2 mt-2" id="kpisArea">
+                    @if (aba == "logs")
+                    {
+                        var total = Model.KpiLogs?.Values.Sum() ?? 0;
+                        var ok = Model.KpiLogs != null && Model.KpiLogs.TryGetValue(2, out var vOk) ? vOk : 0;
+                        var outros = total - ok;
+
+                        <div class="col-12 col-md-3">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body py-2">
+                                    <div class="small text-muted">Total</div>
+                                    <div class="fs-5 fw-bold">@total</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body py-2">
+                                    <div class="small text-muted">Sucesso (Status = 2)</div>
+                                    <div class="fs-5 fw-bold">@ok</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body py-2">
+                                    <div class="small text-muted">Outros Status</div>
+                                    <div class="fs-5 fw-bold">@outros</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body py-2">
+                                    <div class="small text-muted">Período</div>
+                                    <div class="fw-semibold">
+                                        @(Model.DataIni?.ToString("dd/MM/yyyy") ?? "—") → @(Model.DataFim?.ToString("dd/MM/yyyy") ?? "—")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        int GetKpi(string key) => Model.KpiEvents != null && Model.KpiEvents.TryGetValue(key, out var v) ? v : 0;
+                        var pend = GetKpi("Pending");
+                        var proc = GetKpi("Processed");
+                        var err = GetKpi("Error");
+                        var total = (Model.KpiEvents?.Values.Sum() ?? 0);
+
+                        <div class="col-12 col-md-3">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body py-2">
+                                    <div class="small text-muted">Total</div>
+                                    <div class="fs-5 fw-bold">@total</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body py-2">
+                                    <div class="small text-muted">Pendentes</div>
+                                    <div class="fs-5 fw-bold">@pend</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body py-2">
+                                    <div class="small text-muted">Processados</div>
+                                    <div class="fs-5 fw-bold">@proc</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body py-2">
+                                    <div class="small text-muted">Erros</div>
+                                    <div class="fs-5 fw-bold">@err</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Filtros (horizontal) -->
+                <div class="row g-2 mt-2 align-items-end" id="filtrosArea">
+                    <div class="col-12 col-md-2">
+                        <label class="form-label mb-1">Data inicial</label>
+                        <input type="date" class="form-control form-control-sm" id="dataIni"
+                               value="@(Model.DataIni?.ToString("yyyy-MM-dd") ?? "")" />
+                    </div>
+
+                    <div class="col-12 col-md-2">
+                        <label class="form-label mb-1">Data final</label>
+                        <input type="date" class="form-control form-control-sm" id="dataFim"
+                               value="@(Model.DataFim?.ToString("yyyy-MM-dd") ?? "")" />
+                    </div>
+
+                    @if (aba == "events")
+                    {
+                        <div class="col-12 col-md-2">
+                            <label class="form-label mb-1">Status (Eventos)</label>
+                            <select class="form-select form-select-sm" id="statusEvent">
+                                <option value="">Todos</option>
+                                @foreach (var s in (Model.StatusEventsDisponiveis ?? new List<string>()))
+                                {
+                                    var sel = string.Equals(Model.StatusEvent, s, StringComparison.OrdinalIgnoreCase);
+                                    if (sel)
+                                    {
+                                        <option value="@s" selected="selected">@s</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@s">@s</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="col-12 col-md-2">
+                            <label class="form-label mb-1">Status (Logs)</label>
+                            <select class="form-select form-select-sm" id="statusLog">
+                                <option value="">Todos</option>
+                                @foreach (var s in (Model.StatusLogsDisponiveis ?? new List<int>()))
+                                {
+                                    var sel = (Model.StatusLog == s);
+                                    if (sel)
+                                    {
+                                        <option value="@s" selected="selected">@s</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@s">@s</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-2">
+                            <label class="form-label mb-1">Tipo Documento</label>
+                            <select class="form-select form-select-sm" id="tipoDoc">
+                                <option value="">Todos</option>
+                                @foreach (var t in (Model.TiposDocDisponiveis ?? new List<string>()))
+                                {
+                                    var sel = string.Equals(Model.TipoDoc, t, StringComparison.OrdinalIgnoreCase);
+                                    if (sel)
+                                    {
+                                        <option value="@t" selected="selected">@t</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@t">@t</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    }
+
+                    <div class="col-12 col-md-3">
+                        <label class="form-label mb-1">Buscar</label>
+                        <input type="text" class="form-control form-control-sm" id="q"
+                               placeholder="EventId, CorrelationId, Mensagem, Legado..."
+                               value="@(Model.Q ?? "")" />
+                    </div>
+
+                    <div class="col-12 col-md-1">
+                        <label class="form-label mb-1">Qtd</label>
+                        <select class="form-select form-select-sm" id="pageSize">
+                            @{
+                                var ps = Model.PageSize <= 0 ? 50 : Model.PageSize;
+                            }
+                            @if (ps == 25)
+                            {
+                                <option value="25" selected="selected">25</option>
+                            }
+                            else
+                            {
+                                <option value="25">25</option>
+                            }
+                            @if (ps == 50)
+                            {
+                                <option value="50" selected="selected">50</option>
+                            }
+                            else
+                            {
+                                <option value="50">50</option>
+                            }
+                            @if (ps == 100)
+                            {
+                                <option value="100" selected="selected">100</option>
+                            }
+                            else
+                            {
+                                <option value="100">100</option>
+                            }
+                            @if (ps == 200)
+                            {
+                                <option value="200" selected="selected">200</option>
+                            }
+                            else
+                            {
+                                <option value="200">200</option>
+                            }
+                        </select>
+                    </div>
+
+
+                    <div class="col-12 col-md-12 d-flex gap-2 mt-1">
+                        <button id="btnFiltrar" class="btn btn-primary btn-sm" type="button">
+                            <i class="bi bi-funnel"></i> Filtrar
+                        </button>
+                        <button id="btnLimpar" class="btn btn-outline-secondary btn-sm" type="button">
+                            Limpar
+                        </button>
+                    </div>
+                </div>
+
+
+                <!-- Grid -->
+                <div class="mt-3" id="gridArea">
+                    @if (aba == "logs")
+                    {
+                        @await Html.PartialAsync("_GridLogs", Model)
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync("_GridEvents", Model)
+                    }
+                </div>
+
+            </div> <!-- /panelArea -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal JSON -->
+<div class="modal fade" id="jsonModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Payload JSON</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex gap-2 flex-wrap mb-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCopiarEnvio">Copiar Envio</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCopiarRetorno">Copiar Retorno</button>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-12 col-lg-6">
+                        <div class="fw-semibold mb-1">JSON de Envio</div>
+                        <pre class="json-box" id="jsonEnvio"></pre>
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <div class="fw-semibold mb-1">JSON de Retorno</div>
+                        <pre class="json-box" id="jsonRetorno"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #filtrosArea .form-label {
+        font-size: .8rem;
+    }
+
+    .table td, .table th {
+        vertical-align: middle;
+    }
+
+    .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+    }
+
+    /* JSON viewer */
+    .json-box {
+        padding: 12px;
+        border-radius: 6px;
+        font-size: .85rem;
+        white-space: pre-wrap;
+        max-height: 420px;
+        overflow: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+    }
+
+    /* modo claro */
+    [data-bs-theme="light"] .json-box {
+        background: #f8f9fa;
+        color: #212529;
+        border: 1px solid #dee2e6;
+    }
+
+    /* modo escuro */
+    [data-bs-theme="dark"] .json-box {
+        background: #1e1e1e;
+        color: #e6e6e6;
+        border: 1px solid #3a3a3a;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (function () {
+            const panel = document.getElementById('panelArea');
+
+            function activeAba() {
+                return document.querySelector('#tabsSf .nav-link.active')?.dataset?.aba || 'events';
+            }
+
+            function getVal(id) {
+                const el = document.getElementById(id);
+                return el ? el.value : '';
+            }
+
+            function buildParams(extra) {
+                const aba = activeAba();
+                const p = {
+                    aba,
+                    de: getVal('dataIni') || null,
+                    ate: getVal('dataFim') || null,
+                    q: getVal('q') || null,
+                    pageSize: getVal('pageSize') || 50
+                };
+
+                if (aba === 'events') {
+                    p.statusEvent = getVal('statusEvent') || null;
+                } else {
+                    p.statusLog = getVal('statusLog') || null;
+                    p.tipoDoc = getVal('tipoDoc') || null;
+                }
+
+                if (extra) {
+                    for (const k of Object.keys(extra)) p[k] = extra[k];
+                }
+
+                const usp = new URLSearchParams();
+                for (const [k, v] of Object.entries(p)) {
+                    if (v !== null && v !== undefined && v !== '') usp.append(k, v);
+                }
+                return usp.toString();
+            }
+
+            // ✅ Atualiza KPIs + Filtros + Grid (panelArea)
+            async function carregar(extra) {
+                const url = `/MonitorSalesforce/Index?${buildParams(extra)}`;
+
+                const res = await fetch(url, { cache: 'no-store' });
+                const html = await res.text();
+
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const novoPanel = doc.querySelector('#panelArea');
+
+                if (panel && novoPanel) {
+                    panel.innerHTML = novoPanel.innerHTML;
+                } else if (panel) {
+                    panel.innerHTML = html; // fallback
+                }
+
+                // ✅ NÃO precisa rewire porque os handlers abaixo usam delegação em document/panel
+            }
+
+            function setActiveTab(aba) {
+                document.querySelectorAll('#tabsSf .nav-link').forEach(x => x.classList.remove('active'));
+                const link = document.querySelector(`#tabsSf .nav-link[data-aba="${aba}"]`);
+                if (link) link.classList.add('active');
+            }
+
+            // ----------------------------
+            // Tabs / Filtros
+            // ----------------------------
+            document.addEventListener('click', (e) => {
+                const a = e.target.closest('#tabsSf .nav-link[data-aba]');
+                if (!a) return;
+                e.preventDefault();
+                setActiveTab(a.dataset.aba);
+                carregar({ page: 1 });
+            });
+
+            document.getElementById('btnFiltrar')?.addEventListener('click', () => carregar({ page: 1 }));
+            document.getElementById('btnAtualizar')?.addEventListener('click', () => carregar());
+            document.getElementById('btnLimpar')?.addEventListener('click', () => {
+                ['dataIni', 'dataFim', 'q'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                const se = document.getElementById('statusEvent'); if (se) se.value = '';
+                const sl = document.getElementById('statusLog'); if (sl) sl.value = '';
+                const td = document.getElementById('tipoDoc'); if (td) td.value = '';
+                carregar({ page: 1 });
+            });
+
+            document.getElementById('q')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    carregar({ page: 1 });
+                }
+            });
+
+            // ----------------------------
+            // Modal JSON (Bootstrap safe)
+            // ----------------------------
+            const jsonModalEl = document.getElementById('jsonModal');
+            const jsonModal = (jsonModalEl && window.bootstrap) ? new bootstrap.Modal(jsonModalEl) : null;
+
+            function prettyJson(raw) {
+                if (!raw) return '';
+                try {
+                    const obj = JSON.parse(raw);
+                    return JSON.stringify(obj, null, 2);
+                } catch {
+                    return raw;
+                }
+            }
+
+            // ✅ Base64 robusto: aceita base64url, sem padding, e nunca "derruba" o click
+            function fromB64(b64) {
+                if (!b64) return '';
+                try {
+                    let s = String(b64).replace(/-/g, '+').replace(/_/g, '/'); // base64url -> base64
+
+                    const pad = s.length % 4;
+                    if (pad) s += '='.repeat(4 - pad); // padding
+
+                    const bin = atob(s);
+
+                    // tenta UTF-8
+                    try {
+                        const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+                        return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+                    } catch {
+                        return bin; // fallback
+                    }
+                } catch (err) {
+                    console.error('Falha ao decodificar base64:', err);
+                    return String(b64); // fallback (não quebra o fluxo)
+                }
+            }
+
+            // ----------------------------
+            // ✅ Delegação: Paginação + Botão JSON
+            // (não depende de rewire após AJAX)
+            // ----------------------------
+            panel?.addEventListener('click', (e) => {
+                // Paginação
+                const pg = e.target.closest('[data-page]');
+                if (pg) {
+                    e.preventDefault();
+                    const p = pg.getAttribute('data-page');
+                    carregar({ page: p });
+                    return;
+                }
+
+                // Botão JSON
+                const btn = e.target.closest('[data-json-envio-b64]');
+                if (!btn) return;
+
+                e.preventDefault();
+
+                const envioRaw = fromB64(btn.getAttribute('data-json-envio-b64'));
+                const retornoRaw = fromB64(btn.getAttribute('data-json-retorno-b64'));
+
+                const envio = prettyJson(envioRaw);
+                const retorno = prettyJson(retornoRaw);
+
+                const elEnvio = document.getElementById('jsonEnvio');
+                const elRet = document.getElementById('jsonRetorno');
+
+                if (elEnvio) elEnvio.textContent = envio || "";
+                if (elRet) elRet.textContent = retorno || "";
+
+                if (jsonModal) {
+                    jsonModal.show();
+                } else {
+                    alert("Bootstrap Modal não disponível. Verifique bootstrap.bundle.js");
+                }
+
+                if (jsonModalEl) {
+                    jsonModalEl.dataset.envio = envio || "";
+                    jsonModalEl.dataset.retorno = retorno || "";
+                }
+            });
+
+            // ----------------------------
+            // Copiar (amarrado 1x só)
+            // ----------------------------
+            document.getElementById('btnCopiarEnvio')?.addEventListener('click', async () => {
+                const t = jsonModalEl?.dataset?.envio || '';
+                await navigator.clipboard.writeText(t);
+            });
+
+            document.getElementById('btnCopiarRetorno')?.addEventListener('click', async () => {
+                const t = jsonModalEl?.dataset?.retorno || '';
+                await navigator.clipboard.writeText(t);
+            });
+
+        })();
+    </script>
+}
+
+

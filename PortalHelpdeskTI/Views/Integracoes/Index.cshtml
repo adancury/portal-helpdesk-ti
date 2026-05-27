@@ -1,0 +1,144 @@
+﻿@{
+    ViewData["Title"] = "Integrações";
+}
+
+<div class="container mt-4">
+    <h3 class="mb-4">Integrações & Monitoramento</h3>
+
+    <div class="row g-3">
+
+        <!-- WMS -->
+        <div class="col-md-4 d-flex">
+            <a class="card home-card text-decoration-none w-100 h-100" href="~/IntegracoesWms/Index">
+                <div class="card-body d-flex align-items-center">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="icon">
+                            <img src="~/images/Grupo_FLJ_AF_novo.png" alt="WMS" style="width:56px;">
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-1">WMS</h5>
+                            <p class="card-text text-muted mb-0">
+                                Monitoramento de integrações SAP ↔ WMS
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Salesforce -->
+        <div class="col-md-4 d-flex">
+            <a class="card home-card text-decoration-none w-100 h-100" href="~/WmsProcessos/Index">
+                <div class="card-body d-flex align-items-center">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="icon">
+                            <i class="bi bi-diagram-3" style="font-size:40px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-1">Processos WMS</h5>
+                            <p class="card-text text-muted mb-0">
+                                Acompanhamento de entradas, saídas, cortes e atividades
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Salesforce -->
+        <div class="col-md-4 d-flex">
+            <a class="card home-card text-decoration-none w-100 h-100" href="~/MonitorSalesforce/Index">
+                <div class="card-body d-flex align-items-center">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="icon">
+                            <img src="~/images/SL_Icon.png" alt="Salesforce" style="width:56px;">
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-1">Salesforce</h5>
+                            <p class="card-text text-muted mb-0">
+                                Monitoramento de integrações SAP ↔ SF
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Envio de Email de Notas -->
+        <div class="col-md-4 d-flex">
+            <a class="card home-card text-decoration-none w-100 h-100" href="~/IntegracoesNotas/Index">
+                <div class="card-body d-flex align-items-center">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="icon">
+                            <i class="bi bi-envelope-paper" style="font-size:40px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-1">Envio de Notas</h5>
+                            <p class="card-text text-muted mb-0">
+                                Monitoramento de envio de NF-e por e-mail
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Reprocessar Vínculo Fiscal -->
+        <div class="col-md-4 d-flex">
+            <a class="card home-card text-decoration-none w-100 h-100" href="~/IntegracoesNotas/VinculoFiscal">
+                <div class="card-body d-flex align-items-center">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="icon">
+                            <i class="bi bi-link-45deg" style="font-size:40px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-1">Vínculo Fiscal</h5>
+                            <p class="card-text text-muted mb-0">
+                                Reprocessar vínculo fiscal entre esboço e nota criada
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Swagger WMS NF Saída -->
+        <div class="col-md-4 d-flex">
+            <a class="card home-card text-decoration-none w-100 h-100" href="~/api/wms/nota-fiscal-saida/criar">
+                <div class="card-body d-flex align-items-center">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="icon">
+                            <i class="bi bi-braces" style="font-size:40px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-1">Swagger WMS NF Saída</h5>
+                            <p class="card-text text-muted mb-0">
+                                Teste e documentação do endpoint de retorno WMS
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Swagger WMS Enviar Faturamento -->
+        <div class="col-md-4 d-flex">
+            <a class="card home-card text-decoration-none w-100 h-100" href="~/api/wms/enviarFaturamentoOrdemSaida">
+                <div class="card-body d-flex align-items-center">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="icon">
+                            <i class="bi bi-send-check" style="font-size:40px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-1">Swagger WMS Faturamento</h5>
+                            <p class="card-text text-muted mb-0">
+                                Envio manual do faturamento de ordem de saída
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+    </div>
+</div>

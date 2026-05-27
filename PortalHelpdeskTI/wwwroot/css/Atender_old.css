@@ -1,0 +1,604 @@
+﻿.atender-container {
+    background-color: #f5f6f6; /* azul claro */
+    border: 1px solid #c8c8c8;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+    .atender-container select,
+    .atender-container textarea {
+        width: 100%;
+        padding: 8px;
+        margin-top: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    .atender-container button {
+        background-color: #003366;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        /*border-radius: 4px;*/
+        /* REMOVA OU COMENTE: */
+        /* margin-top: 15px; */
+        /* width: 100%; */
+        font-size: 16px;
+    }
+
+        .atender-container button:hover {
+            background-color: #0055a5;
+        }
+
+.badge {
+    padding: 0.6em 1em;
+    font-weight: 500;
+}
+
+.descricao-chamado {
+    background-color: #f5f6f6;
+    border: 1px solid #c8c8c8;
+    border-left: 4px solid #007bff;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 1.05rem;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.info-tags {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.tag-prioridade {
+    background-color: #f8d7da; /* vermelho claro */
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-weight: 500;
+}
+
+.tag-data {
+    background-color: #d1ecf1; /* azul claro */
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-weight: 500;
+}
+
+.interacoes-chat {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+    /* Preserva quebras de linha e ainda permite quebra automática de palavras longas */
+    .interacoes-chat .chat-message {
+        white-space: pre-wrap; /* preserva \n, \r\n e espaços simples */
+        overflow-wrap: anywhere; /* evita estouro com URLs/palavras enormes */
+        word-break: break-word; /* compat. extra para navegadores antigos */
+    }
+
+.chat-bubble {
+    max-width: 70%;
+    padding: 10px 15px;
+    border-radius: 15px;
+    margin: 5px 0;
+    word-wrap: break-word;
+    clear: both;
+}
+
+    .chat-bubble.tecnico {
+        background-color: #d1ecf1; /* azul claro */
+        border: 1px solid #bee5eb;
+        margin-left: auto; /* empurra para direita */
+        text-align: right;
+    }
+
+    .chat-bubble.usuario {
+        background-color: #f1f0f0; /* cinza claro */
+        border: 1px solid #ddd;
+        margin-right: auto; /* fica na esquerda */
+        text-align: left;
+    }
+
+.chat-message {
+    font-size: 1rem;
+}
+
+.chat-meta {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 4px;
+    text-align: right;
+}
+/* Para garantir alinhamento central nos botões */
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-anexos a {
+    display: inline-block;
+    margin-right: 5px;
+    margin-top: 3px;
+    font-size: 0.85rem;
+}
+
+@keyframes highlightFade {
+    from {
+        background-color: #fff3cd;
+    }
+    /* tom de amarelo suave */
+    to {
+        background-color: transparent;
+    }
+}
+
+.tr-destaque {
+    animation: highlightFade 2s ease-out forwards;
+}
+
+#overlay-bloqueio {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 9999;
+    display: none; /* ou flex para testar */
+    align-items: center;
+    justify-content: center;
+}
+
+.overlay-conteudo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.select-concluido {
+    background-color: #d4edda;
+    color: #155724;
+    font-weight: bold;
+}
+
+.select-atendimento {
+    background-color: #fff3cd;
+    color: #856404;
+    font-weight: bold;
+}
+
+.select-aguardando {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    font-weight: bold;
+}
+
+.atender-container .badge {
+    letter-spacing: .2px;
+}
+
+.atender-container .text-muted {
+    font-size: .95rem;
+}
+/* === Harmonização tema (usa vars do site.css) === */
+
+/* Containers / blocos */
+.atender-container,
+.descricao-chamado {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+.descricao-chamado {
+    border-left-color: var(--accent) !important;
+}
+
+    /* Títulos e labels – tema-aware */
+    .atender-container h5,
+    .atender-container label,
+    .atender-container label.form-label,
+    .dados-solicitante label.form-label,
+    .descricao-chamado .form-label {
+        color: var(--label-fg) !important;
+    }
+
+/* Form controls */
+.atender-container .form-control,
+.atender-container .form-select,
+#interacaoMensagem {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+}
+
+    .atender-container .form-control:focus,
+    .atender-container .form-select:focus,
+    #interacaoMensagem:focus {
+        box-shadow: 0 0 0 .2rem rgba(96, 165, 250, .25); /* azul suave */
+        border-color: var(--accent) !important;
+    }
+
+.atender-container ::placeholder {
+    color: var(--muted) !important;
+}
+
+/* Botões dentro do bloco (deixe o primário como está via Bootstrap/vars) */
+.atender-container button,
+.atender-container .btn {
+    /* já herdam de site.css / Bootstrap; nada fixo aqui */
+}
+
+/* Histórico de interações (container) */
+.historico-interacoes {
+    background-color: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+}
+
+/* Balões do chat – versões tema-aware */
+.chat-bubble {
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+    background: var(--surface-alt) !important;
+}
+
+    /* Balão do técnico (direita) */
+    .chat-bubble.tecnico {
+        background: rgba(96, 165, 250, 0.12) !important; /* azul translúcido */
+        border-color: rgba(96, 165, 250, 0.35) !important; /* borda azul suave */
+    }
+
+    /* Balão do usuário (esquerda) */
+    .chat-bubble.usuario {
+        background: rgba(148, 163, 184, 0.14) !important; /* cinza translúcido */
+        border-color: rgba(148, 163, 184, 0.35) !important;
+    }
+
+/* Metadados do chat */
+.chat-meta {
+    color: var(--muted) !important;
+}
+
+/* List-group dos anexos dentro do chat */
+.list-group-item {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+    .list-group-item .text-muted {
+        color: var(--muted) !important;
+    }
+
+/* Modal de anexos: header e corpo seguem o tema */
+.modal-header.bg-light {
+    background-color: var(--surface-alt) !important;
+    color: var(--text) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+.modal-content {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+.btn-close {
+    filter: invert(0);
+}
+
+html.dark .btn-close {
+    filter: invert(1);
+}
+/* melhora visibilidade no dark */
+
+/* Badges/infos */
+.tag-prioridade {
+    background-color: rgba(248, 215, 218, 0.2) !important;
+    color: #ffb3b8 !important;
+    border-color: rgba(245, 198, 203, 0.35) !important;
+}
+
+.tag-data {
+    background-color: rgba(209, 236, 241, 0.2) !important;
+    color: #b7e0ea !important;
+    border-color: rgba(190, 229, 235, 0.35) !important;
+}
+
+/* Selects “com status” (mantém ideia, mas adequa contraste) */
+.select-concluido {
+    background-color: rgba(52, 211, 153, 0.15) !important;
+    color: #a7f3d0 !important;
+}
+
+.select-atendimento {
+    background-color: rgba(250, 204, 21, 0.15) !important;
+    color: #fde68a !important;
+}
+
+.select-aguardando {
+    background-color: rgba(96, 165, 250, 0.15) !important;
+    color: #bfdbfe !important;
+}
+
+/* Ajustes de contraste nos cards e bordas arredondadas */
+.atender-container,
+.descricao-chamado,
+.atender-container,
+.descricao-chamado {
+    background: var(--bs-tertiary-bg) !important;
+    border: 0 !important;
+    border-radius: .5rem;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+}
+
+.historico-interacoes {
+    border-radius: .6rem !important;
+}
+/* Labels/headings com a mesma família de azul dos títulos */
+.atender-container h3,
+.atender-container h5,
+.atender-container label.form-label,
+.descricao-chamado .form-label,
+.dados-solicitante label.form-label {
+    color: var(--label-fg) !important;
+}
+
+    /* Ícones ao lado dos headings herdam a cor */
+    .atender-container h3 .bi,
+    .atender-container h5 .bi {
+        color: inherit !important;
+    }
+/* Alinha APENAS o conteúdo dos balões à esquerda */
+.chat-bubble.tecnico,
+.chat-bubble.usuario {
+    text-align: left !important; /* ignora o right/left anterior */
+}
+
+/* Mensagem sempre alinhada à esquerda */
+.chat-bubble .chat-message {
+    text-align: left !important;
+}
+
+/* Mantém data/autor alinhados à direita */
+.chat-bubble .chat-meta {
+    text-align: right !important;
+}
+/* antes estava pre-wrap */
+.interacoes-chat .chat-message {
+    white-space: pre-line; /* preserva \n, mas ignora espaços iniciais */
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    text-align: left !important; /* mantém texto à esquerda */
+}
+
+/* metadados continuam à direita */
+.chat-bubble .chat-meta {
+    text-align: right !important;
+}
+
+/* === Labels no LIGHT devem usar a MESMA cor do título === */
+html[data-bs-theme="light"] .atender-container label,
+html[data-bs-theme="light"] .atender-container h5,
+html[data-bs-theme="light"] .descricao-chamado .form-label,
+html[data-bs-theme="light"] .dados-solicitante label.form-label {
+    color: var(--heading-fg) !important;
+}
+    /* LIGHT: labels = EXATAMENTE a mesma cor do título */
+    html[data-bs-theme="light"] .atender-container label,
+    html[data-bs-theme="light"] .atender-container label.form-label,
+    html[data-bs-theme="light"] .dados-solicitante label.form-label,
+    html[data-bs-theme="light"] .descricao-chamado .form-label,
+    html[data-bs-theme="light"] .atender-container h5 {
+        color: var(--heading-fg) !important;
+    }
+
+/* atender.css (v=6) */
+
+/* usa o mesmo tom do footer (Bootstrap token: --bs-tertiary-bg) */
+.atender-container,
+.descricao-chamado {
+    background: var(--bs-tertiary-bg) !important;
+    border: 0 !important;
+    border-radius: .5rem;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+}
+
+    /* mantém boa leitura do texto nos dois temas */
+    .descricao-chamado,
+    .atender-container,
+    .descricao-chamado label,
+    .atender-container label {
+        color: var(--bs-body-color);
+    }
+
+        /* espaçamentos consistentes entre blocos */
+        .descricao-chamado + .atender-container,
+        .atender-container + .atender-container {
+            margin-top: 1rem;
+        }
+
+        /* inputs seguem o tema, sem forçar cores */
+        .atender-container .form-control,
+        .atender-container .form-select,
+        .descricao-chamado .form-control,
+        .descricao-chamado .form-select {
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
+        }
+
+/* opcional: borda suave nos campos no dark */
+[data-bs-theme="dark"] .atender-container .form-control,
+[data-bs-theme="dark"] .atender-container .form-select {
+    border-color: rgba(255,255,255,.15);
+}
+
+
+
+/*novo css*/
+/* atender.css (v=7)  — enxuto, tema-aware e seguindo Bootstrap 5.3 */
+
+/* ===== Blocos principais (mesmo cinza do footer) ===== */
+.atender-container,
+.descricao-chamado {
+    background: var(--bs-tertiary-bg) !important;
+    border: 0 !important;
+    border-radius: .5rem;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+    color: var(--bs-body-color);
+    margin-bottom: 1.25rem;
+}
+
+    /* Inputs/Selects seguem o tema; sem forçar cores fixas */
+    .atender-container .form-control,
+    .atender-container .form-select {
+        background-color: var(--bs-body-bg);
+        color: var(--bs-body-color);
+    }
+
+[data-bs-theme="dark"] .atender-container .form-control,
+[data-bs-theme="dark"] .atender-container .form-select {
+    border-color: rgba(255,255,255,.15);
+}
+
+/* ===== Descrição do chamado ===== */
+.descricao-chamado .form-label,
+.atender-container .form-label,
+.atender-container h5,
+.atender-container h3 {
+    color: var(--bs-body-color);
+}
+
+/* ===== Overlay de bloqueio ===== */
+#overlay-bloqueio {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(255,255,255,.8);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.overlay-conteudo {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--bs-body-color);
+}
+
+/* ===== Histórico / Chat ===== */
+.interacoes-chat {
+    display: flex;
+    flex-direction: column;
+    gap: .625rem;
+}
+
+.chat-bubble {
+    max-width: 70%;
+    padding: .625rem .9rem;
+    border-radius: 1rem;
+    margin: .3rem 0;
+    word-wrap: break-word;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    color: var(--bs-body-color);
+    text-align: left;
+}
+
+    .chat-bubble.tecnico {
+        margin-left: auto;
+    }
+
+    .chat-bubble.usuario {
+        margin-right: auto;
+    }
+
+.interacoes-chat .chat-message {
+    white-space: pre-wrap; /* preserva \n e espaços simples */
+    overflow-wrap: anywhere; /* evita estouro com URLs longas */
+    word-break: break-word;
+}
+
+.chat-meta {
+    font-size: .8rem;
+    color: var(--bs-secondary-color);
+    margin-top: .25rem;
+    text-align: right;
+}
+
+/* Lista de anexos no chat */
+.list-group-item {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border-color: var(--bs-border-color);
+}
+
+/* ===== Modal de anexos ===== */
+.modal-content {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border-color: var(--bs-border-color);
+}
+
+.modal-header {
+    background: var(--bs-tertiary-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+/* ===== Destaque de linha (animação suave) ===== */
+@keyframes highlightFade {
+    from {
+        background-color: #fff3cd;
+    }
+    /* amarelo suave */
+    to {
+        background-color: transparent;
+    }
+}
+
+.tr-destaque {
+    animation: highlightFade 2s ease-out forwards;
+}
+
+/* ===== Selects “com status” (tema-aware com tokens Bootstrap) ===== */
+.select-concluido {
+    background-color: rgba(var(--bs-success-rgb), .15) !important;
+    color: var(--bs-success-text-emphasis) !important;
+}
+
+.select-atendimento {
+    background-color: rgba(var(--bs-warning-rgb), .15) !important;
+    color: var(--bs-warning-text-emphasis) !important;
+}
+
+.select-aguardando {
+    background-color: rgba(var(--bs-info-rgb), .15) !important;
+    color: var(--bs-info-text-emphasis) !important;
+}
+
+/* Botões centralizados (mantém comportamento bootstrap) */
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+

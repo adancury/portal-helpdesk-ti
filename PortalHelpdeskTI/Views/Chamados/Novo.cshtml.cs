@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace PortalHelpdeskTI.Views.Chamados
 {
-    public class NovoModel : PageModel
+    public class Novo_Model : PageModel
     {
         public void OnGet()
         {

@@ -1,0 +1,45 @@
+﻿@model System.Data.DataTable
+@{
+    var titulo = (string?)TempData["RelatorioNome"] ?? "Resultado";
+    ViewData["Title"] = titulo;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h4 class="mb-3">@titulo</h4>
+
+@if (Model.Rows.Count == 0)
+{
+    <div class="alert alert-warning">Sem resultados.</div>
+}
+else
+{
+    <form method="post" asp-action="ExportCsv_DadosProdutos" class="mb-2">
+        @Html.AntiForgeryToken()
+        <button class="btn btn-outline-secondary btn-sm">Exportar CSV</button>
+        <a class="btn btn-link btn-sm" href="javascript:history.back()">Voltar</a>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-sm align-middle table-hover">
+            <thead>
+                <tr>
+                    @foreach (System.Data.DataColumn c in Model.Columns)
+                    {
+                        <th>@c.ColumnName</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (System.Data.DataRow row in Model.Rows)
+                {
+                    <tr>
+                        @foreach (System.Data.DataColumn c in Model.Columns)
+                        {
+                            <td>@(row[c] is DBNull ? "" : row[c])</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

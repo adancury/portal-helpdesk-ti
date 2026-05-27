@@ -1,0 +1,238 @@
+﻿@inject Microsoft.Extensions.Configuration.IConfiguration _cfg
+@model PortalHelpdeskTI.Models.AprovacoesPainelVM
+@using System.Globalization
+
+@{
+    Layout = null;
+
+    // Lista da página atual
+    var list = Model?.Itens?.ToList() ?? new List<PortalHelpdeskTI.Services.SAP.ServiceLayerClient.ApprovalRequestDto>();
+
+    // Dados de paginação
+    // Dados de paginação
+    var total = Model?.Total ?? list.Count;
+    var curPage = Model?.Page ?? 1;
+    var pageSize = Model?.PageSize ?? (total == 0 ? 1 : total);
+    var lastPage = (int)Math.Ceiling(total / (double)pageSize);
+
+    int start = 0, end = 0;
+    if (total > 0)
+    {
+        start = (curPage - 1) * pageSize + 1;
+        end = Math.Min(curPage * pageSize, total);
+    }
+
+    // páginas anterior / próxima
+    var prevPage = curPage > 1 ? curPage - 1 : 1;
+    var nextPage = curPage < lastPage ? curPage + 1 : lastPage;
+
+    string FmtCreated(PortalHelpdeskTI.Services.SAP.ServiceLayerClient.ApprovalRequestDto it)
+    {
+        if (!it.CreationDate.HasValue) return "—";
+
+        // Usa apenas a DATA de CreationDate (vem como 00:00:00Z) e combina com CreationTime
+        var d = it.CreationDate.Value.Date;
+        var timeStr = it.CreationTime ?? "";
+        if (!TimeSpan.TryParse(timeStr, out var t))
+        {
+            if (timeStr?.Length == 6)
+                TimeSpan.TryParse(timeStr.Insert(2, ":").Insert(5, ":"), out t);
+        }
+
+        if (t != default)
+        {
+            var combined = new DateTime(d.Year, d.Month, d.Day, t.Hours, t.Minutes, t.Seconds, DateTimeKind.Unspecified);
+            return combined.ToString("dd/MM/yyyy HH:mm");
+        }
+
+        return d.ToString("dd/MM/yyyy");
+    }
+
+    var sapUser = ViewContext.HttpContext.Session.GetString("SAP_USERCODE");
+    var db = _cfg["SapB1:CompanyDB"];
+}
+@{
+    // <<< NOVO: formata nome "Primeiro Último"
+    string ShortName(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            return "—";
+
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1)
+            return parts[0];
+
+        return parts[0] + " " + parts[^1];
+    }
+}
+
+@{
+    string ObjLabel(string? objType, string? draftType, string? isDraft)
+    {
+        if (string.Equals(isDraft, "Y", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(draftType, "PRQ", StringComparison.OrdinalIgnoreCase))
+                return "Solicitação";
+            if (string.Equals(draftType, "PO", StringComparison.OrdinalIgnoreCase))
+                return "Pedido";
+        }
+
+        return objType switch
+        {
+            "1470000113" => "Solicitação",
+            "22" => "Pedido",
+            _ => objType ?? "—"
+        };
+    }
+}
+
+@if (!list.Any())
+{
+    <div class="p-3 text-muted">
+        Nenhuma aprovação pendente em <strong>@db</strong>
+        @if (!string.IsNullOrWhiteSpace(sapUser))
+        {
+            <text> (usuário <code>@sapUser</code>)</text>
+        }
+        .
+    </div>
+}
+else
+{
+    <div id="aprovacoes-wrapper">
+        <table id="tabela-painel" class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="text-center" style="width:76px;">#</th>
+                    <th>Documento</th>
+                    <th>Criador</th>
+                    <th>Criado em</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th class="d-none d-md-table-cell">Resumo</th>
+                    <th class="text-center" style="width:120px;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var it in list)
+                {
+                    var statusRaw = it.Status ?? "";
+                    var statusMap = new Dictionary<string, (string Text, string Css)>
+                    {
+                        ["arsPeding"] = ("Pendente", "badge bg-warning text-dark"),
+                        ["arsPending"] = ("Pendente", "badge bg-warning text-dark"),
+                        ["arsApproved"] = ("Aprovado", "badge bg-success"),
+                        ["arsRejected"] = ("Rejeitado", "badge bg-danger"),
+                        ["arsGenerated"] = ("Gerado", "badge bg-secondary")
+                    };
+                    var (statusText, statusCss) = statusMap.TryGetValue(statusRaw, out var v)
+                    ? v
+                    : (statusRaw, "badge bg-secondary");
+                    <tr>
+                        <!-- Nº do documento (DraftDocNum) com classe correta -->
+                        <td class="text-center fw-semibold text-muted col-docnum">
+                            @it.DraftDocNum
+                        </td>
+
+                        <!-- Documento com classe col-doc -->
+                        <td class="col-doc">
+                            @ObjLabel(it.ObjectType, it.DraftType, it.IsDraft)
+                        </td>
+
+                        <!-- Criador -->
+                        <td class="col-creator text-nowrap">
+                            @ShortName(it.OriginatorNameInitCap)
+                        </td>
+
+                        <td class="col-creator text-nowrap">
+                            @FmtCreated(it)
+                        </td>
+                        <td class="text-end">
+                            @{
+                                decimal? valorParaMostrar = null;
+                                string simbolo = "";
+
+                                // 1º: se tiver valor em moeda estrangeira (> 0), usa DocTotalFC (dólar)
+                                if (it.DocTotalFC.HasValue && it.DocTotalFC.Value > 0)
+                                {
+                                    valorParaMostrar = it.DocTotalFC.Value;
+                                    simbolo = "$";
+                                }
+                                // 2º: senão, se tiver valor em DocTotal (> 0), usa DocTotal (real)
+                                else if (it.DocTotal.HasValue && it.DocTotal.Value > 0)
+                                {
+                                    valorParaMostrar = it.DocTotal.Value;
+                                    simbolo = "R$";
+                                }
+                            }
+
+                            @if (valorParaMostrar.HasValue)
+                            {
+                                <span class="badge bg-light text-dark border">
+                                    @simbolo @valorParaMostrar.Value.ToString("N2", new CultureInfo("pt-BR"))
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-dark border">
+                                    —
+                                </span>
+                            }
+                        </td>
+                        <td><span class="@statusCss">@statusText</span></td>
+                        <td class="d-none d-md-table-cell">
+                            <div class="fw-semibold">
+                                Etapa: @(it.CurrentStageName?.ToString() ?? "—")
+                            </div>
+                            <div class="small text-muted">
+                                @(string.IsNullOrWhiteSpace(it.Remarks) ? "—" : it.Remarks)
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary btn-detalhes"
+                                    data-code="@it.Code"
+                                    data-draft="@it.DraftDocNum">
+                                Detalhes
+                            </button>
+                        </td>
+                    </tr>
+                        }
+            </tbody>
+
+            <tfoot>
+                <tr>
+                    <td colspan="8">
+                        <div class="d-flex justify-content-between align-items-center small">
+                            <div>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-light pager-btn"
+                                        data-page="@prevPage"
+                                        @(curPage <= 1 ? "disabled" : "")>
+                                    « Anterior
+                                </button>
+                            </div>
+
+                            <div class="text-center">
+                                Página <strong>@curPage</strong> de <strong>@lastPage</strong>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-light pager-btn"
+                                        data-page="@nextPage"
+                                        @(curPage >= lastPage ? "disabled" : "")>
+                                    Próxima »
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-1 text-start">
+                            Total: <strong>@total</strong>
+                        </div>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}

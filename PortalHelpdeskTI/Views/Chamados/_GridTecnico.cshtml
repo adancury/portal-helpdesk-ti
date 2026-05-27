@@ -1,0 +1,114 @@
+@model IEnumerable<PortalHelpdeskTI.Models.GridTecnicoItemVM>
+@using PortalHelpdeskTI.Helpers
+
+<table class="table align-middle mb-0" id="tabela-painel">
+    <thead>
+        <tr>
+            <th>
+                <div class="d-flex align-items-start pt-1">
+                    <span>#</span>
+                </div>
+            </th>
+            <th class="col-titulo">
+                <div class="d-flex align-items-start pt-1">
+                    <span>Título</span>
+                </div>
+            </th>
+            <th>
+                <div class="d-flex align-items-start pt-1">
+                    <span>Prioridade</span>
+                </div>
+            </th>
+            <th>
+                <div class="d-flex align-items-start pt-1">
+                    <span>SLA</span>
+                </div>
+            </th>
+            <th>
+                <div class="d-flex align-items-start pt-1">
+                    <span>Solicitante</span>
+                </div>
+            </th>
+            <th>
+                <div class="d-flex align-items-start pt-1">
+                    <span>Técnico</span>
+                </div>
+            </th>
+            <th>
+                <div class="d-flex align-items-start pt-1">
+                    <span class="fw-bold">Status</span>
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm ms-1 d-flex align-items-center pt-1"
+                            onclick="toggleFiltroStatusDropdown(event)"
+                            style="line-height:1;">
+                        <i class="bi bi-funnel-fill"></i>
+                    </button>
+                </div>
+            </th>
+            <th class="text-center">Ações</th>
+        </tr>
+    </thead>
+
+    <tbody id="corpo-tabela-tecnico">
+        @foreach (var item in Model)
+        {
+            var chamado = item.Chamado;
+            var destaque = ViewBag.NovosChamados != null && ((List<int>)ViewBag.NovosChamados).Contains(chamado.Id)
+                ? "table-warning"
+                : "";
+
+            <tr data-id="@chamado.Id" data-href="/Chamados/Atender/@chamado.Id" class="@destaque chamado-row-click">
+                <td>@chamado.Id</td>
+                <td class="col-titulo">
+                    <span class="titulo-text">@chamado.Titulo</span>
+                </td>
+                <td>
+                    <span class="badge @BadgeHelper.GetPrioridadeBadgeClass(chamado.Prioridade)">
+                        @chamado.Prioridade
+                    </span>
+                </td>
+                <td style="min-width: 180px;">
+                    <div class="progress" style="height: 18px;" title="@item.SlaLabel">
+                        <div class="progress-bar @item.SlaCss"
+                             role="progressbar"
+                             style="width:@item.SlaPercent%;"
+                             aria-valuenow="@item.SlaPercent"
+                             aria-valuemin="0"
+                             aria-valuemax="100">
+                            @item.SlaPercent%
+                        </div>
+                    </div>
+                    <small class="sla-legend d-block mt-1">
+                        @item.SlaLabel
+                        @if (item.SlaPaused)
+                        {
+                            <span class="text-muted"> • pausado (Aguardando)</span>
+                        }
+                    </small>
+                </td>
+                <td>@chamado.Usuario?.Nome</td>
+                <td>@(chamado.Tecnico?.Nome ?? "Não atribuído")</td>
+                <td>
+                    <span class="badge @BadgeHelper.GetStatusBadgeClass(chamado.Status)">
+                        @chamado.Status
+                    </span>
+                </td>
+                <td class="text-center">
+                    <div class="position-relative d-inline-block">
+                        <a href="/Chamados/Atender/@chamado.Id" class="btn btn-sm btn-primary botao-visualizar">
+                            Atender
+                            @if (ViewBag.NovosChamados != null && ((List<int>)ViewBag.NovosChamados).Contains(chamado.Id))
+                            {
+                                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                                    <span class="visually-hidden">Novo</span>
+                                </span>
+                            }
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@* O dropdown de filtro de status fica na TecnicoPainel.cshtml *@

@@ -1,0 +1,11 @@
+﻿/* Aplica Segoe UI em todo o site */
+body {
+    font-family: 'Segoe UI', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+}
+
+/* Garante também na navbar (caso o Bootstrap ou outro CSS tente sobrescrever) */
+.navbar-custom,
+.navbar-custom .nav-link,
+.navbar-custom .navbar-brand {
+    font-family: 'Segoe UI', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+}

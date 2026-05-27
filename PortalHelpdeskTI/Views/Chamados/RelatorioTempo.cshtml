@@ -1,0 +1,176 @@
+﻿@model List<PortalHelpdeskTI.Models.Relatorios.TempoAtendimentoDto>
+
+@{
+    var embed = Context.Request.Query["embed"] == "1";
+    Layout = embed ? null : "~/Views/Shared/_Layout.cshtml";
+
+    string valDe = Context.Request.Query["de"];
+    string valAte = Context.Request.Query["ate"];
+}
+
+<style>
+    .board {
+        border-radius: .5rem;
+        overflow: hidden;
+        border: 1px solid rgba(0,0,0,.08);
+        background: var(--bs-body-bg,#fff);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)
+    }
+
+    .board-header {
+        background: #0d6efd;
+        color: #fff;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: .75rem;
+        padding: .65rem 1rem
+    }
+
+    .board-title {
+        font-weight: 600
+    }
+
+    .board-body {
+        padding: 0;
+        border-top: 1px solid rgba(0,0,0,.06)
+    }
+
+    .tbl-scroll {
+        max-height: 65vh;
+        overflow: auto
+    }
+
+    .tbl-relatorio thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: var(--bs-table-bg,var(--bs-body-bg,#fff));
+        box-shadow: 0 1px 0 rgba(0,0,0,.06)
+    }
+</style>
+
+<div class="board">
+    <div class="board-header">
+        <div class="board-title">
+            <i class="bi bi-stopwatch me-2"></i> Relatório de Horas
+        </div>
+    </div>
+
+    <div class="board-body">
+
+        <form method="get"
+              asp-controller="Relatorios"
+              asp-action="Tempo"
+              id="filtroRelatorio"
+              class="d-flex flex-wrap align-items-center gap-2 p-2">
+
+            <div class="d-flex align-items-center gap-2">
+                <label for="de" class="form-label m-0 small">De</label>
+                <input type="date" id="de" name="de"
+                       value="@valDe"
+                       class="form-control form-control-sm w-auto" />
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <label for="ate" class="form-label m-0 small">Até</label>
+                <input type="date" id="ate" name="ate"
+                       value="@valAte"
+                       class="form-control form-control-sm w-auto" />
+            </div>
+
+            <button class="btn btn-light btn-sm fw-semibold" type="submit">Filtrar</button>
+
+            <button class="btn btn-success btn-sm fw-semibold" type="button" id="btnExcel">
+                <i class="bi bi-file-earmark-excel me-1"></i> Excel
+            </button>
+
+            <button class="btn btn-danger btn-sm fw-semibold" type="button" id="btnPdf">
+                <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+            </button>
+
+        </form>
+
+        <div class="tbl-scroll">
+            <table class="table table-hover table-striped tbl-relatorio">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Chamado</th>
+                        <th>Usuário</th>
+                        <th>Técnico</th>
+                        <th>Aberto</th>
+                        <th>Fechado</th>
+                        <th>Total</th>
+                        <th>Parado</th>
+                        <th>Atend.</th>
+                        <th>SLA</th>
+                        <th>SLA OK</th>
+                        <th>Resumo</th>
+                    </tr>
+                </thead>
+                <tbody id="gridRelatorio">
+                    @await Html.PartialAsync("~/Views/Configuracoes/_GridRelatorioTempo.cshtml", Model)
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    (() => {
+
+        const form = document.getElementById('filtroRelatorio');
+        const grid = document.getElementById('gridRelatorio');
+        const btnExcel = document.getElementById('btnExcel');
+        const btnPdf = document.getElementById('btnPdf');
+
+        if (!form || !grid) return;
+
+        // ===== FILTRO AJAX =====
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const params = new URLSearchParams(new FormData(form));
+            const ajaxParams = new URLSearchParams(params);
+            ajaxParams.set('embed', '1');
+
+            const url = form.action + '?' + ajaxParams.toString();
+
+            grid.innerHTML = '<tr><td colspan="12" class="text-center p-3">Carregando...</td></tr>';
+
+            try {
+                const rsp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!rsp.ok) throw new Error();
+
+                grid.innerHTML = await rsp.text();
+
+                // mantém filtros na URL sem embed
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('de', document.getElementById('de')?.value || '');
+                newUrl.searchParams.set('ate', document.getElementById('ate')?.value || '');
+                newUrl.searchParams.delete('embed');
+                history.replaceState(null, '', newUrl);
+
+            } catch {
+                grid.innerHTML = '<tr><td colspan="12" class="text-center text-danger p-3">Erro ao carregar dados</td></tr>';
+            }
+        });
+
+        // ===== EXPORT EXCEL =====
+        btnExcel?.addEventListener('click', () => {
+            const params = new URLSearchParams(new FormData(form));
+            params.delete('embed');
+            window.location.href = '/Relatorios/TempoExcel?' + params.toString();
+        });
+
+        // ===== EXPORT PDF =====
+        btnPdf?.addEventListener('click', () => {
+            const params = new URLSearchParams(new FormData(form));
+            params.delete('embed');
+            window.location.href = '/Relatorios/TempoPdf?' + params.toString();
+        });
+
+    })();
+</script>

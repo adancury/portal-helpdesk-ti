@@ -1,16 +1,127 @@
-﻿@{
+﻿@model IEnumerable<PortalHelpdeskTI.Models.Chamado>
+
+@{
+    ViewData["Title"] = "Meus Chamados";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>Meus Chamados</h2>
-<table>
-    <tr><th>Título</th><th>Status</th><th>Abertura</th></tr>
-    @foreach (var c in Model)
+<div class="container mt-4">
+    <h2>Meus Chamados</h2>
+    @if (ViewBag.FiltroPendentes == true)
     {
-        <tr>
-            <td><a href="/Chamados/Detalhes/@c.Id">@c.Titulo</a></td>
-            <td>@c.Status</td>
-            <td>@c.DataAbertura</td>
-        </tr>
+        <div class="alert alert-warning d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Exibindo somente chamados pendentes de avaliação.</strong>
+            </div>
+            <a class="btn btn-sm btn-outline-dark" href="~/Chamados/Index">Ver todos</a>
+        </div>
     }
-</table>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="scroll-tabela">
+            <table class="table table-bordered table-striped" id="tabela-painel">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Título</th>
+                        <th>Prioridade</th>
+                        <th>Data Abertura</th>
+                        <th>Status</th>
+                        <th class="text-center">Avaliação</th>
+                        <th class="text-center">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model)
+                    {
+                        <tr>
+                            <td>@c.Id</td>
+                            <td>@c.Titulo</td>
+                            <td>
+                                <span class="badge @GetPrioridadeBadgeClass(c.Prioridade)">
+                                    @c.Prioridade
+                                </span>
+                            </td>
+                            <td>@c.DataAbertura.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <span class="badge @GetStatusBadgeClass(c.Status)">
+                                    @c.Status
+                                </span>
+                            </td>
+                            @{
+                                var pendentesSet = ViewBag.PendentesAvaliacaoIds as HashSet<int>;
+                                var pendenteAvaliacao = (pendentesSet != null) && pendentesSet.Contains(c.Id);
+                            }
+
+                            <td class="text-center">
+                                @if (c.Status == "Concluído" && pendenteAvaliacao)
+                                {
+                                    <a class="badge bg-warning text-dark text-decoration-none px-3 py-2"
+                                       href="~/Chamados/AvaliarChamado/@c.Id">
+                                        Avaliar
+                                    </a>
+                                }
+                                else if (c.Status == "Concluído")
+                                {
+                                    <span class="badge bg-success">Avaliado</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                <div class="position-relative d-inline-block">
+                                    <a href="/Chamados/Detalhes/@c.Id" class="btn btn-sm btn-primary position-relative">
+                                        Detalhes
+                                        @if (ViewBag.NovosChamados != null && ((List<int>)ViewBag.NovosChamados).Contains(c.Id))
+                                        {
+                                            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                                                <span class="visually-hidden">Nova interação do técnico</span>
+                                            </span>
+                                        }
+                                    </a>
+                                </div>
+                            </td>
+
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            Nenhum chamado encontrado.
+        </div>
+    }
+</div>
+
+@functions {
+    public string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Aberto" => "bg-secondary",
+            "Em Atendimento" => "bg-warning text-dark",
+            "Aguardando" => "bg-info text-dark",
+            "Concluído" => "bg-success",
+            _ => "bg-light text-dark"
+        };
+    }
+
+    public string GetPrioridadeBadgeClass(string prioridade)
+    {
+        return prioridade switch
+        {
+            "Alta" => "bg-danger",
+            "Crítica" => "bg-danger",
+            "Média" => "bg-warning text-dark",
+            "Baixa" => "bg-info text-dark",
+            _ => "bg-secondary"
+        };
+    }
+}

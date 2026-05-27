@@ -10,13 +10,16 @@
 
 <form method="get" style="margin-bottom: 20px;">
     <label for="statusFiltro">Filtrar por status:</label>
-    <select name="statusFiltro" id="statusFiltro">
+    <select id="statusFiltro" name="statusFiltro" class="form-select">
         <option value="">-- Todos --</option>
-        <option value="Aberto" @(ViewBag.StatusFiltro == "Aberto" ? "selected" : "")>Aberto</option>
-        <option value="Em Atendimento" @(ViewBag.StatusFiltro == "Em Atendimento" ? "selected" : "")>Em Atendimento</option>
-        <option value="Aguardando" @(ViewBag.StatusFiltro == "Aguardando" ? "selected" : "")>Aguardando</option>
-        <option value="Concluído" @(ViewBag.StatusFiltro == "Concluído" ? "selected" : "")>Concluído</option>
+        @foreach (var status in new[] { "Aberto", "Em Atendimento", "Aguardando", "Concluído" })
+        {
+            var selected = (ViewBag.StatusFiltro as string) == status ? "selected" : "";
+            <option value="@status" selected="@selected">@status</option>
+        }
     </select>
+
+
     <button type="submit">Filtrar</button>
 </form>
 

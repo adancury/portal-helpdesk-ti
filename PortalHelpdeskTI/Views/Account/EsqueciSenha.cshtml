@@ -1,0 +1,48 @@
+﻿@{
+    ViewData["Title"] = "Esqueci minha senha";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-5" style="max-width: 500px;">
+    <h3 class="text-center text-primary">Esqueci minha senha</h3>
+
+    @if (TempData["Mensagem"] != null)
+    {
+        <div class="alert alert-info text-center">
+            @TempData["Mensagem"]
+        </div>
+
+        <div class="text-center mt-3">
+            <a href="@Url.Action("Login", "Account")" class="btn btn-outline-primary">
+                Voltar para o login
+            </a>
+        </div>
+    }
+    else
+    {
+        <form method="post" asp-action="EnviarLinkReset" onsubmit="return mostrarLoading()">
+            <div class="mb-3">
+                <label for="email" class="form-label">Seu e-mail:</label>
+                <input type="email" name="email" id="email" class="form-control" required />
+            </div>
+
+            <button id="btnEnviar" class="btn btn-primary w-100" type="submit">
+                <span id="spinner" class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
+                Enviar link de redefinição
+            </button>
+        </form>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function mostrarLoading() {
+            const btn = document.getElementById("btnEnviar");
+            const spinner = document.getElementById("spinner");
+
+            btn.disabled = true;
+            spinner.classList.remove("d-none");
+            return true; // permite o submit
+        }
+    </script>
+}

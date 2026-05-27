@@ -1,0 +1,64 @@
+﻿@page
+@model PortalHelpdeskTI.Views.Configuracoes.SmtpModel
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+    <div id="toastEmailTeste" class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="toastEmailTexto">
+                Testando envio...
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+        </div>
+    </div>
+</div>
+
+<button type="button" class="btn btn-outline-secondary" id="btnTestarEmail">
+    <i class="bi bi-envelope-check"></i> Testar Envio de E-mail
+</button>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const toastEl = document.getElementById('toastEmailTeste');
+        const toastTexto = document.getElementById('toastEmailTexto');
+        const toast = new bootstrap.Toast(toastEl);
+
+        document.getElementById('btnTestarEmail').addEventListener('click', function () {
+            const emailTeste = prompt("Digite o e-mail para teste:");
+
+            if (!emailTeste || !emailTeste.includes('@@')) {
+                toastTexto.innerText = "❌ E-mail inválido.";
+                toastEl.classList.remove("bg-primary", "bg-success");
+                toastEl.classList.add("bg-danger");
+                toast.show();
+                return;
+            }
+
+            toastTexto.innerText = "⏳ Enviando e-mail de teste...";
+            toastEl.classList.remove("bg-danger", "bg-success");
+            toastEl.classList.add("bg-primary");
+            toast.show();
+
+            fetch(`/Configuracoes/TestarEnvioEmail?email=${encodeURIComponent(emailTeste)}`)
+                .then(resp => resp.json())
+                .then(data => {
+                    if (data.sucesso) {
+                        toastTexto.innerText = "✅ E-mail de teste enviado com sucesso!";
+                        toastEl.classList.remove("bg-primary", "bg-danger");
+                        toastEl.classList.add("bg-success");
+                    } else {
+                        toastTexto.innerText = "❌ Erro: " + data.mensagem;
+                        toastEl.classList.remove("bg-primary", "bg-success");
+                        toastEl.classList.add("bg-danger");
+                    }
+                    toast.show();
+                })
+                .catch(err => {
+                    toastTexto.innerText = "❌ Erro inesperado: " + err;
+                    toastEl.classList.remove("bg-primary", "bg-success");
+                    toastEl.classList.add("bg-danger");
+                    toast.show();
+                });
+        });
+    });
+</script>
+
+
+

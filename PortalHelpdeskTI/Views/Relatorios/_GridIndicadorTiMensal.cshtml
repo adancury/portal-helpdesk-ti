@@ -1,0 +1,33 @@
+﻿@model List<PortalHelpdeskTI.Models.Relatorios.IndicadorTiMensalDto>
+
+@if (Model == null || Model.Count == 0)
+{
+    <tr><td colspan="10" class="text-center p-3 text-muted">Sem dados</td></tr>
+}
+else
+{
+    foreach (var m in Model.OrderByDescending(x => x.MesRef))
+    {
+        <tr class="row-click" data-mesref="@m.MesRef.ToString("yyyy-MM-dd")">
+            <td>@m.MesRef.ToString("MM/yyyy")</td>
+            <td class="text-end">@m.QtdeChamados</td>
+            <td class="text-end">@m.HorasEstimadasTotal.ToString("N2")</td>
+            <td class="text-end">@m.HorasReaisTotal.ToString("N2")</td>
+            <td class="text-end">@m.PerformancePct.ToString("N2")%</td>
+            <td class="text-end">@m.PerformancePctCap110.ToString("N2")%</td>
+            <td class="text-end">@m.NotaMedia_1a5.ToString("N2")</td>
+            <td class="text-end">@m.SatisfacaoPct.ToString("N2")%</td>
+            <td class="text-end fw-semibold">@m.IndicadorFinal.ToString("N2")%</td>
+            <td>
+                @if (m.AtingiuMeta95)
+                {
+                    <span class="badge bg-success">ATINGIU</span>
+                }
+                else
+                {
+                    <span class="badge bg-danger">NÃO ATINGIU</span>
+                }
+            </td>
+        </tr>
+    }
+}

@@ -1,0 +1,166 @@
+﻿@model PortalHelpdeskTI.ViewModels.Permissoes.RelatoriosPermissoesVm
+@{
+    Layout = null; // IMPORTANTE: para carregar dentro do #conteudo-configuracoes
+}
+
+<div class="card shadow-sm rounded-4">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="fw-semibold">
+            <i class="bi bi-shield-lock me-2"></i> Permissões de Relatórios
+        </div>
+    </div>
+
+    <div class="card-body">
+        <ul class="nav nav-tabs" id="tabsPerm" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabDept" type="button" role="tab">
+                    Por Departamento (padrão)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabUser" type="button" role="tab">
+                    Por Usuário (override)
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content pt-3">
+            <!-- TAB: Departamento -->
+            <div class="tab-pane fade show active" id="tabDept" role="tabpanel">
+                <form method="post" action="~/Configuracoes/SalvarPermissoesRelatoriosDept">
+                    @Html.AntiForgeryToken()
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="min-width:260px;">Relatório</th>
+                                    @foreach (var d in Model.Departamentos)
+                                    {
+                                        <th class="text-center" style="min-width:110px;">@d.Nome</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < Model.Relatorios.Count; i++)
+                                {
+                                    var r = Model.Relatorios[i];
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@r.Titulo</div>
+                                            <div class="text-body-secondary small">@r.Key</div>
+                                        </td>
+
+                                        @foreach (var d in Model.Departamentos)
+                                        {
+                                            var dictKey = $"{d.Id}|{r.Key.ToUpper()}";
+                                            var checkedVal = Model.DeptPerms.ContainsKey(dictKey) ? Model.DeptPerms[dictKey] : false;
+
+                                            <td class="text-center">
+                                                <input type="hidden" name="perms[@(i * 1000 + d.Id)].DepartamentoId" value="@d.Id" />
+                                                <input type="hidden" name="perms[@(i * 1000 + d.Id)].RelatorioKey" value="@r.Key" />
+
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       name="perms[@(i * 1000 + d.Id)].PodeVer"
+                                                       value="true"
+                                                       @(checkedVal ? "checked" : "") />
+
+                                                <input type="hidden" name="perms[@(i * 1000 + d.Id)].PodeVer" value="false" />
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-2">
+                        <button class="btn btn-success">
+                            <i class="bi bi-check2-circle me-1"></i> Salvar permissões por departamento
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TAB: Usuário -->
+            <div class="tab-pane fade" id="tabUser" role="tabpanel">
+                <form method="get" action="~/Configuracoes/PermissoesRelatorios" class="row g-2 align-items-end mb-3">
+                    <input type="hidden" name="embed" value="1" />
+                    <div class="col-12 col-md-6 col-lg-5">
+                        <label class="form-label">Usuário</label>
+                        <select name="usuarioId" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">Selecione...</option>
+                            @foreach (var u in Model.Usuarios)
+                            {
+                                var sel = Model.UsuarioId.HasValue && Model.UsuarioId.Value == u.Id;
+                                <option value="@u.Id" selected="@(sel ? "selected" : null)">
+                                    @u.Nome (@(u.Departamento?.Nome ?? "Sem depto"))
+                                </option>
+                            }
+                        </select>
+                    </div>
+                </form>
+
+                @if (!Model.UsuarioId.HasValue)
+                {
+                    <div class="alert alert-warning">
+                        Selecione um usuário para configurar os overrides.
+                    </div>
+                }
+                else
+                {
+                    <form method="post" action="~/Configuracoes/SalvarPermissoesRelatoriosUsuario">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="usuarioId" value="@Model.UsuarioId.Value" />
+
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width:320px;">Relatório</th>
+                                        <th style="min-width:220px;">Permissão</th>
+                                        <th class="text-body-secondary">Obs.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < Model.Relatorios.Count; i++)
+                                    {
+                                        var r = Model.Relatorios[i];
+                                        Model.UserOverrides.TryGetValue(r.Key, out var v);
+
+                                        string current = v.HasValue ? (v.Value ? "1" : "0") : "";
+
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@r.Titulo</div>
+                                                <div class="text-body-secondary small">@r.Key</div>
+                                            </td>
+                                            <td>
+                                                <input type="hidden" name="perms[@i].RelatorioKey" value="@r.Key" />
+                                                <select class="form-select form-select-sm" name="perms[@i].Value">
+                                                    <option value="" selected="@(current == "" ? "selected" : null)">Padrão (Departamento)</option>
+                                                    <option value="1" selected="@(current == "1" ? "selected" : null)">Permitir</option>
+                                                    <option value="0" selected="@(current == "0" ? "selected" : null)">Negar</option>
+                                                </select>
+                                            </td>
+                                            <td class="text-body-secondary small">
+                                                “Padrão” usa a regra do departamento do usuário.
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-2">
+                            <button class="btn btn-success">
+                                <i class="bi bi-check2-circle me-1"></i> Salvar overrides do usuário
+                            </button>
+                        </div>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>

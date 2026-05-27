@@ -1,0 +1,132 @@
+﻿@model PortalHelpdeskTI.Models.Relatorios.MudancaCarteiraUploadViewModel
+
+@{
+    ViewData["Title"] = "Mudança de Carteira";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2 class="mb-3">Mudança de Carteira</h2>
+
+<div class="card border-0 bg-body-tertiary mb-3">
+    <div class="card-body py-3 d-flex flex-column flex-md-row
+                justify-content-between align-items-start align-items-md-center gap-3">
+        <div class="small text-body-secondary">
+            Envie uma planilha Excel com duas colunas:
+            <strong>Código do Cliente (CardCode)</strong> e
+            <strong>Código do Vendedor (SlpCode)</strong>.
+            Em seguida, escolha se deseja atualizar o
+            <strong>vendedor principal</strong> (<code>OCRD.SlpCode</code>) ou o
+            <strong>vendedor secundário</strong> (<code>OCRD.U_SegVendedor</code>).
+        </div>
+
+        <div class="text-md-end">
+            <a href="~/relatorios/modelos/mudanca-carteira-modelo.xlsx"
+               class="btn btn-sm btn-outline-primary"
+               download>
+                Baixar modelo de planilha
+            </a>
+            <div class="form-text mt-1">
+                Modelo com colunas <code>CardCode</code> e <code>SlpCode</code>.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form asp-action="MudancaCarteira"
+              method="post"
+              enctype="multipart/form-data"
+              class="vstack gap-3">
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label asp-for="Arquivo" class="form-label"></label>
+                <input asp-for="Arquivo"
+                       class="form-control"
+                       type="file"
+                       accept=".xlsx,.xls" />
+                <span asp-validation-for="Arquivo" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label d-block">Atualizar qual vendedor?</label>
+
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input"
+                           type="radio"
+                           asp-for="TipoVendedor"
+                           id="optPrincipal"
+                           value="principal" />
+                    <label class="form-check-label" for="optPrincipal">
+                        Vendedor principal
+                        <small class="text-muted">(OCRD.SlpCode)</small>
+                    </label>
+                </div>
+
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input"
+                           type="radio"
+                           asp-for="TipoVendedor"
+                           id="optSecundario"
+                           value="secundario" />
+                    <label class="form-check-label" for="optSecundario">
+                        Vendedor secundário
+                        <small class="text-muted">(OCRD.U_SegVendedor)</small>
+                    </label>
+                </div>
+
+                <div>
+                    <span asp-validation-for="TipoVendedor" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    Processar Mudança de Carteira
+                </button>
+                <a asp-controller="Relatorios" asp-action="Index" class="btn btn-outline-secondary">
+                    Voltar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.Processado)
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">Resultado do processamento</h5>
+            <p class="mb-2">
+                Linhas lidas na planilha:
+                <strong>@Model.TotalLinhas</strong><br />
+                Registros atualizados em <code>OCRD</code>:
+                <strong>@Model.Atualizados</strong>
+            </p>
+
+            @if (Model.Erros != null && Model.Erros.Count > 0)
+            {
+                <div class="alert alert-warning mb-0">
+                    <strong>Ocorreram alguns problemas:</strong>
+                    <ul class="mb-0">
+                        @foreach (var erro in Model.Erros)
+                        {
+                            <li>@erro</li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-success mb-0">
+                    Todas as linhas foram processadas com sucesso.
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

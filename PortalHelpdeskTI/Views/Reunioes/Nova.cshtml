@@ -1,0 +1,258 @@
+﻿@{
+    ViewData["Title"] = "Gravar ou Selecionar Áudio";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<div class="container mt-4">
+    <h3>Reunião – Gravar ou Selecionar Áudio</h3>
+
+    <div class="row mb-2">
+        <div class="col-md-6">
+            <label>Título</label>
+            <input id="titulo" class="form-control" placeholder="Ex.: Reunião semanal" />
+        </div>
+        <div class="col-md-6">
+            <label>Participantes (separar por ;)</label>
+            <input id="participantes" class="form-control" placeholder="nome1;nome2;..." />
+        </div>
+    </div>
+
+    <!-- ▼▼ ADIÇÃO: Método + Descrição ▼▼ -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label>Método de geração da ata</label>
+            <select id="metodoAta" class="form-control">
+                <option value="local">Parser local</option>
+                <option value="gpt">ChatGPT</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label>Descrição/Objetivo (opcional)</label>
+            <input id="descricao" class="form-control" placeholder="Ex.: objetivos, contexto, prioridades" />
+        </div>
+    </div>
+    <!-- ▲▲ ADIÇÃO ▲▲ -->
+
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <label>E-mails para envio (separar por ;)</label>
+            <input id="emails" class="form-control" placeholder="a@empresa.com;b@empresa.com" />
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Selecionar arquivo de áudio (opcional):</label>
+        <input id="fileAudio" type="file" class="form-control"
+               accept=".webm,.ogg,.mp3,.wav,.m4a,.mp4,audio/*" />
+        <small class="text-muted">Se preferir, use os botões de gravação abaixo.</small>
+    </div>
+
+    <div class="mb-3">
+        <audio id="player" controls></audio>
+    </div>
+
+    <div class="btn-group mb-3">
+        <button id="btnStart" class="btn btn-success">Gravar</button>
+        <button id="btnStop" class="btn btn-danger" disabled>Parar</button>
+        <button id="btnEnviar" class="btn btn-primary" disabled>Enviar áudio</button>
+    </div>
+
+    <div id="status" class="text-muted"></div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            let mediaRecorder, chunks = [];
+            let blob = null;              // Fonte atual de áudio (gravação ou arquivo)
+            let selectedMime = null;      // MIME do áudio atual
+            let savedReuniaoId = null;
+            let currentObjectUrl = null;
+
+            const el = (id) => document.getElementById(id);
+            const btnStart = el('btnStart');
+            const btnStop = el('btnStop');
+            const btnEnviar = el('btnEnviar');
+            const player = el('player');
+            const fileAudio = el('fileAudio');
+            const statusEl = el('status');
+
+            function setStatus(text) { statusEl.innerText = text || ''; }
+            function enableEnviar(enable) { btnEnviar.disabled = !enable; }
+            function revokePlayerUrl() {
+                if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+            }
+
+            function pickMimeType() {
+                const candidates = [
+                    'audio/webm;codecs=opus','audio/webm',
+                    'audio/ogg;codecs=opus','audio/ogg',
+                    'audio/mp4'
+                ];
+                for (const t of candidates) {
+                    if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t;
+                }
+                return null;
+            }
+
+            async function initStream() {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert('Seu navegador não suporta getUserMedia. Use Chrome/Edge/Firefox (HTTPS).');
+                    throw new Error('getUserMedia not supported');
+                }
+                return await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
+
+            // ======== Selecionar arquivo =========
+            fileAudio.addEventListener('change', () => {
+                const file = fileAudio.files?.[0];
+                if (!file) { setStatus('Nenhum arquivo selecionado.'); return; }
+                if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.stop(); btnStop.disabled = true; }
+
+                blob = file;
+                selectedMime = file.type || null;
+
+                revokePlayerUrl();
+                currentObjectUrl = URL.createObjectURL(file);
+                player.srcObject = null;
+                player.src = currentObjectUrl;
+                player.controls = true;
+
+                enableEnviar(true);
+                setStatus(`Arquivo selecionado: ${file.name} (${selectedMime || 'desconhecido'})`);
+            });
+
+            // ======== Gravar/Parar =========
+            btnStart.onclick = async () => {
+                try {
+                    const stream = await initStream();
+                    chunks = [];
+                    selectedMime = pickMimeType();
+                    const options = selectedMime ? { mimeType: selectedMime } : {};
+                    mediaRecorder = new MediaRecorder(stream, options);
+
+                    mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+                    mediaRecorder.onstop = () => {
+                        blob = new Blob(chunks, { type: selectedMime || 'audio/webm' });
+                        stream.getTracks().forEach(t => t.stop());
+
+                        revokePlayerUrl();
+                        currentObjectUrl = URL.createObjectURL(blob);
+                        player.srcObject = null;
+                        player.src = currentObjectUrl;
+                        player.controls = true;
+
+                        enableEnviar(true);
+                        setStatus('Gravação finalizada. Pronta para enviar.');
+                    };
+
+                    mediaRecorder.start();
+                    setStatus('Gravando...');
+                    btnStart.disabled = true;
+                    btnStop.disabled = false;
+                    enableEnviar(false);
+                    if (fileAudio.value) fileAudio.value = '';
+                } catch (e) {
+                    console.error(e);
+                    alert('Não foi possível iniciar a gravação. Verifique permissões de microfone e HTTPS.');
+                }
+            };
+
+            btnStop.onclick = () => {
+                try {
+                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                        mediaRecorder.stop();
+                        btnStop.disabled = true;
+                        btnStart.disabled = false;
+                    }
+                } catch (e) { console.error(e); }
+            };
+
+            // ======== Enviar (upload + gerar ata) =========
+            btnEnviar.onclick = async () => {
+                if (!blob) { alert('Nenhuma gravação/arquivo para enviar.'); return; }
+
+                const fd = new FormData();
+                let fileName = 'audio.webm';
+                if (blob instanceof File && blob.name) { fileName = blob.name; }
+                else if (selectedMime) {
+                    if (selectedMime.includes('mp4')) fileName = 'audio.mp4';
+                    else if (selectedMime.includes('ogg')) fileName = 'audio.ogg';
+                    else if (selectedMime.includes('wav')) fileName = 'audio.wav';
+                    else if (selectedMime.includes('m4a')) fileName = 'audio.m4a';
+                    else if (selectedMime.includes('mp3')) fileName = 'audio.mp3';
+                }
+
+                fd.append('audio', blob, fileName);
+                fd.append('titulo', el('titulo').value || '');
+                fd.append('participantes', el('participantes').value || '');
+                fd.append('emailsDestino', el('emails').value || '');
+
+                setStatus('Enviando áudio...');
+                enableEnviar(false);
+
+                try {
+                    const resp = await fetch('/Reunioes/UploadAudio', { method: 'POST', body: fd });
+                    const bodyText = await resp.text();
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' - ' + bodyText);
+
+                    let j; try { j = JSON.parse(bodyText); } catch { throw new Error('Resposta não está em JSON: ' + bodyText); }
+
+                    if (j.ok) {
+                        savedReuniaoId = j.reuniaoId;
+                        setStatus('Áudio enviado. Gerando transcrição e ata...');
+                        await gerarAta();
+                    } else {
+                        setStatus('Falha no upload.');
+                        enableEnviar(true);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    setStatus('Erro no upload. Veja o console.');
+                    enableEnviar(true);
+                }
+            };
+
+            async function gerarAta() {
+                const params = new URLSearchParams();
+                params.append('reuniaoId', savedReuniaoId);
+                params.append('titulo', el('titulo').value || '');
+                params.append('participantes', el('participantes').value || '');
+
+                // ▼▼ ADIÇÃO: enviar método + descrição ▼▼
+                const usarGpt = (el('metodoAta').value === 'gpt');
+                params.append('usarGpt', usarGpt ? 'true' : 'false');
+                params.append('descricao', el('descricao').value || '');
+                // ▲▲ ADIÇÃO ▲▲
+
+                try {
+                    const resp = await fetch('/Reunioes/GerarAta', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params.toString()
+                    });
+
+                    const text = await resp.text();
+                    let j = null; try { j = JSON.parse(text); } catch {}
+
+                    if (!resp.ok) {
+                        setStatus("Erro ao gerar a ata (HTTP " + resp.status + "): " + (j?.error || text));
+                        enableEnviar(true);
+                        return;
+                    }
+
+                    if (j?.ok) {
+                        setStatus('');
+                        statusEl.innerHTML = 'Ata gerada. <a href="' + j.pdf + '" target="_blank">Baixar PDF</a>';
+                    } else {
+                        setStatus("Falha ao gerar a ata: " + (j?.error || text || "Erro desconhecido."));
+                        enableEnviar(true);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    setStatus('Erro de rede ao gerar a ata. Veja o console.');
+                    enableEnviar(true);
+                }
+            }
+        })();
+    </script>
+}

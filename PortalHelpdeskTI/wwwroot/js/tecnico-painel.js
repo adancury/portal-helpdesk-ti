@@ -31,3 +31,17 @@
     background - color: #0066aa;
     border - color: #0066aa;
 }
+.kpi - card{
+    border: 1px solid var(--bs - border - color);
+    border - radius: 16px;
+    background - color: var(--bs - primary - bg - subtle);
+    box - shadow: 0 2px 10px rgba(16, 24, 40, 0.04);
+}
+.kpi - icon{
+    width: 40px; height: 40px;
+    border - radius: 12px;
+    display: flex; align - items: center; justify - content: center;
+    font - size: 18px;
+}
+.kpi - label{ font - size: .85rem; color: #667085; }
+.kpi - value{ font - size: 1.35rem; font - weight: 700; color:#101828; }

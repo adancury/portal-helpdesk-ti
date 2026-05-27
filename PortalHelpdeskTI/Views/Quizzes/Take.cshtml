@@ -1,0 +1,89 @@
+﻿@using PortalHelpdeskTI.Models.Quizzes
+@model PortalHelpdeskTI.ViewModels.Quizzes.QuizTakeVM
+@{
+    ViewData["Title"] = Model.Titulo;
+}
+<div class="quiz-ui">
+    <h2>@Model.Titulo</h2>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Descricao))
+    {
+        <p class="text-muted">@Model.Descricao</p>
+    }
+
+    @if (Model.TempoLimiteSegundos.HasValue)
+    {
+        <div class="alert alert-info">Tempo limite: <strong id="tempoRestante"></strong></div>
+    }
+
+    <form asp-route="Quizzes_Submit" asp-route-id="@Model.QuizId" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="QuizId" value="@Model.QuizId" />
+        <input type="hidden" name="inicioIso" value="@ViewBag.InicioIso" />
+
+        @for (int i = 0; i < Model.Questoes.Count; i++)
+        {
+            var q = Model.Questoes[i];
+            <div class="mb-4 p-3 border rounded quiz-question">
+                <h5>@(i + 1). @q.Enunciado</h5>
+                <div class="mt-2">
+                    @if (q.Tipo == TipoQuestao.UnicaEscolha || q.Tipo == TipoQuestao.VerdadeiroFalso)
+                    {
+                        foreach (var o in q.Opcoes)
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio"
+                                       name="Respostas[@q.QuestaoId][]"
+                                       value="@o.OpcaoId"
+                                       id="q@q.QuestaoId_o@o.OpcaoId" />
+                                <label class="form-check-label" for="q@q.QuestaoId_o@o.OpcaoId">@o.Texto</label>
+                            </div>
+                        }
+                    }
+                    else if (q.Tipo == TipoQuestao.MultiplaEscolha)
+                    {
+                        foreach (var o in q.Opcoes)
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="Respostas[@q.QuestaoId][]"
+                                       value="@o.OpcaoId"
+                                       id="q@q.QuestaoId_o@o.OpcaoId" />
+                                <label class="form-check-label" for="q@q.QuestaoId_o@o.OpcaoId">@o.Texto</label>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="quiz-actions">
+            <button type="submit" class="btn btn-success">Finalizar</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        (function(){
+          const limite = @(Model.TempoLimiteSegundos ?? 0);
+          if(limite > 0){
+            const fim = Date.now() + limite*1000;
+            const el = document.getElementById('tempoRestante');
+            const timer = setInterval(()=>{
+              const restante = Math.max(0, Math.floor((fim - Date.now())/1000));
+              const m = String(Math.floor(restante/60)).padStart(2,'0');
+              const s = String(restante%60).padStart(2,'0');
+              el.textContent = m+":"+s;
+              if(restante <= 0){
+                clearInterval(timer);
+                document.querySelector('form').submit();
+              }
+            }, 250);
+          }
+          // Evita voltar e mexer no form de forma indevida
+          history.pushState(null, document.title, location.href);
+          window.addEventListener('popstate', function () { history.pushState(null, document.title, location.href); });
+        })();
+    </script>
+}

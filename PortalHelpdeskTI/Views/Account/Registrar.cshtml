@@ -1,0 +1,48 @@
+﻿@model RegistrarUsuarioViewModel
+@{
+    ViewData["Title"] = "Criar usuário";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<div class="container mt-4" style="max-width:600px">
+    <h2>Criar seu usuário</h2>
+    <p class="text-muted">Preencha seus dados para acessar o Portal.</p>
+
+    @using (Html.BeginForm("Registrar", "Account", FormMethod.Post, new { @class = "needs-validation", novalidate = "novalidate" }))
+    {
+        @Html.AntiForgeryToken()
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+        <div class="mb-3">
+            @Html.LabelFor(m => m.Nome, new { @class = "form-label" })
+            @Html.TextBoxFor(m => m.Nome, new { @class = "form-control", placeholder = "Seu nome completo" })
+            @Html.ValidationMessageFor(m => m.Nome, "", new { @class = "text-danger" })
+        </div>
+
+        <div class="mb-3">
+            @Html.LabelFor(m => m.Email, new { @class = "form-label" })
+            @Html.TextBoxFor(m => m.Email, new { @class = "form-control", type = "email", placeholder = "seu.nome@empresa.com.br" })
+            @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
+        </div>
+
+        <div class="mb-3">
+            @Html.LabelFor(m => m.Ramal, new { @class = "form-label" })
+            @Html.TextBoxFor(m => m.Ramal, new { @class = "form-control", placeholder = "Ex.: 1234" })
+            @Html.ValidationMessageFor(m => m.Ramal, "", new { @class = "text-danger" })
+        </div>
+
+        <div class="mb-3">
+            @Html.LabelFor(m => m.Senha, new { @class = "form-label" })
+            @Html.PasswordFor(m => m.Senha, new { @class = "form-control", placeholder = "Mínimo 8 caracteres" })
+            @Html.ValidationMessageFor(m => m.Senha, "", new { @class = "text-danger" })
+        </div>
+
+        <div class="mb-3">
+            @Html.LabelFor(m => m.ConfirmarSenha, new { @class = "form-label" })
+            @Html.PasswordFor(m => m.ConfirmarSenha, new { @class = "form-control", placeholder = "Repita a senha" })
+            @Html.ValidationMessageFor(m => m.ConfirmarSenha, "", new { @class = "text-danger" })
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Criar</button>
+        <div class="form-text mt-2">Você receberá um e-mail para ativar sua conta.</div>
+    }
+</div>

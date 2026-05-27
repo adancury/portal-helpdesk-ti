@@ -1,0 +1,65 @@
+﻿@model PortalHelpdeskTI.Models.VinculoFiscalManualRequest
+
+@{
+    ViewData["Title"] = "Reprocessar Vínculo Fiscal";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-xl-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Reprocessar Vínculo Fiscal</h5>
+                </div>
+
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Informe o número do esboço e o DocEntry da nota criada para reprocessar o vínculo fiscal.
+                    </p>
+
+                    @if (ViewBag.Sucesso != null)
+                    {
+                        <div class="alert alert-success">
+                            @ViewBag.Sucesso
+                        </div>
+                    }
+
+                    @if (ViewBag.Erro != null)
+                    {
+                        <div class="alert alert-danger">
+                            @ViewBag.Erro
+                        </div>
+                    }
+
+                    <form asp-action="VinculoFiscal" asp-controller="IntegracoesNotas" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-3">
+                            <label asp-for="NumEsboco" class="form-label">Número do Esboço</label>
+                            <input asp-for="NumEsboco" class="form-control" type="number" min="1" required />
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="DocEntryNotaCriada" class="form-label">DocEntry da Nota Criada</label>
+                            <input asp-for="DocEntryNotaCriada" class="form-control" type="number" min="1" required />
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a asp-action="Index" asp-controller="IntegracoesNotas" class="btn btn-secondary">
+                                Voltar
+                            </a>
+
+                            <button type="submit" class="btn btn-primary">
+                                Reprocessar Vínculo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card-footer text-muted small">
+                    Esta rotina não efetiva esboços. Ela apenas reprocessa o vínculo fiscal entre o esboço informado e a nota já criada.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,120 @@
+﻿@model PortalHelpdeskTI.ViewModels.Relatorios.DataTablePage
+
+@{
+    var dt = Model?.Data;
+    string Get(object? v) => v == null || v == System.DBNull.Value ? string.Empty : v.ToString();
+
+    var total = Model?.Total ?? 0;
+    var pageSize = Model?.PageSize ?? 50; // 50 por página
+}
+
+<div class="card card-ruptura-grid mb-3">
+    <div class="table-wrap-rupturas table-responsive mb-0">
+        <table id="tabela-rupturas" class="table table-sm mb-0 relatorio-table-rupturas">
+            <colgroup>
+                <col style="width:120px;">   @* Código *@
+                <col>                        @* Descrição *@
+                <col style="width:110px;">   @* Data *@
+                <col style="width:110px;">   @* EstoqueNoDia *@
+                <col style="width:110px;">   @* QtdComprometida *@
+                <col style="width:110px;">   @* QtdAReceber *@
+                <col style="width:120px;">   @* EstoqueDisponivel *@
+                <col style="width:120px;">   @* EstoqueFuturo *@
+                <col style="width:90px;">    @* Status *@
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Produto</th>
+                    <th>Data</th>
+                    <th class="text-end">Estoque do dia</th>
+                    <th class="text-end">Qtd. Comprometida</th>
+                    <th class="text-end">Qtd. a receber</th>
+                    <th class="text-end">Estoque disponível</th>
+                    <th class="text-end">Estoque futuro</th>
+                    <th class="text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (dt == null || dt.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">
+                            Nenhum registro encontrado.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (System.Data.DataRow row in dt.Rows)
+                    {
+                        var status = Get(row["Status"]);
+                        var cssStatus = status == "RUPTURA" ? "badge bg-danger" :
+                        status == "PREVISTO" ? "badge bg-info text-dark" :
+                        "badge bg-success";
+
+                        <tr>
+                            <td>@Get(row["ItemCode"])</td>
+                            <td class="text-truncate">@Get(row["ItemName"])</td>
+                            <td>
+                                @(row["Data"] is DBNull
+                                                        ? ""
+                                                        : ((DateTime)row["Data"]).ToString("dd/MM/yyyy"))
+                    </td>
+                    <td class="text-end">@Get(row["EstoqueNoDia"])</td>
+                    <td class="text-end">@Get(row["QtdComprometida"])</td>
+                    <td class="text-end">@Get(row["QtdAReceber"])</td>
+                    <td class="text-end">@Get(row["EstoqueDisponivel"])</td>
+                    <td class="text-end">@Get(row["EstoqueFuturo"])</td>
+                    <td class="text-center">
+                        <span class="@cssStatus">@status</span>
+                    </td>
+                </tr>
+                                }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (total > 0)
+    {
+        <!-- meta pra JS pegar o pageSize -->
+        <input type="hidden" id="rupturas-page-size" value="@pageSize" />
+
+        <div class="card-footer py-2 small">
+            <!-- Linha 1: botões + "Página X de Y" -->
+            <div class="d-flex justify-content-between align-items-center small mt-2 rupturas-pager">
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary"
+                            type="button"
+                            data-rupturas-prev>
+                        « Anterior
+                    </button>
+                </div>
+
+                <div>
+                    Página <span data-rupturas-pagina-atual>1</span>
+                    de <span data-rupturas-total-paginas>1</span>
+                </div>
+
+                <div class="text-end">
+                    <button class="btn btn-sm btn-outline-secondary"
+                            type="button"
+                            data-rupturas-next>
+                        Próxima »
+                    </button>
+                </div>
+            </div>
+
+            <!-- Linha 2: "Total: N" à esquerda, "Página X" à direita -->
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    Total: <strong>@total</strong>
+                </div>
+                <div data-rupturas-pagina-rodape>
+                    Página 1
+                </div>
+            </div>
+        </div>
+    }
+</div>

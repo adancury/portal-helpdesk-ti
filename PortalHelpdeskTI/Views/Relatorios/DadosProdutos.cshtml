@@ -1,0 +1,215 @@
+﻿@model PortalHelpdeskTI.ViewModels.Relatorios.DataTablePage
+@{
+    ViewData["Title"] = "Dados de Produtos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<link rel="stylesheet" href="~/css/tecnico-painel.css" />
+
+<div class="container-fluid py-3">
+    <div class="card relatorio-card shadow-sm rounded-4">
+        <div class="card-header bg-body d-flex align-items-center justify-content-between rounded-top-4 dp-header">
+            <div class="d-flex align-items-center gap-2">
+                <div class="avatar-32 rounded-circle bg-body-tertiary d-flex align-items-center justify-content-center">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+                <div>
+                    <h5 class="mb-0">Dados de Produtos</h5>
+                    <div class="text-body-secondary small">
+                        Consulta formatada (SAP) • <span id="totalItensListados">@Model.Total.ToString("N0")</span> itens listados
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input id="txtBusca" class="form-control" placeholder="Buscar em todas as colunas…" value="@Model.Search" />
+                </div>
+
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">Itens</span>
+                    <select id="selPageSize" class="form-select">
+                        <option value="100">100</option>
+                        <option value="200" selected>200</option>
+                        <option value="500">500</option>
+                    </select>
+                </div>
+
+                <form method="post" asp-action="ExportCsv_DadosProdutos" class="mb-0">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="page" value="@Model.Page" />
+                    <input type="hidden" name="pageSize" value="@Model.PageSize" />
+                    <input type="hidden" name="q" value="@Model.Search" />
+                    <button class="btn btn-sm btn-outline-secondary text-nowrap">
+                        <i class="bi bi-filetype-csv"></i> Exportar CSV
+                    </button>
+                </form>
+
+                <button id="btnAtualizar" class="btn btn-sm btn-outline-secondary text-nowrap">
+                    <i class="bi bi-arrow-clockwise"></i> Atualizar
+                </button>
+
+                <button id="btnFicha" class="btn btn-sm btn-primary text-nowrap" disabled>
+                    <i class="bi bi-file-pdf"></i> Ficha Técnica
+                </button>
+
+                <div class="btn-group">
+                    <button id="btnEtiquetas"
+                            type="button"
+                            class="btn btn-sm btn-outline-danger text-nowrap dropdown-toggle"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            disabled>
+                        <i class="bi bi-tags"></i> Etiquetas
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="#" id="btnEtiquetaInner">
+                                <i class="bi bi-tag"></i> Gerar Etiqueta Inner
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" id="btnEtiquetaMaster">
+                                <i class="bi bi-box-seam"></i> Gerar Etiqueta Master
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <button type="button"
+                        class="btn btn-sm btn-outline-light text-nowrap"
+                        onclick="history.back()">
+                    ← Voltar
+                </button>
+
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div id="grid-wrap" class="table-wrap">
+                <partial name="~/Views/Relatorios/_GridDadosProdutos_DataTable.cshtml" model="Model" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+          const $grid = $("#grid-wrap");
+          const $busca = $("#txtBusca");
+          const $btnAtualizar = $("#btnAtualizar");
+          const $selPageSize = $("#selPageSize");
+
+          let currentPage = @Model.Page;
+          let pageSize = @Model.PageSize;
+
+          function atualizarBotoesSelecao() {
+            const any = $("#grid-wrap").find(".row-check:checked").length > 0;
+            $("#btnFicha").prop("disabled", !any);
+            $("#btnEtiquetas").prop("disabled", !any);
+          }
+
+          function carregar(p, forceQ) {
+            if (p) currentPage = p;
+            pageSize = parseInt($selPageSize.val() || pageSize, 10);
+            const q = (forceQ ?? $busca.val() ?? "").trim();
+
+            $.ajax({
+              url: "@Url.Action("DadosProdutos", "Relatorios")",
+              type: "GET",
+              data: { page: currentPage, pageSize: pageSize, q: q },
+              headers: { "X-Requested-With": "XMLHttpRequest" }
+            }).done(html => {
+              $grid.html(html);
+              currentPage = parseInt($grid.find("[data-current-page]").data("current-page") || currentPage, 10);
+              const total = parseInt($grid.find("[data-total-items]").data("total-items") || 0, 10);
+              $("#totalItensListados").text(total.toLocaleString("pt-BR"));
+              $('input[name="page"]').val(currentPage);
+              $('input[name="pageSize"]').val(pageSize);
+              $('input[name="q"]').val(q);
+              atualizarBotoesSelecao();
+            }).fail(() => {
+              $grid.html(`<div class="p-3 text-danger small">Falha ao carregar a grid.</div>`);
+            });
+          }
+
+          function getSelectedCodes() {
+            return $("#grid-wrap")
+              .find("tbody tr")
+              .has(".row-check:checked")
+              .map(function () { return $(this).data("itemcode"); })
+              .get();
+          }
+
+          function postPdf(actionUrl, payloadName, payloadValue) {
+            const form = $('<form method="post"></form>').attr("action", actionUrl);
+            form.append('@Html.AntiForgeryToken()');
+            form.append($('<input type="hidden" />').attr("name", payloadName).val(payloadValue));
+            $(document.body).append(form);
+            form.trigger('submit');
+            form.remove();
+          }
+
+          $busca.on("input", () => {
+            clearTimeout(window._tSrv);
+            window._tSrv = setTimeout(() => carregar(1), 250);
+          });
+
+          $busca.on("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              carregar(1);
+            }
+          });
+
+          $(document).on("click", "ul.pagination [data-page]", function (e) {
+            e.preventDefault();
+            const $a  = $(this);
+            const $li = $a.closest(".page-item");
+            if ($li.hasClass("disabled") || $a.attr("aria-disabled") === "true") return;
+            const p = parseInt($a.data("page"), 10);
+            if (isNaN(p)) return;
+            carregar(p);
+            $("#grid-wrap").animate({ scrollTop: 0 }, 150);
+          });
+
+          $(document).on("change", ".row-check, #chkAll", function () {
+            if (this.id === "chkAll") {
+              const mark = $(this).is(":checked");
+              $("#grid-wrap").find(".row-check").prop("checked", mark);
+            }
+            atualizarBotoesSelecao();
+          });
+
+          $btnAtualizar.on("click", () => carregar(currentPage));
+          $selPageSize.on("change", () => carregar(1));
+
+          $("#btnFicha").on("click", function () {
+            const codes = getSelectedCodes();
+            if (!codes.length) return;
+
+            postPdf("@Url.Action("FichaTecnicaPdf", "Relatorios")", "codes", JSON.stringify(codes));
+          });
+
+                  $("#btnEtiquetaInner").on("click", function (e) {
+          e.preventDefault();
+          const codes = getSelectedCodes();
+          if (!codes.length) return;
+
+          postPdf("@Url.Action("EtiquetaPdf", "Relatorios")", "payload",
+              JSON.stringify({ Codes: codes, Modelo: "inner" }));
+        });
+
+        $("#btnEtiquetaMaster").on("click", function (e) {
+          e.preventDefault();
+          const codes = getSelectedCodes();
+          if (!codes.length) return;
+
+          postPdf("@Url.Action("EtiquetaPdf", "Relatorios")", "payload",
+              JSON.stringify({ Codes: codes, Modelo: "master" }));
+        });
+
+          atualizarBotoesSelecao();
+        })();
+    </script>
+}

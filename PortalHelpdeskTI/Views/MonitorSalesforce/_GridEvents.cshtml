@@ -1,0 +1,95 @@
+﻿@model MonitorSalesforceVm
+@{
+    var page = Model.Page < 1 ? 1 : Model.Page;
+    var size = Model.PageSize <= 0 ? 50 : Model.PageSize;
+    var total = Model.Total < 0 ? 0 : Model.Total;
+    var pages = (int)Math.Ceiling(total / (double)size);
+    if (pages < 1) pages = 1;
+
+    string Badge(string? st)
+    {
+        if (string.IsNullOrWhiteSpace(st)) return "bg-secondary";
+        st = st.Trim().ToLowerInvariant();
+        return st switch
+        {
+            "pending" => "bg-warning text-dark",
+            "processed" => "bg-success",
+            "error" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}
+
+<div class="card shadow-sm rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="min-width:140px">Event Id</th>
+                        <th style="min-width:120px">Object</th>
+                        <th style="min-width:140px">Transaction</th>
+                        <th style="min-width:180px">Primary Keys</th>
+                        <th style="min-width:120px">Event Data</th>
+                        <th style="min-width:160px">Created</th>
+                        <th style="min-width:120px">By</th>
+                        <th style="min-width:110px">Status</th>
+                        <th style="min-width:80px" class="text-center">Retry</th>
+                        <th style="min-width:80px" class="text-center">Prio</th>
+                        <th style="min-width:160px">Processed</th>
+                        <th style="min-width:180px">Correlation</th>
+                        <th style="min-width:220px">Erro</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Events == null || Model.Events.Count == 0)
+                {
+                    <tr>
+                        <td colspan="13" class="text-center py-4 text-muted">Nenhum evento encontrado.</td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var e in Model.Events)
+                    {
+                        <tr>
+                            <td class="mono">@e.EventId</td>
+                            <td>@e.ObjectType</td>
+                            <td>@e.TransactionType</td>
+                            <td class="mono">@e.PrimaryKeys</td>
+                            <td>@e.EventData</td>
+                            <td>@(e.CreatedDate?.ToString("dd/MM/yyyy HH:mm") ?? "")</td>
+                            <td>@e.CreatedBy</td>
+                            <td>
+                                <span class="badge @Badge(e.Status)">@e.Status</span>
+                            </td>
+                            <td class="text-center">@e.RetryCount</td>
+                            <td class="text-center">@e.Priority</td>
+                            <td>@(e.ProcessedDate?.ToString("dd/MM/yyyy HH:mm") ?? "")</td>
+                            <td class="mono">@e.CorrelationId</td>
+                            <td style="max-width:320px">
+                                <div class="text-truncate" title="@e.ErrorMessage">@e.ErrorMessage</div>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="small text-muted">
+            Total: <b>@total</b> — Página <b>@(page)</b> / <b>@pages</b> — @size por página
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="#" class="btn btn-outline-secondary btn-sm @(page <= 1 ? "disabled" : "")" data-page="@(page-1)">
+                Anterior
+            </a>
+            <a href="#" class="btn btn-outline-secondary btn-sm @(page >= pages ? "disabled" : "")" data-page="@(page+1)">
+                Próxima
+            </a>
+        </div>
+    </div>
+</div>

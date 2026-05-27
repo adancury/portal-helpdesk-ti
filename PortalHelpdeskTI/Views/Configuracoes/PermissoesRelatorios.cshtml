@@ -1,0 +1,692 @@
+﻿@model PortalHelpdeskTI.ViewModels.Permissoes.RelatoriosPermissoesVm
+@{
+    var embed = (ViewData["Embed"] as bool?) == true;
+
+    var urlSalvarDept = Url.Action("SalvarPermissoesRelatoriosDept", "Configuracoes", new { embed = embed ? 1 : (int?)null })
+        ?? "/Configuracoes/SalvarPermissoesRelatoriosDept";
+
+    var urlPermissoes = Url.Action("PermissoesRelatorios", "Configuracoes", new { embed = embed ? 1 : (int?)null })
+        ?? "/Configuracoes/PermissoesRelatorios";
+
+    var urlSalvarUsuario = Url.Action("SalvarPermissoesRelatoriosUsuario", "Configuracoes", new { embed = embed ? 1 : (int?)null })
+        ?? "/Configuracoes/SalvarPermissoesRelatoriosUsuario";
+
+    var urlSalvarCatalogo = Url.Action("SalvarRelatorioCatalogo", "Configuracoes", new { embed = embed ? 1 : (int?)null })
+        ?? "/Configuracoes/SalvarRelatorioCatalogo";
+
+    var urlDesativarCatalogo = Url.Action("DesativarRelatorioCatalogo", "Configuracoes", new { embed = embed ? 1 : (int?)null })
+        ?? "/Configuracoes/DesativarRelatorioCatalogo";
+
+    var deptCols = Model.Departamentos.OrderBy(d => d.Nome).ToList();
+    var relRows = Model.Relatorios; // ativos (matriz)
+    var catalogoRows = Model.Catalogo
+        ?? new List<PortalHelpdeskTI.ViewModels.Permissoes.RelatoriosPermissoesVm.CatalogoItemVm>();
+}
+
+<div class="card shadow-sm rounded-4 overflow-hidden">
+
+    <!-- Header padrão do cadastro (azul) -->
+    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2 fw-semibold">
+            <i class="bi bi-shield-lock"></i>
+            <span>Permissões de Relatórios</span>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-dark bg-opacity-50">
+                Selecionados: <span id="permCount">0</span>
+            </span>
+            <span class="badge bg-dark bg-opacity-50">Deptos: @deptCols.Count</span>
+            <span class="badge bg-dark bg-opacity-50">Relatórios (ativos): @relRows.Count</span>
+            <span class="badge bg-dark bg-opacity-50">Catálogo: @catalogoRows.Count</span>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+
+        <!-- Abas -->
+        <div class="px-3 pt-3">
+            <ul class="nav nav-tabs" id="tabsPerm" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabDept" type="button" role="tab">
+                        Por Departamento (padrão)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabUser" type="button" role="tab">
+                        Por Usuário (override)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCat" type="button" role="tab">
+                        Catálogo
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="tab-content p-3">
+
+            <!-- ===================================================== -->
+            <!-- TAB: Departamento -->
+            <!-- ===================================================== -->
+            <div class="tab-pane fade show active" id="tabDept" role="tabpanel">
+
+                <!-- Controles (padrão do cadastro: faixa acima da tabela) -->
+                <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+                    <div class="flex-grow-1" style="min-width:260px;">
+                        <label class="form-label mb-1">Buscar relatório</label>
+                        <input id="permSearch" class="form-control form-control-sm" placeholder="Ex: comissão, ruptura, produtos..." />
+                    </div>
+
+                    <div style="min-width:260px;">
+                        <label class="form-label mb-1">Filtrar departamentos (colunas)</label>
+                        <select id="deptFilter" class="form-select form-select-sm">
+                            <option value="ALL" selected>Todos</option>
+                            @foreach (var d in deptCols)
+                            {
+                                <option value="@d.Id">@d.Nome</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="ms-auto d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAllOn">
+                            <i class="bi bi-check2-square me-1"></i> Marcar tudo
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAllOff">
+                            <i class="bi bi-square me-1"></i> Desmarcar tudo
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalCopyDept">
+                            <i class="bi bi-copy me-1"></i> Copiar permissões (Depto → Depto)
+                        </button>
+                    </div>
+                </div>
+
+                <form method="post" action="@urlSalvarDept" class="js-perm-form" id="formDeptPerms">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="embed" value="@(embed ? "true" : "false")" />
+
+                    <!-- Mesmo padrão do cadastro: table-responsive + table-sm mb-0 -->
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle" id="permTable">
+                            <thead>
+                                <tr>
+                                    <th style="min-width:320px;">
+                                        Relatório
+                                        <div class="text-body-secondary small">Key</div>
+                                    </th>
+
+                                    @foreach (var d in deptCols)
+                                    {
+                                        <th class="dept-col text-center" data-deptid="@d.Id" style="min-width:120px;">
+                                            <div class="fw-semibold">@d.Nome</div>
+                                            <div class="d-flex justify-content-center gap-1 mt-1">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" title="Marcar coluna" data-col-on="@d.Id">
+                                                    <i class="bi bi-check2"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" title="Desmarcar coluna" data-col-off="@d.Id">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        </th>
+                                    }
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @{
+                                    var permIdx = 0;
+                                }
+
+                                @for (int i = 0; i < relRows.Count; i++)
+                                {
+                                    var r = relRows[i];
+                                    var rowKeyUpper = (r.Key ?? "").Trim().ToUpperInvariant();
+                                    var rowTitleLower = (r.Titulo ?? "").ToLowerInvariant();
+
+                                    <tr class="perm-row" data-rowtitle="@rowTitleLower" data-rowkey="@rowKeyUpper">
+                                        <td>
+                                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                                <div>
+                                                    <div class="fw-semibold">@r.Titulo</div>
+                                                    <div class="text-body-secondary small">@r.Key</div>
+                                                </div>
+
+                                                <div class="d-flex gap-1">
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" title="Marcar linha" data-row-on="@rowKeyUpper">
+                                                        <i class="bi bi-check2"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" title="Desmarcar linha" data-row-off="@rowKeyUpper">
+                                                        <i class="bi bi-x"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        @foreach (var d in deptCols)
+                                        {
+                                            var dictKey = $"{d.Id}|{rowKeyUpper}";
+                                            var checkedVal = Model.DeptPerms.ContainsKey(dictKey) ? Model.DeptPerms[dictKey] : false;
+
+                                            <td class="text-center dept-cell" data-deptid="@d.Id">
+                                                <input type="hidden" name="perms[@permIdx].DepartamentoId" value="@d.Id" />
+                                                <input type="hidden" name="perms[@permIdx].RelatorioKey" value="@rowKeyUpper" />
+
+                                                <input class="form-check-input perm-chk"
+                                                       type="checkbox"
+                                                       name="perms[@permIdx].PodeVer"
+                                                       value="true"
+                                                       data-deptid="@d.Id"
+                                                       data-relkey="@rowKeyUpper"
+                                                       @(checkedVal ? "checked" : "") />
+
+                                                <input type="hidden" name="perms[@permIdx].PodeVer" value="false" />
+                                            </td>
+
+                                            permIdx++;
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Footer padrão do cadastro: botão à direita -->
+                    <div class="d-flex justify-content-end mt-3">
+                        <button class="btn btn-success">
+                            <i class="bi bi-check2-circle me-1"></i> Salvar permissões por departamento
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Modal: Copy Dept -> Dept -->
+                <div class="modal fade" id="modalCopyDept" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content rounded-4">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Copiar permissões entre departamentos</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <label class="form-label">De (origem)</label>
+                                        <select class="form-select form-select-sm" id="copyFrom">
+                                            @foreach (var d in deptCols)
+                                            {
+                                                <option value="@d.Id">@d.Nome</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Para (destino)</label>
+                                        <select class="form-select form-select-sm" id="copyTo">
+                                            @foreach (var d in deptCols)
+                                            {
+                                                <option value="@d.Id">@d.Nome</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="alert alert-warning mb-0">
+                                            Isso copia o “marcado/desmarcado” de todos os relatórios da coluna origem para a coluna destino.
+                                            Depois clique em <b>Salvar</b>.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button class="btn btn-primary" type="button" id="btnCopyDept">
+                                    <i class="bi bi-copy me-1"></i> Copiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ===================================================== -->
+            <!-- TAB: Usuário -->
+            <!-- ===================================================== -->
+            <div class="tab-pane fade" id="tabUser" role="tabpanel">
+                <form method="get" action="@urlPermissoes" class="row g-2 align-items-end mb-3 js-perm-get">
+                    <div class="col-12 col-md-6 col-lg-5">
+                        <label class="form-label">Usuário</label>
+                        <select name="usuarioId" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">Selecione...</option>
+                            @foreach (var u in Model.Usuarios)
+                            {
+                                var sel = Model.UsuarioId.HasValue && Model.UsuarioId.Value == u.Id;
+                                <option value="@u.Id" selected="@(sel ? "selected" : null)">
+                                    @u.Nome (@(u.Departamento?.Nome ?? "Sem depto"))
+                                </option>
+                            }
+                        </select>
+
+                        @if (embed)
+                        {
+                            <input type="hidden" name="embed" value="1" />
+                        }
+                    </div>
+                </form>
+
+                @if (!Model.UsuarioId.HasValue)
+                {
+                    <div class="alert alert-warning">Selecione um usuário para configurar os overrides.</div>
+                }
+                else
+                {
+                    <form method="post" action="@urlSalvarUsuario" class="js-perm-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="usuarioId" value="@Model.UsuarioId.Value" />
+                        <input type="hidden" name="embed" value="@(embed ? "true" : "false")" />
+
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0 align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width:340px;">Relatório</th>
+                                        <th style="min-width:240px;">Permissão</th>
+                                        <th class="text-body-secondary">Obs.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < Model.Relatorios.Count; i++)
+                                    {
+                                        var r = Model.Relatorios[i];
+                                        Model.UserOverrides.TryGetValue(r.Key, out var v);
+                                        string current = v.HasValue ? (v.Value ? "1" : "0") : "";
+
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@r.Titulo</div>
+                                                <div class="text-body-secondary small">@r.Key</div>
+                                            </td>
+                                            <td>
+                                                <input type="hidden" name="perms[@i].RelatorioKey" value="@r.Key" />
+                                                <select class="form-select form-select-sm" name="perms[@i].Value">
+                                                    <option value="" selected="@(current == "" ? "selected" : null)">Padrão (Departamento)</option>
+                                                    <option value="1" selected="@(current == "1" ? "selected" : null)">Permitir</option>
+                                                    <option value="0" selected="@(current == "0" ? "selected" : null)">Negar</option>
+                                                </select>
+                                            </td>
+                                            <td class="text-body-secondary small">“Padrão” usa a regra do departamento do usuário.</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-3">
+                            <button class="btn btn-success">
+                                <i class="bi bi-check2-circle me-1"></i> Salvar overrides do usuário
+                            </button>
+                        </div>
+                    </form>
+                }
+            </div>
+
+            <!-- ===================================================== -->
+            <!-- TAB: Catálogo -->
+            <!-- ===================================================== -->
+            <div class="tab-pane fade" id="tabCat" role="tabpanel">
+
+                <div class="card shadow-sm rounded-4 overflow-hidden mb-3">
+                    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+                        <div class="fw-semibold"><i class="bi bi-journal-plus me-2"></i>Adicionar novo relatório</div>
+                        <div class="small opacity-75">Remover = desativar (não exclui do banco)</div>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="@urlSalvarCatalogo" class="js-perm-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="embed" value="@(embed ? "true" : "false")" />
+
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <label class="form-label">Key</label>
+                                    <input class="form-control form-control-sm" name="Key" placeholder="EX: DADOS_PRODUTOS" required />
+                                    <div class="text-body-secondary small">Será salvo em MAIÚSCULO.</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Departamento</label>
+                                    <input class="form-control form-control-sm" name="Departamento" placeholder="Comercial / RH / TI..." />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Título</label>
+                                    <input class="form-control form-control-sm" name="Titulo" required />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Ordem</label>
+                                    <input class="form-control form-control-sm" name="Ordem" type="number" value="0" />
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label">URL Visualizar</label>
+                                    <input class="form-control form-control-sm" name="UrlVisualizar" placeholder="~/Relatorios/Tempo  ou  /Relatorios/Tempo" />
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label">Descrição</label>
+                                    <input class="form-control form-control-sm" name="Descricao" />
+                                </div>
+
+                                <input type="hidden" name="Id" value="0" />
+                                <input type="hidden" name="Ativo" value="true" />
+                            </div>
+
+                            <div class="mt-3 d-flex justify-content-end">
+                                <button class="btn btn-primary btn-sm" type="submit">
+                                    <i class="bi bi-plus-circle me-1"></i> Adicionar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+                        <div class="fw-semibold"><i class="bi bi-list-check me-2"></i>Relatórios cadastrados</div>
+                        <div class="small opacity-75">Desativar remove do menu e da matriz</div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0 align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width:90px;">Status</th>
+                                        <th style="min-width:180px;">Key</th>
+                                        <th style="min-width:260px;">Título</th>
+                                        <th style="min-width:160px;">Departamento</th>
+                                        <th style="min-width:90px;">Ordem</th>
+                                        <th style="min-width:260px;">URL</th>
+                                        <th style="min-width:220px;" class="text-end">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var r in catalogoRows)
+                                    {
+                                        var formId = $"frmCat_{r.Id}";
+                                        var formDelId = $"frmCatDel_{r.Id}";
+
+                                        <tr class="@(r.Ativo ? "" : "table-secondary")">
+                                            <td>
+                                                <span class="badge @(r.Ativo ? "bg-success" : "bg-secondary")">
+                                                    @(r.Ativo ? "Ativo" : "Inativo")
+                                                </span>
+                                            </td>
+
+                                            <td><code>@r.Key</code></td>
+
+                                            <td>
+                                                <form id="@formId" method="post" action="@urlSalvarCatalogo" class="js-perm-form">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="embed" value="@(embed ? "true" : "false")" />
+                                                    <input type="hidden" name="Id" value="@r.Id" />
+                                                    <input type="hidden" name="Key" value="@r.Key" />
+                                                    <input type="hidden" name="Ativo" value="@(r.Ativo ? "true" : "false")" />
+                                                    <input type="hidden" name="Descricao" value="@(r.Descricao ?? "")" />
+                                                </form>
+
+                                                <input class="form-control form-control-sm" form="@formId" name="Titulo" value="@r.Titulo" />
+                                            </td>
+
+                                            <td>
+                                                <input class="form-control form-control-sm" form="@formId" name="Departamento" value="@(r.Departamento ?? "")" />
+                                            </td>
+
+                                            <td>
+                                                <input class="form-control form-control-sm" form="@formId" name="Ordem" type="number" value="@r.Ordem" />
+                                            </td>
+
+                                            <td>
+                                                <input class="form-control form-control-sm" form="@formId" name="UrlVisualizar" value="@(r.UrlVisualizar ?? "")" />
+                                            </td>
+
+                                            <td class="text-end">
+                                                <button class="btn btn-outline-primary btn-sm" type="submit" form="@formId">
+                                                    <i class="bi bi-save me-1"></i> Salvar
+                                                </button>
+
+                                                <form id="@formDelId" method="post" action="@urlDesativarCatalogo" class="js-perm-form d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="embed" value="@(embed ? "true" : "false")" />
+                                                    <input type="hidden" name="id" value="@r.Id" />
+                                                </form>
+
+                                                <button class="btn btn-outline-danger btn-sm"
+                                                        type="submit"
+                                                        form="@formDelId"
+                                                        @((r.Ativo && r.Id > 0) ? "" : "disabled")>
+                                                    <i class="bi bi-slash-circle me-1"></i> Desativar
+                                                </button>
+                                            </td>
+                                        </tr>
+
+                                        @if (!string.IsNullOrWhiteSpace(r.Descricao))
+                                        {
+                                            <tr class="@(r.Ativo ? "" : "table-secondary")">
+                                                <td></td>
+                                                <td colspan="6" class="text-body-secondary small">
+                                                    <i class="bi bi-info-circle me-1"></i> @r.Descricao
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card-footer text-body-secondary small">
+                        Observação: a matriz de permissões (abas Departamento/Usuário) usa apenas relatórios <b>ativos</b>.
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        function updateCount() {
+            const n = document.querySelectorAll(".perm-chk:checked").length;
+            const el = document.getElementById("permCount");
+            if (el) el.textContent = n.toString();
+        }
+
+        function setAll(checked) {
+            document.querySelectorAll(".perm-chk").forEach(chk => chk.checked = checked);
+            updateCount();
+        }
+
+        function setColumn(deptId, checked) {
+            document.querySelectorAll('.perm-chk[data-deptid="' + deptId + '"]').forEach(chk => chk.checked = checked);
+            updateCount();
+        }
+
+        function setRow(relKey, checked) {
+            document.querySelectorAll('.perm-chk[data-relkey="' + relKey + '"]').forEach(chk => chk.checked = checked);
+            updateCount();
+        }
+
+        function applySearch() {
+            const q = (document.getElementById("permSearch")?.value || "").trim().toLowerCase();
+            document.querySelectorAll("#permTable tbody tr.perm-row").forEach(tr => {
+                const title = (tr.getAttribute("data-rowtitle") || "");
+                const key = (tr.getAttribute("data-rowkey") || "").toLowerCase();
+                const ok = !q || title.includes(q) || key.includes(q);
+                tr.style.display = ok ? "" : "none";
+            });
+        }
+
+        function applyDeptFilter() {
+            const v = document.getElementById("deptFilter")?.value || "ALL";
+            const showAll = (v === "ALL");
+
+            document.querySelectorAll(".dept-col").forEach(th => {
+                const id = th.getAttribute("data-deptid");
+                th.style.display = (showAll || id === v) ? "" : "none";
+            });
+            document.querySelectorAll(".dept-cell").forEach(td => {
+                const id = td.getAttribute("data-deptid");
+                td.style.display = (showAll || id === v) ? "" : "none";
+            });
+        }
+
+        document.getElementById("btnAllOn")?.addEventListener("click", () => setAll(true));
+        document.getElementById("btnAllOff")?.addEventListener("click", () => setAll(false));
+
+        document.querySelectorAll("[data-col-on]").forEach(btn => {
+            btn.addEventListener("click", () => setColumn(btn.getAttribute("data-col-on"), true));
+        });
+        document.querySelectorAll("[data-col-off]").forEach(btn => {
+            btn.addEventListener("click", () => setColumn(btn.getAttribute("data-col-off"), false));
+        });
+
+        document.querySelectorAll("[data-row-on]").forEach(btn => {
+            btn.addEventListener("click", () => setRow(btn.getAttribute("data-row-on"), true));
+        });
+        document.querySelectorAll("[data-row-off]").forEach(btn => {
+            btn.addEventListener("click", () => setRow(btn.getAttribute("data-row-off"), false));
+        });
+
+        document.getElementById("permSearch")?.addEventListener("input", () => {
+            window.clearTimeout(window._perm_t);
+            window._perm_t = window.setTimeout(applySearch, 120);
+        });
+
+        document.getElementById("deptFilter")?.addEventListener("change", applyDeptFilter);
+
+        document.addEventListener("change", function (e) {
+            if (e.target && e.target.classList && e.target.classList.contains("perm-chk")) {
+                updateCount();
+            }
+        });
+
+        document.getElementById("btnCopyDept")?.addEventListener("click", () => {
+            const from = document.getElementById("copyFrom")?.value;
+            const to = document.getElementById("copyTo")?.value;
+            if (!from || !to) return;
+
+            const fromMap = {};
+            document.querySelectorAll('.perm-chk[data-deptid="' + from + '"]').forEach(chk => {
+                const key = chk.getAttribute("data-relkey");
+                fromMap[key] = chk.checked;
+            });
+
+            document.querySelectorAll('.perm-chk[data-deptid="' + to + '"]').forEach(chk => {
+                const key = chk.getAttribute("data-relkey");
+                chk.checked = !!fromMap[key];
+            });
+
+            updateCount();
+
+            const modalEl = document.getElementById("modalCopyDept");
+            if (modalEl && window.bootstrap) {
+                const m = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                m.hide();
+            }
+        });
+
+        applyDeptFilter();
+        applySearch();
+        updateCount();
+    })();
+</script>
+
+@if (embed)
+{
+    <script>
+        (function () {
+            const $host = $("#conteudo-configuracoes");
+            if (!$host.length) return;
+
+            function ensureToastHost() {
+                if (document.getElementById("permToastHost")) return;
+                const host = document.createElement("div");
+                host.id = "permToastHost";
+                host.className = "toast-container position-fixed top-0 end-0 p-3";
+                host.style.zIndex = 2000;
+                document.body.appendChild(host);
+            }
+
+            function showToast(message, variant) {
+                ensureToastHost();
+                const id = "permToast_" + Date.now();
+                const cls = (variant === "danger")
+                    ? "text-bg-danger"
+                    : (variant === "warning" ? "text-bg-warning" : "text-bg-success");
+
+                const html =
+                    `<div id="${id}" class="toast align-items-center ${cls} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">${message}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>`;
+
+                const host = document.getElementById("permToastHost");
+                host.insertAdjacentHTML("beforeend", html);
+
+                const el = document.getElementById(id);
+                const toast = bootstrap.Toast.getOrCreateInstance(el, { delay: 2500 });
+                toast.show();
+                el.addEventListener("hidden.bs.toast", () => el.remove());
+            }
+
+            function getUidFromHost() {
+                const $sel = $host.find('select[name="usuarioId"]');
+                return ($sel.length ? ($sel.val() || "") : "");
+            }
+
+            function reloadPerms(uid) {
+                const baseReload = "@(Url.Action("PermissoesRelatorios", "Configuracoes") ?? "/Configuracoes/PermissoesRelatorios")";
+                const reload = baseReload + "?embed=1" + (uid ? ("&usuarioId=" + encodeURIComponent(uid)) : "");
+                return $.get(reload).done(html => $host.html(html));
+            }
+
+            $host.off("submit.perm", "form.js-perm-form").on("submit.perm", "form.js-perm-form", function (e) {
+                e.preventDefault();
+                const $form = $(this);
+                const url = $form.attr("action");
+                const data = $form.serialize();
+                const uid = getUidFromHost();
+
+                $host.html('<div class="text-center my-4"><div class="spinner-border" role="status"></div></div>');
+
+                $.post(url, data)
+                    .done(function (resp) {
+                        let msg = "Salvo com sucesso.";
+                        if (resp && typeof resp === "object" && resp.message) msg = resp.message;
+                        showToast(msg, "success");
+                        reloadPerms(uid);
+                    })
+                    .fail(function (xhr) {
+                        showToast("Erro ao salvar (" + xhr.status + ").", "danger");
+                        $host.html('<div class="alert alert-danger">Erro ao salvar: ' + xhr.status + '</div>');
+                        console.error(xhr.responseText);
+                    });
+            });
+
+            $host.off("submit.permget", "form.js-perm-get").on("submit.permget", "form.js-perm-get", function (e) {
+                e.preventDefault();
+                const base = $(this).attr("action");
+                const sep = base.indexOf("?") >= 0 ? "&" : "?";
+                const url = base + sep + $(this).serialize();
+
+                $host.html('<div class="text-center my-4"><div class="spinner-border" role="status"></div></div>');
+                $.get(url)
+                    .done(html => $host.html(html))
+                    .fail(function (xhr) {
+                        showToast("Erro ao carregar (" + xhr.status + ").", "danger");
+                        $host.html('<div class="alert alert-danger">Erro ao carregar: ' + xhr.status + '</div>');
+                        console.error(xhr.responseText);
+                    });
+            });
+        })();
+    </script>
+}

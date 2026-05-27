@@ -1,0 +1,329 @@
+﻿@model List<PortalHelpdeskTI.Models.TipoChamado>
+
+@{
+    if (ViewContext.HttpContext.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+    {
+        Layout = null;
+    }
+    else
+    {
+        Layout = "~/Views/Shared/_Layout.cshtml";
+    }
+}
+
+@Html.AntiForgeryToken()
+<link rel="stylesheet" href="~/css/usuarios.css" />
+
+<div class="card" style="margin-top: 0 !important;">
+    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-tags-fill me-2"></i> Cadastro de Categorias</span>
+        <button class="btn btn-sm btn-light text-primary" onclick="adicionarNovaLinha()">
+            <i class="bi bi-plus"></i> Novo
+        </button>
+    </div>
+
+    <div class="card-body">
+        <!-- Barra de busca -->
+        <form id="formBuscaCategorias" method="get" class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+            <input type="text" name="filtro" class="form-control form-control-sm" placeholder="Filtrar categorias..." style="width: 250px;" />
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-search"></i> Buscar
+            </button>
+        </form>
+
+        <!-- Grid com rolagem -->
+        <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+            <table class="table table-bordered table-striped table-sm align-middle">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th style="width: 20%">Tipo de Chamado</th>
+                        <th style="width: 25%">Categoria</th>
+                        <th style="width: 25%">Subcategoria</th>
+                        <th style="width: 30%" class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCategorias">
+                    @await Html.PartialAsync("_GridCategorias", Model)
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    function editarLinhaCompleta(botao) {
+        const tr = botao.closest("tr");
+        const id = tr.getAttribute("data-id");
+
+        const tipo = tr.querySelector(".tipo")?.innerText.trim() ?? "";
+        const categoria = tr.querySelector(".categoria")?.innerText.trim() ?? "";
+        const subcategoria = tr.querySelector(".subcategoria")?.innerText.trim() ?? "";
+
+        // Armazena os valores originais em atributos data-* para poder restaurar no "Cancelar"
+        tr.dataset.tipoOriginal = tipo;
+        tr.dataset.categoriaOriginal = categoria;
+        tr.dataset.subcategoriaOriginal = subcategoria;
+
+        tr.innerHTML = `
+            <td><input class="form-control form-control-sm" name="tipoEdit" value="${tipo}" /></td>
+            <td><input class="form-control form-control-sm" name="categoriaEdit" value="${categoria}" /></td>
+            <td><input class="form-control form-control-sm" name="subcategoriaEdit" value="${subcategoria}" /></td>
+            <td class="text-center">
+                <div class="d-inline-flex gap-1">
+                    <button class="btn btn-sm btn-success" title="Salvar" onclick="salvarEdicaoLinha(this, ${id})">
+                        <i class="bi bi-check"></i>
+                    </button>
+                    <button class="btn btn-sm btn-secondary" title="Cancelar" onclick="cancelarEdicaoLinha(this)">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            </td>`;
+    }
+
+    function cancelarEdicaoLinha(botao) {
+        const tr = botao.closest("tr");
+        const id = tr.getAttribute("data-id");
+
+        const tipo = tr.dataset.tipoOriginal ?? "N/A";
+        const categoria = tr.dataset.categoriaOriginal ?? "N/A";
+        const subcategoria = tr.dataset.subcategoriaOriginal ?? "N/A";
+
+        tr.innerHTML = `
+            <td class="tipo">${tipo}</td>
+            <td class="categoria">${categoria}</td>
+            <td class="subcategoria">${subcategoria}</td>
+            <td class="text-center">
+                <div class="d-inline-flex gap-1">
+                    <button class="btn btn-sm btn-warning btn-editar-categoria" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <form method="post" action="/Configuracoes/ExcluirCategoria/${id}" style="display:inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-danger" title="Excluir" onclick="return confirm('Confirma exclusão?')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </td>`;
+
+        ativarEventosCategorias(); // Reaplica os eventos do botão "Editar"
+    }
+
+    function cancelarNovaLinha(botao) {
+        const tr = botao.closest("tr");
+        tr.remove();
+    }
+
+    function salvarEdicaoLinha(botao, id) {
+        const tr = botao.closest("tr");
+        const tipoNome = tr.querySelector("[name='tipoEdit']").value.trim();
+        const categoriaNome = tr.querySelector("[name='categoriaEdit']").value.trim();
+        const subcategoriaNome = tr.querySelector("[name='subcategoriaEdit']").value.trim();
+
+        if (!tipoNome || !categoriaNome || !subcategoriaNome) {
+            alert("Preencha todos os campos.");
+            return;
+        }
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+        fetch('/Configuracoes/SalvarEdicaoCompleta', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': token
+            },
+            body: JSON.stringify({
+                Id: id,
+                TipoNome: tipoNome,
+                CategoriaNome: categoriaNome,
+                SubcategoriaNome: subcategoriaNome
+            })
+        })
+        .then(res => {
+            if (res.ok) {
+                atualizarTabelaCategorias(); // Atualiza apenas a grid
+            } else {
+                alert("Erro ao salvar alterações.");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Erro inesperado ao salvar.");
+        });
+    }
+
+    function salvarNovaLinha(botao) {
+        const tr = botao.closest("tr");
+        const tipoNome = tr.querySelector("[name='tipoNovo']").value.trim();
+        const categoriaNome = tr.querySelector("[name='categoriaNovo']").value.trim();
+        const subcategoriaNome = tr.querySelector("[name='subcategoriaNovo']").value.trim();
+
+        if (!tipoNome || !categoriaNome || !subcategoriaNome) {
+            alert("Preencha todos os campos.");
+            return;
+        }
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+        fetch('/Configuracoes/AdicionarCategoria', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': token
+            },
+            body: JSON.stringify({
+                TipoNome: tipoNome,
+                CategoriaNome: categoriaNome,
+                SubcategoriaNome: subcategoriaNome
+            })
+        })
+        .then(async res => {
+            if (res.ok) {
+                atualizarTabelaCategorias();
+            } else if (res.status === 409) {
+                const msg = await res.text();
+                alert(msg || "Subcategoria já existe.");
+            } else {
+                const msg = await res.text();
+                alert("Erro ao adicionar nova categoria: " + msg);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Erro inesperado ao adicionar.");
+        });
+    }
+
+    function atualizarTabelaCategorias() {
+        fetch("/Configuracoes/GridCategorias", {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const novaContainer = doc.querySelector('.table-responsive');
+            const atual = document.querySelector('.table-responsive');
+            if (novaContainer && atual) {
+                atual.innerHTML = novaContainer.innerHTML;
+                ativarEventosCategorias();
+            }
+        });
+    }
+
+    function handleClickEditar(event) {
+        const botao = event.currentTarget;
+        editarLinhaCompleta(botao);
+    }
+
+    function ativarEventosCategorias() {
+        const botoes = document.querySelectorAll(".btn-editar-categoria");
+        botoes.forEach(botao => {
+            botao.removeEventListener("click", handleClickEditar);
+            botao.addEventListener("click", handleClickEditar);
+        });
+    }
+
+    function ativarBusca() {
+        const form = document.getElementById("formBuscaCategorias");
+        if (form && !form.classList.contains("handler-aplicado")) {
+            form.classList.add("handler-aplicado");
+
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+                const filtro = form.querySelector("input[name='filtro']").value;
+
+                fetch(`/Configuracoes/Categorias?filtro=${encodeURIComponent(filtro)}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const novaContainer = doc.querySelector('.container, .card');
+                    const atual = document.querySelector('.container, .card');
+                    if (novaContainer && atual) {
+                        atual.innerHTML = novaContainer.innerHTML;
+                        ativarBusca();
+                        ativarEventosCategorias();
+                    }
+                });
+            });
+        }
+    }
+
+    // Executa imediatamente (funciona mesmo via AJAX)
+    ativarBusca();
+    ativarEventosCategorias();
+
+    function adicionarNovaLinha() {
+        // Se já existe uma linha de criação, não adicionar outra
+        if (document.querySelector('.linha-nova-categoria')) return;
+
+        const tbody = document.getElementById("tabelaCategorias");
+        const novaLinha = document.createElement("tr");
+        novaLinha.classList.add("linha-nova-categoria");
+
+        novaLinha.innerHTML = `
+            <td><input class="form-control form-control-sm" name="tipoNovo" placeholder="Novo tipo..." /></td>
+            <td><input class="form-control form-control-sm" name="categoriaNovo" placeholder="Nova categoria..." /></td>
+            <td><input class="form-control form-control-sm" name="subcategoriaNovo" placeholder="Nova subcategoria..." /></td>
+            <td class="text-center">
+                <div class="d-inline-flex gap-1">
+                    <button class="btn btn-sm btn-success" title="Salvar" onclick="salvarNovaLinha(this)">
+                        <i class="bi bi-check"></i>
+                    </button>
+                    <button class="btn btn-sm btn-secondary" title="Cancelar" onclick="cancelarNovaLinha(this)">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+
+        tbody.prepend(novaLinha);
+    }
+
+    function excluirCategoria(id) {
+        if (!confirm("Confirma exclusão da categoria?")) return;
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+        fetch(`/Configuracoes/ExcluirCategoria/${id}`, {
+            method: 'POST',
+            headers: {
+                'RequestVerificationToken': token
+            }
+        })
+        .then(res => {
+            if (res.ok) {
+                atualizarTabelaCategorias(); // já está pronto
+            } else {
+                return res.text().then(msg => {
+                    alert("Erro ao excluir categoria: " + msg);
+                });
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Erro inesperado ao excluir.");
+        });
+    }
+    function excluirSubcategoria(id) {
+        if (!confirm("Deseja excluir esta subcategoria?")) return;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+        fetch(`/Configuracoes/ExcluirSubcategoria/${id}`, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': token }
+        })
+        .then(res => {
+            if (res.ok) atualizarTabelaCategorias();
+            else return res.text().then(msg => alert(msg));
+        });
+    }
+
+
+</script>
+
+

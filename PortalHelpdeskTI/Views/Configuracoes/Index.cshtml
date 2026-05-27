@@ -1,0 +1,176 @@
+﻿@{
+    ViewData["Title"] = "Configurações";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    #conteudo-configuracoes {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+    }
+</style>
+
+<div class="container-fluid">
+    <h2 class="mb-4">Configurações</h2>
+
+    <div class="row flex-grow-1" style="min-height: 0;">
+        <!-- Menu lateral -->
+        <div class="col-md-3">
+            <div class="menu-lateral-sticky h-100">
+
+                <div class="menu-configuracoes">
+
+                    <!-- Usuários -->
+                    <a href="#"
+                       data-url="/Usuarios/ListarUsuario"
+                       class="list-group-item list-group-item-action">
+                        <i class="bi bi-people me-1"></i> Usuários
+                    </a>
+
+                    <!-- Categorias -->
+                    <a href="#"
+                       data-url="/Configuracoes/Categorias"
+                       class="list-group-item list-group-item-action">
+                        <i class="bi bi-tags-fill me-1"></i> Categorias
+                    </a>
+
+                    <!-- Servidor de Email -->
+                    <a href="#"
+                       data-url="/Configuracoes/ServidorEmail"
+                       class="list-group-item list-group-item-action">
+                        <i class="bi bi-envelope me-1"></i> Servidor de Email
+                    </a>
+
+                    <a href="/Inventario"
+                       class="list-group-item list-group-item-action">
+                        <i class="bi bi-pc-display-horizontal me-1"></i> Inventário de Equipamentos
+                    </a>
+
+                    <!-- Admin Quizzes -->
+                    <a href="#"
+                       data-url="/Admin/Quizzes?embed=1"
+                       class="list-group-item list-group-item-action">
+                        <i class="bi bi-ui-checks-grid me-1"></i> Admin Quizzes
+                    </a>
+
+                    <!-- ===== Relatórios ===== -->
+                    <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#submenu-relatorios"
+                            aria-expanded="false"
+                            aria-controls="submenu-relatorios">
+                        <span>
+                            <i class="bi bi-bar-chart-line me-1"></i> Relatórios
+                        </span>
+                        <i class="bi bi-chevron-down small"></i>
+                    </button>
+
+                    <!-- Submenu Relatórios -->
+                    <div id="submenu-relatorios" class="collapse submenu">
+
+                        <!-- Relatório de Horas -->
+                        <a href="#"
+                           data-url="/Chamados/RelatorioTempo?embed=1"
+                           class="list-group-item list-group-item-action">
+                            <i class="bi bi-stopwatch me-1"></i> Relatório de horas
+                        </a>
+
+                        <!-- ⭐ NOVO: Permissões de Relatórios -->
+                        <a href="#"
+                           data-url="/Configuracoes/PermissoesRelatorios?embed=1"
+                           class="list-group-item list-group-item-action">
+                            <i class="bi bi-shield-lock me-1"></i> Permissões de Relatórios
+                        </a>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteúdo principal -->
+        <div class="col-md-9">
+            <div id="conteudo-configuracoes" class="conteudo-configuracoes p-3">
+                <div class="alert alert-info">
+                    Selecione uma opção no menu à esquerda.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function inicializarEventosAdminQuizzes() {
+            const $container = $('#conteudo-configuracoes');
+            const spinner = '<div class="text-center my-4"><div class="spinner-border" role="status"></div></div>';
+
+            // Links internos
+            $container.off('click.adminQuizzes', 'a[href*="/Admin/Quizzes"]')
+                .on('click.adminQuizzes', 'a[href*="/Admin/Quizzes"]', function (e) {
+                    const href = $(this).attr('href') || '';
+                    if (href.startsWith('/Admin/Quizzes')) {
+                        e.preventDefault();
+                        $container.html(spinner);
+                        $.get(href).done(html => $container.html(html));
+                    }
+                });
+
+            // Forms internos
+            $container.off('submit.adminQuizzes', 'form[action*="/Admin/Quizzes"]')
+                .on('submit.adminQuizzes', 'form[action*="/Admin/Quizzes"]', function (e) {
+                    e.preventDefault();
+                    const $form = $(this);
+                    $container.html(spinner);
+
+                    $.ajax({
+                        url: $form.attr('action'),
+                        method: $form.attr('method') || 'POST',
+                        data: $form.serialize()
+                    }).done(html => $container.html(html));
+                });
+        }
+
+        $(document).ready(function () {
+
+            $('.menu-configuracoes a').on('click', function (e) {
+                e.preventDefault();
+
+                const url = $(this).data('url');
+                if (!url) return;
+
+                $('.menu-configuracoes a').removeClass('active');
+                $(this).addClass('active');
+
+                const parentCollapse = $(this).closest('.collapse');
+                if (parentCollapse.length && !parentCollapse.hasClass('show')) {
+                    bootstrap.Collapse.getOrCreateInstance(parentCollapse[0]).show();
+                }
+
+                $('#conteudo-configuracoes').html(
+                    '<div class="text-center my-4"><div class="spinner-border" role="status"></div></div>'
+                );
+
+                $.get(url)
+                    .done(function (data) {
+                        $('#conteudo-configuracoes').html(data);
+
+                        if (url.includes('/Usuarios/')) {
+                            window.ativarEventosUsuarios?.();
+                        }
+
+                        if (url.includes('/Admin/Quizzes')) inicializarEventosAdminQuizzes();
+                    })
+                    .fail(function (xhr) {
+                        $('#conteudo-configuracoes').html(
+                            '<div class="alert alert-danger">Erro ao carregar conteúdo.</div>'
+                        );
+                        console.error(xhr.responseText);
+                    });
+            });
+
+        });
+    </script>
+}

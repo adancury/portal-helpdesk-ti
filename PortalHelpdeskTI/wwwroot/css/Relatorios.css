@@ -1,0 +1,205 @@
+﻿/* ====== Container Azul e Corpo ====== */
+.card-relatorio {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bs-body-bg, #fff);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.card-relatorio-header {
+    background-color: #007bff;
+    color: #fff;
+    font-weight: 500;
+    padding: 0.6rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+}
+
+[data-bs-theme="dark"] .card-relatorio-header,
+html.dark .card-relatorio-header {
+    background-color: #0d6efd;
+}
+
+.card-relatorio-body {
+    padding: 1rem;
+}
+
+/* ====== Scroll e Cabeçalho fixo ====== */
+.scroll-tabela {
+    max-height: 65vh;
+    overflow: auto;
+}
+
+.tbl-relatorio thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--bs-table-bg, var(--bs-body-bg, #fff));
+}
+
+/* === BLOCO PRINCIPAL === */
+.relatorio-tempo {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+    /* === TOOLBAR FIXA === */
+    .relatorio-tempo .relatorio-toolbar {
+        flex: 0 0 auto;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: .5rem;
+    }
+
+    /* === ÁREA QUE ROLA === */
+    .relatorio-tempo .relatorio-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: .5rem;
+    }
+
+    /* === TABELA === */
+    .relatorio-tempo table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0;
+    }
+
+    /* === CABEÇALHO GRUDADO === */
+    .relatorio-tempo thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--surface);
+        box-shadow: 0 2px 3px rgba(0,0,0,0.08);
+    }
+
+    /* === CORPO ROLÁVEL === */
+    .relatorio-tempo tbody {
+        display: table-row-group;
+    }
+
+/* === DARK MODE === */
+[data-bs-theme="dark"] .relatorio-tempo thead th,
+html.dark .relatorio-tempo thead th {
+    background: color-mix(in oklab, var(--bs-body-bg,#0b0b0b) 92%, #111 8%);
+    box-shadow: 0 1px 0 rgba(255,255,255,.06);
+}
+.relatorio-tempo .relatorio-scroll {
+    max-height: 65vh; /* altura limite */
+}
+.scroll-tabela {
+    max-height: 65vh; /* altura visível */
+    overflow-y: auto; /* rola só o corpo */
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: .5rem;
+}
+
+    .scroll-tabela table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .scroll-tabela thead th {
+        position: sticky;
+        top: 0;
+        background-color: var(--surface);
+        z-index: 10;
+        box-shadow: 0 4px 4px rgba(0,0,0,0.2);
+    }
+/* ====== Container igual “Cadastro de Categorias” ====== */
+.board {
+    border-radius: .5rem;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,.08);
+    background: var(--bs-body-bg, #fff);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.08);
+}
+
+/* Faixa azul do topo */
+.board-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+    padding: .65rem 1rem;
+    background: #0d6efd; /* igual header azul do módulo */
+    color: #fff;
+}
+
+.board-title {
+    font-weight: 600;
+}
+
+/* Filtros embutidos no header */
+.board-filters .form-label {
+    color: rgba(255,255,255,.85) !important;
+}
+
+.board-input {
+    background: rgba(255,255,255,.12) !important;
+    color: #fff !important;
+    border-color: rgba(255,255,255,.35) !important;
+}
+
+    .board-input::placeholder {
+        color: rgba(255,255,255,.65);
+    }
+
+    .board-input:focus {
+        box-shadow: 0 0 0 .2rem rgba(255,255,255,.25);
+    }
+
+/* Corpo branco/escuro com borda, como a grid de Categorias */
+.board-body {
+    padding: 0; /* a tabela já tem seu próprio respiro */
+    background: var(--bs-body-bg, #fff);
+    border-top: 1px solid rgba(0,0,0,.06);
+}
+
+/* Área que rola só o corpo da tabela */
+.tbl-scroll {
+    max-height: 65vh;
+    overflow: auto;
+}
+
+/* Thead fixo */
+.tbl-relatorio thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--bs-table-bg, var(--bs-body-bg, #fff));
+    box-shadow: 0 1px 0 rgba(0,0,0,.06);
+}
+
+/* (opcional) primeiras células mais fortes como no grid de categorias */
+.tbl-relatorio th {
+    font-weight: 600;
+}
+
+/* Dark mode */
+[data-bs-theme="dark"] .board {
+    border-color: rgba(255,255,255,.08);
+    background: color-mix(in oklab, var(--bs-body-bg,#0b0b0b) 96%, #000 4%);
+}
+
+[data-bs-theme="dark"] .board-header {
+    background: #0d6efd;
+}
+
+[data-bs-theme="dark"] .tbl-relatorio thead th {
+    background: color-mix(in oklab, var(--bs-body-bg,#0b0b0b) 90%, #111 10%);
+    box-shadow: 0 1px 0 rgba(255,255,255,.06);
+}

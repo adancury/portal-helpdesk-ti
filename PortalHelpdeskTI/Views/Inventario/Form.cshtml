@@ -1,0 +1,204 @@
+@model PortalHelpdeskTI.Models.Inventario.EquipamentoInventario
+
+@{
+    ViewData["Title"] = Model.Id == 0 ? "Novo Equipamento" : "Editar Equipamento";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    static string FormatarTamanho(long bytes)
+    {
+        if (bytes >= 1024 * 1024)
+            return $"{bytes / 1024d / 1024d:0.##} MB";
+
+        if (bytes >= 1024)
+            return $"{bytes / 1024d:0.##} KB";
+
+        return $"{bytes} B";
+    }
+}
+
+<div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+    <h2 class="mb-0">@ViewData["Title"]</h2>
+    <a class="btn btn-outline-secondary" asp-action="Index">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<form asp-action="Salvar" method="post" enctype="multipart/form-data" class="card">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="CriadoEm" />
+    <input type="hidden" asp-for="UltimaDescobertaEm" />
+
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label asp-for="Tipo" class="form-label">Tipo</label>
+                <select asp-for="Tipo" asp-items="ViewBag.Tipos" class="form-select"></select>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Status" class="form-label">Status</label>
+                <select asp-for="Status" asp-items="ViewBag.Status" class="form-select"></select>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="OrigemCadastro" class="form-label">Origem</label>
+                <select asp-for="OrigemCadastro" asp-items="ViewBag.Origens" class="form-select"></select>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Patrimonio" class="form-label">Patrimônio</label>
+                <input asp-for="Patrimonio" class="form-control" />
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="NomeEquipamento" class="form-label">Nome do equipamento</label>
+                <input asp-for="NomeEquipamento" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Hostname" class="form-label">Hostname</label>
+                <input asp-for="Hostname" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="SistemaOperacional" class="form-label">Sistema operacional</label>
+                <input asp-for="SistemaOperacional" class="form-control" />
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Fabricante" class="form-label">Fabricante</label>
+                <input asp-for="Fabricante" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Modelo" class="form-label">Modelo</label>
+                <input asp-for="Modelo" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="NumeroSerie" class="form-label">Número de série</label>
+                <input asp-for="NumeroSerie" class="form-control" />
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="EnderecoIp" class="form-label">IP</label>
+                <input asp-for="EnderecoIp" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="EnderecoMac" class="form-label">MAC</label>
+                <input asp-for="EnderecoMac" class="form-control" placeholder="AA:BB:CC:DD:EE:FF" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Localizacao" class="form-label">Localização</label>
+                <input asp-for="Localizacao" class="form-control" placeholder="Ex.: Administrativo, Loja, CD..." />
+            </div>
+        </div>
+
+        <hr />
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="ProprietarioUsuarioId" class="form-label">Proprietário cadastrado no portal</label>
+                <select asp-for="ProprietarioUsuarioId" asp-items="ViewBag.Usuarios" class="form-select">
+                    <option value="">Sem vínculo com usuário do portal</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ProprietarioNomeManual" class="form-label">Proprietário não cadastrado</label>
+                <input asp-for="ProprietarioNomeManual" class="form-control" placeholder="Nome do colaborador ou responsável" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ProprietarioEmailManual" class="form-label">E-mail do proprietário não cadastrado</label>
+                <input asp-for="ProprietarioEmailManual" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ProprietarioDepartamentoManual" class="form-label">Departamento do proprietário não cadastrado</label>
+                <input asp-for="ProprietarioDepartamentoManual" class="form-control" />
+            </div>
+            <div class="col-12">
+                <label asp-for="Observacoes" class="form-label">Observações</label>
+                <textarea asp-for="Observacoes" class="form-control" rows="4"></textarea>
+            </div>
+        </div>
+
+        <hr />
+
+        <div class="row g-3">
+            <div class="col-12">
+                <label for="anexos" class="form-label">Anexos</label>
+                <input type="file"
+                       id="anexos"
+                       name="anexos"
+                       class="form-control"
+                       multiple
+                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" />
+                <div class="form-text">Use para nota fiscal, termo de responsabilidade, comprovantes e documentos relacionados. Limite: 20 MB por arquivo.</div>
+            </div>
+
+            <div class="col-12">
+                <div class="border rounded p-3">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                        <strong>Anexos vinculados</strong>
+                        <span class="badge text-bg-secondary">@(Model.Anexos?.Count ?? 0)</span>
+                    </div>
+
+                    @if (Model.Anexos != null && Model.Anexos.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var anexo in Model.Anexos.OrderByDescending(a => a.CriadoEm))
+                            {
+                                <div class="list-group-item d-flex align-items-center justify-content-between gap-2">
+                                    <div class="min-w-0">
+                                        <div class="fw-semibold text-truncate">
+                                            <i class="bi bi-paperclip me-1"></i>@anexo.NomeOriginal
+                                        </div>
+                                        <div class="small text-muted">
+                                            @FormatarTamanho(anexo.TamanhoBytes) - @anexo.CriadoEm.ToString("dd/MM/yyyy HH:mm")
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-1 flex-shrink-0">
+                                        <a class="btn btn-sm btn-outline-primary" asp-action="BaixarAnexo" asp-route-id="@anexo.Id" title="Baixar">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-danger"
+                                                form="form-excluir-anexo-@anexo.Id"
+                                                title="Remover">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-muted small">Nenhum anexo vinculado a este equipamento.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-end gap-2">
+        <a class="btn btn-outline-secondary" asp-action="Index">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check2"></i> Salvar
+        </button>
+    </div>
+</form>
+
+@if (Model.Anexos != null)
+{
+    foreach (var anexo in Model.Anexos)
+    {
+        <form id="form-excluir-anexo-@anexo.Id"
+              asp-action="ExcluirAnexo"
+              method="post"
+              class="d-none"
+              onsubmit="return confirm('Remover este anexo?')">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@anexo.Id" />
+        </form>
+    }
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,684 @@
+﻿@inject Microsoft.Extensions.Configuration.IConfiguration Cfg
+@{
+    ViewData["Title"] = "Aprovações";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var showSl = bool.TryParse(Cfg["FeatureFlags:ShowServiceLayerStatus"], out var x) && x;
+}
+<link rel="stylesheet" href="~/css/tecnico-painel.css" />
+@{
+    var sapUser = ViewContext.HttpContext.Session.GetString("SAP_USERCODE");
+}
+@if (showSl && !string.IsNullOrWhiteSpace(sapUser))
+{
+    <div id="sl-banner" class="alert alert-info py-2 my-2 sl-service-status">
+        <strong>Service Layer:</strong> conectado como <code>@sapUser</code>.
+    </div>
+}
+<style>
+    #slLoginCard {
+        margin-inline: auto;
+    }
+
+    #pageWrap {
+        min-height: 65vh;
+        align-items: stretch; /* <-- garante largura cheia (título à esquerda) */
+        justify-content: center;
+    }
+
+    .sl-logged #pageWrap {
+        justify-content: flex-start;
+    }
+
+    .sl-logged #gridContainer {
+        margin-top: .75rem;
+    }
+    /* --- Acesso SL: proporções iguais ao login do Portal --- */
+    #slLoginCard {
+        width: 100%;
+        max-width: 560px; /* mesmo “gabarito” do portal */
+        border-radius: 1.25rem; /* 20px aprox. */
+    }
+
+        #slLoginCard .card-body {
+            padding: 2rem 2.25rem; /* respiro parecido */
+        }
+
+        /* avatar do topo no mesmo “peso visual” do portal */
+        #slLoginCard .avatar-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bs-body-tertiary-bg, rgba(255,255,255,.06));
+        }
+
+            #slLoginCard .avatar-circle img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transform: scale(1.06);
+            }
+
+        /* inputs mais altos (como no portal) */
+        #slLoginCard .form-floating > .form-control {
+            height: 56px; /* ~altura dos campos do portal */
+            padding-top: 1.25rem;
+            padding-bottom: .5rem;
+            font-size: 1rem;
+            border-radius: .7rem;
+        }
+
+        #slLoginCard .form-floating > label {
+            padding-top: .6rem;
+        }
+
+        /* botão cheio e alto como o portal */
+        #slLoginCard .btn-primary {
+            height: 52px;
+            font-weight: 600;
+            border-radius: .75rem;
+        }
+
+        /* espaçamento entre logo, título e formulário */
+        #slLoginCard .login-title {
+            margin-top: .25rem;
+        }
+
+        #slLoginCard .login-subtitle {
+            margin-top: .25rem;
+            margin-bottom: 1rem;
+        }
+
+    /* opcional: mantém a mesma largura em telas muito largas */
+    @@media (min-width: 1400px) {
+        #slLoginCard {
+            max-width: 560px;
+        }
+    }
+    /* Força a paginação das aprovações a ficar dentro do header do card */
+    #aprovacoes-pager-header .pagination {
+        position: static !important;
+        margin: 0;
+    }
+
+    #gridContainer .card-body {
+        position: relative;
+    }
+
+    #gridContainer.grid-loading #gridArea {
+        opacity: .45;
+        pointer-events: none;
+    }
+
+    #aprovacoes-grid-loading {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, .72);
+        backdrop-filter: blur(1px);
+    }
+
+    #gridContainer.grid-loading #aprovacoes-grid-loading {
+        display: flex;
+    }
+
+    .aprovacoes-loading-box {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        padding: .65rem .9rem;
+        border: 1px solid rgba(0, 0, 0, .08);
+        border-radius: .5rem;
+        background: #fff;
+        box-shadow: 0 .35rem 1rem rgba(0, 0, 0, .08);
+        font-size: .9rem;
+        color: #495057;
+    }
+</style>
+
+<div class="container mt-4">
+    <div id="pageWrap" class="d-flex flex-column align-items-stretch">
+        <div id="headerBar" class="d-flex w-100 align-items-center justify-content-start mb-2 @(string.IsNullOrWhiteSpace(sapUser) ? "d-none" : "")">
+            <h2 class="mb-0">Aprovações</h2>
+        </div>
+        @if (TempData["MensagemErro"] != null)
+        {
+            <div class="alert alert-danger">
+                @TempData["MensagemErro"]
+            </div>
+        }
+
+        <!-- Card de login do Service Layer -->
+        <div id="loginWrapper" class="d-flex justify-content-center">
+            <div id="slLoginCard" class="card mb-3 d-none shadow-sm rounded-4 mx-auto">
+                <div class="card-body p-4">
+                    <div class="text-center mb-3">
+                        <div class="mx-auto mb-2 avatar-circle">
+                            <img src="/images/sapb1icone.png" alt="SAP Business One">
+                        </div>
+                        <h6 class="mb-0 login-title">SAP Business One</h6>
+                        <div class="text-body-secondary small login-subtitle">Acesso ao Service Layer</div>
+                    </div>
+
+                    <form asp-action="LoginSL" method="post" class="vstack gap-3" id="form-sl"
+                          autocomplete="off" autocapitalize="none" spellcheck="false">
+                        @Html.AntiForgeryToken()
+
+                        <!-- Campos “isca” para capturar autofill de alguns browsers -->
+                        <input type="text" name="fake_user" autocomplete="username" tabindex="-1" style="position:absolute; left:-9999px; width:1px; height:1px;">
+                        <input type="password" name="fake_pass" autocomplete="new-password" tabindex="-1" style="position:absolute; left:-9999px; width:1px; height:1px;">
+
+                        <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+
+                        <div class="form-floating">
+                            <input type="text" name="sapUser" id="sapUser" class="form-control"
+                                   placeholder="Usuário SAP" required
+                                   autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="text">
+                            <label for="sapUser">Usuário SAP</label>
+                        </div>
+
+                        <div class="form-floating position-relative">
+                            <input type="password" name="sapPassword" id="sapPassword" class="form-control"
+                                   placeholder="Senha SAP" required
+                                   autocomplete="new-password">
+                            <label for="sapPassword">Senha SAP</label>
+
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
+                                    id="togglePass" aria-label="Mostrar/ocultar senha">
+                                <span id="eyeText">Mostrar</span>
+                            </button>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="true" id="lembrarUser">
+                                <label class="form-check-label small" for="lembrarUser">Lembrar usuário</label>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary w-100" type="submit" id="btnSubmit">
+                            <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="btnSpinner"></span>
+                            Entrar no Service Layer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid -->
+        <div id="gridContainer" class="card @(string.IsNullOrWhiteSpace(sapUser) ? "d-none" : "mt-2")">
+            <div class="card-header d-flex align-items-center justify-content-between gap-2 py-2">
+                <!-- Esquerda: filtro -->
+                <div class="input-group input-group-sm" style="max-width: 380px;">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            id="btn-aplicar-filtro">
+                        Filtrar
+                    </button>
+                    <input type="text"
+                           id="filtro-aprovacoes"
+                           class="form-control"
+                           placeholder="Nº documento ou criador do documento...">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            id="btn-limpar-filtro">
+                        Limpar
+                    </button>
+                </div>
+
+                <!-- Direita: paginação + Sair SL -->
+                <div class="d-flex align-items-center gap-2">
+                    <!-- ID novo e bem específico -->
+                    <div id="aprovacoes-pager-header"></div>
+
+                    <form asp-action="LogoutSL" method="post" class="d-inline mb-0">
+                        @Html.AntiForgeryToken()
+                        <button type="submit"
+                                class="btn btn-outline-secondary btn-sm text-nowrap"
+                                id="btnSairSL">
+                            Sair SL
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="gridArea" class="table-responsive p-0">
+                    <div class="p-3 text-muted">Carregando pendências…</div>
+                </div>
+                <div id="aprovacoes-grid-loading" aria-live="polite" aria-busy="true">
+                    <div class="aprovacoes-loading-box">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span>Carregando...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- /#pageWrap -->
+</div>   <!-- /.container -->
+<!-- Modal Detalhes -->
+<div class="modal fade" id="approvalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <!-- a partial _DetalhesAprovacao será injetada aqui -->
+        </div>
+    </div>
+</div>
+@{
+    var toastMsg = TempData["ToastMsg"] as string;
+    var toastTipo = TempData["ToastTipo"] as string; // "success" | "error" | etc.
+}
+
+<!-- Popup de feedback (mesmo padrão do login SL) -->
+<div id="popupMensagem" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-body text-center p-4">
+                <i class="bi bi-check-circle text-success display-4 mb-3"></i>
+                <h5 class="mb-2" id="popupMensagemTitulo">Sucesso</h5>
+                <p id="popupMensagemTexto">Solicitação aprovada com sucesso.</p>
+                <button type="button" class="btn btn-success mt-3 px-4" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        // Toggle mostrar/ocultar senha
+        (function () {
+            const input = document.getElementById('sapPassword');
+            const btn = document.getElementById('togglePass');
+            const txt = document.getElementById('eyeText');
+            if (!input || !btn || !txt) return;
+
+            btn.addEventListener('click', function () {
+                const show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                txt.textContent = show ? 'Ocultar' : 'Mostrar';
+                input.focus();
+            });
+        })();
+    </script>
+
+    <script>
+        // Lembrar usuário (localStorage) + spinner no submit
+        (function () {
+            const key = 'sl_last_user';
+            const form = document.getElementById('form-sl');
+            const user = document.getElementById('sapUser');
+            const chk = document.getElementById('lembrarUser');
+            const btn = document.getElementById('btnSubmit');
+            const spn = document.getElementById('btnSpinner');
+
+            if (user && chk) {
+                const saved = localStorage.getItem(key);
+                if (saved) {
+                    user.value = saved;
+                    chk.checked = true;
+                }
+
+                user.addEventListener('change', () => {
+                    if (chk.checked) localStorage.setItem(key, user.value || '');
+                });
+
+                chk.addEventListener('change', () => {
+                    if (chk.checked) {
+                        localStorage.setItem(key, user.value || '');
+                    } else {
+                        localStorage.removeItem(key);
+                    }
+                });
+            }
+
+            if (form && btn && spn) {
+                form.addEventListener('submit', function () {
+                    btn.disabled = true;
+                    spn.classList.remove('d-none');
+                });
+            }
+        })();
+    </script>
+
+    <!-- GRID + PAGINAÇÃO + DETALHES -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gridArea = document.getElementById('gridArea');
+            const slLoginCard = document.getElementById('slLoginCard');
+            const headerBar = document.getElementById('headerBar');
+            const gridContainer = document.getElementById('gridContainer');
+            const gridLoading = document.getElementById('aprovacoes-grid-loading');
+
+            // evita senha “pré-preenchida” por autofill
+            const pass = document.getElementById('sapPassword');
+            if (pass) pass.value = '';
+
+
+            if (!gridArea) {
+                console.error('gridArea não encontrado no DOM');
+                return;
+            }
+
+            let currentPage = 1;
+            let currentFilter = ''; // filtro atual
+
+            function setGridLoading(isLoading) {
+                gridContainer?.classList.toggle('grid-loading', isLoading);
+                gridLoading?.setAttribute('aria-hidden', isLoading ? 'false' : 'true');
+
+                if (isLoading) {
+                    gridArea.querySelectorAll('.pager-btn:not(:disabled)').forEach(btn => {
+                        btn.dataset.loadingDisabled = '1';
+                        btn.disabled = true;
+                    });
+                    return;
+                }
+
+                gridArea.querySelectorAll('.pager-btn[data-loading-disabled="1"]').forEach(btn => {
+                    btn.disabled = false;
+                    delete btn.dataset.loadingDisabled;
+                });
+            }
+
+            async function loadGrid(page, filtro) {
+                currentPage = page || 1;
+
+                // se veio filtro novo, atualiza o filtro atual
+                if (typeof filtro === 'string') {
+                    currentFilter = filtro;
+                }
+
+                try {
+                    setGridLoading(true);
+
+                    const qs = new URLSearchParams();
+                    qs.set('page', currentPage.toString());
+                    if (currentFilter) {
+                        qs.set('filtro', currentFilter); // nome do parâmetro na action
+                    }
+
+                    const resp = await fetch(`/Aprovacoes/Grid?${qs.toString()}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (!resp.ok) {
+                        const body = await resp.text();
+                        gridArea.innerHTML = `<div class="p-3 text-danger">Falha ao carregar pendências.</div>`;
+                        console.error('Falha /Aprovacoes/Grid', resp.status, body);
+                        return;
+                    }
+
+                    const html = await resp.text();
+                    const requiresLogin = html.includes('data-requires-sl-login="1"');
+
+                    if (requiresLogin) {
+                        // precisa logar: mostra card, oculta header e grid
+                        slLoginCard?.classList.remove('d-none');
+                        headerBar?.classList.add('d-none');
+                        gridContainer?.classList.add('d-none');
+                        gridArea.innerHTML = '';
+                        document.body.classList.remove('sl-logged');
+                    } else {
+                        // logado: esconde card e mostra header + grid
+                        slLoginCard?.classList.add('d-none');
+                        headerBar?.classList.remove('d-none');
+                        gridContainer?.classList.remove('d-none');
+                        gridArea.innerHTML = html;
+                        document.body.classList.add('sl-logged');
+                    }
+                } catch (e) {
+                    gridArea.innerHTML = '<div class="p-3 text-danger">Falha ao carregar pendências.</div>';
+                    console.error('Erro JS loadGrid', e);
+                } finally {
+                    setGridLoading(false);
+                }
+            }
+
+            // deixa disponível globalmente pro script do filtro
+            window.loadAprovacoesGrid = loadGrid;
+
+            // Paginação no rodapé da grid (botões « Anterior / Próxima »)
+            gridArea.addEventListener('click', (ev) => {
+                const btn = ev.target.closest('.pager-btn[data-page]');
+                if (!btn) return;
+                if (btn.disabled) return;
+
+                const p = parseInt(btn.dataset.page, 10);
+                if (!Number.isFinite(p) || p < 1) return;
+
+                ev.preventDefault();
+                // mantém o filtro atual
+                loadGrid(p);
+            });
+
+                    // Delegação: Aprovar / Rejeitar (botões com data-approve / data-reject)
+        gridArea.addEventListener('click', async (ev) => {
+            const btn = ev.target.closest('[data-approve],[data-reject]');
+            if (!btn) return;
+
+            ev.preventDefault();
+            if (btn.disabled) return;
+
+            const isApprove = btn.hasAttribute('data-approve');
+            const url = isApprove ? '/Aprovacoes/Aprovar' : '/Aprovacoes/Rejeitar';
+
+            btn.disabled = true;
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+            const body = new URLSearchParams();
+            body.set('__RequestVerificationToken', token);
+            body.set('id', btn.dataset.id ?? '');
+            body.set('obs', isApprove ? 'Aprovação via Portal Helpdesk' : 'Rejeição via Portal Helpdesk');
+
+            try {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                    },
+                    body: body.toString()
+                });
+
+                let payload = null;
+                try {
+                    payload = await resp.json();
+                } catch { }
+
+                if (!resp.ok) {
+                    const msgErro = payload?.message || 'Não foi possível processar a solicitação.';
+                    alert(msgErro);
+                    console.error('Falha na aprovação/rejeição', resp.status, payload);
+                    btn.disabled = false;
+                    return;
+                }
+
+                // Remove a linha clicada (sai da lista imediatamente)
+                const row = btn.closest('tr');
+                if (row) row.remove();
+
+                // Recarrega a página atual da grid para atualizar paginação / total etc.
+                await loadGrid(currentPage);
+
+                const msgSucesso = payload?.message ||
+                    (isApprove ? 'Solicitação aprovada com sucesso.' : 'Solicitação rejeitada com sucesso.');
+
+                if (window.showPopupMensagem) {
+                    window.showPopupMensagem('Aprovação', msgSucesso, 'success');
+                } else {
+                    console.log(msgSucesso);
+                }
+            } catch (err) {
+                console.error('Erro na requisição de aprovação/rejeição', err);
+                alert('Falha na requisição. Tente novamente.');
+                btn.disabled = false;
+            }
+        });
+
+
+            // Delegação: abrir detalhes (botões com .btn-detalhes)
+            gridArea.addEventListener('click', async (e) => {
+                const btn = e.target.closest('.btn-detalhes');
+                if (!btn) return;
+
+                const codeAttr = btn.getAttribute('data-code');
+                const urlAttr = btn.getAttribute('data-url');
+                const draftAttr = btn.getAttribute('data-draft');
+
+                if (codeAttr) {
+                    const code = parseInt(codeAttr, 10);
+                    if (!Number.isFinite(code)) {
+                        console.warn('[Detalhes] data-code inválido:', codeAttr);
+                        return;
+                    }
+
+                    const draftDocNum = draftAttr ? parseInt(draftAttr, 10) : null;
+                    await abrirDetalhes(code, draftDocNum);
+                    return;
+                }
+
+                if (urlAttr) {
+                    try {
+                        const res = await fetch(urlAttr, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        const html = await res.text();
+                        const modalEl = document.querySelector('#approvalModal .modal-content');
+                        if (!modalEl) return;
+                        modalEl.innerHTML = html;
+                        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('approvalModal'));
+                        modal.show();
+                    } catch (err) {
+                        console.error('[Detalhes] Falha ao carregar (urlAttr):', err);
+                        const modalEl = document.querySelector('#approvalModal .modal-content');
+                        if (modalEl) {
+                            modalEl.innerHTML = `
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Detalhes da aprovação</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-danger">Não foi possível carregar os detalhes. Tente novamente.</div>
+                                </div>`;
+                            bootstrap.Modal.getOrCreateInstance(document.getElementById('approvalModal')).show();
+                        }
+                    }
+                }
+            });
+
+            // Expor abrirDetalhes global (se precisar ser chamado de fora)
+            window.abrirDetalhes = abrirDetalhes;
+
+            async function abrirDetalhes(code, draftDocNum) {
+                try {
+                    const qs = (draftDocNum && Number.isFinite(draftDocNum))
+                        ? `?draftDocNum=${encodeURIComponent(draftDocNum)}`
+                        : '';
+
+                    const res = await fetch(`/Aprovacoes/Detalhes/${code}${qs}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (!res.ok) {
+                        const msg = await res.text();
+                        alert(msg || 'Falha ao carregar detalhes.');
+                        return;
+                    }
+
+                    const html = await res.text();
+                    const modalEl = document.querySelector('#approvalModal .modal-content');
+                    if (!modalEl) return;
+                    modalEl.innerHTML = html;
+                    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('approvalModal'));
+                    modal.show();
+                } catch (err) {
+                    console.error('Erro inesperado ao abrir detalhes:', err);
+                    const modalEl = document.querySelector('#approvalModal .modal-content');
+                    if (modalEl) {
+                        modalEl.innerHTML = `
+                            <div class="modal-header">
+                                <h5 class="modal-title">Detalhes da aprovação</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-danger">Não foi possível carregar os detalhes. Tente novamente.</div>
+                            </div>`;
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('approvalModal')).show();
+                    }
+                }
+            }
+
+            // Primeiro carregamento sem filtro
+            loadGrid(1);
+        });
+    </script>
+
+    <!-- Popup de feedback (TempData / sessionStorage) -->
+    <script>
+        (function () {
+            var msgTemp = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["ToastMsg"] as string ?? ""));
+            var tipoTemp = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["ToastTipo"] as string ?? "success"));
+
+            if (msgTemp) {
+                window.showPopupMensagem("Aprovação", msgTemp, tipoTemp);
+                return;
+            }
+
+            var msg = sessionStorage.getItem('aprovacao_msg');
+            var tipo = sessionStorage.getItem('aprovacao_tipo') || 'success';
+            if (msg) {
+                sessionStorage.removeItem('aprovacao_msg');
+                sessionStorage.removeItem('aprovacao_tipo');
+                window.showPopupMensagem("Aprovação", msg, tipo);
+            }
+        })();
+    </script>
+
+    <!-- Filtro pelo Nº documento / criador (busca em TODAS as páginas via servidor) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const input = document.getElementById('filtro-aprovacoes');
+            const btnLimpar = document.getElementById('btn-limpar-filtro');
+            const btnAplicar = document.getElementById('btn-aplicar-filtro');
+
+            if (!input) return;
+
+            function aplicarFiltro() {
+                const termo = (input.value || '').trim();
+
+                if (typeof window.loadAprovacoesGrid === 'function') {
+                    btnAplicar?.setAttribute('disabled', 'disabled');
+                    btnLimpar?.setAttribute('disabled', 'disabled');
+
+                    window.loadAprovacoesGrid(1, termo).finally(() => {
+                        btnAplicar?.removeAttribute('disabled');
+                        btnLimpar?.removeAttribute('disabled');
+                    });
+                }
+            }
+
+            // Pressionar ENTER no campo aplica o filtro
+            input.addEventListener('keyup', function (e) {
+                if (e.key === 'Enter') {
+                    aplicarFiltro();
+                }
+            });
+
+            if (btnAplicar) {
+                btnAplicar.addEventListener('click', aplicarFiltro);
+            }
+
+            if (btnLimpar) {
+                btnLimpar.addEventListener('click', function () {
+                    input.value = '';
+                    aplicarFiltro(); // recarrega sem filtro
+                    input.focus();
+                });
+            }
+        });
+    </script>
+}

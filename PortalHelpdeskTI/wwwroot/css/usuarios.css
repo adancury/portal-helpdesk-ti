@@ -1,0 +1,58 @@
+﻿.scroll-tabela {
+    max-height: 60vh;
+    overflow-y: auto;
+    display: block;
+    width: 100%;
+}
+
+    .scroll-tabela table {
+        font-size: 0.85rem;
+    }
+
+    .scroll-tabela th,
+    .scroll-tabela td {
+        padding-top: 0.2rem;
+        padding-bottom: 0.2rem;
+        line-height: 1;
+    }
+
+    .scroll-tabela input,
+    .scroll-tabela select {
+        font-size: 0.85rem;
+        padding-top: 0.2rem;
+        padding-bottom: 0.2rem;
+        height: auto;
+    }
+
+#usuarioTable td {
+    vertical-align: middle;
+    text-align: left;
+}
+
+.btn-acao {
+    width: 36px;
+    height: 32px;
+    padding: 0;
+    text-align: center;
+}
+.tabela-categorias-container {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.tabela-categorias {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+    .tabela-categorias thead th {
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        z-index: 2;
+    }
+/* Torna o cabeçalho fixo no scroll da tabela */
+table thead.sticky-top th {
+    background-color: #f8f9fa; /* mesma cor do thead padrão */
+    z-index: 2;
+}

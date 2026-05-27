@@ -1,0 +1,624 @@
+﻿@model PortalHelpdeskTI.Models.Relatorios.MudancaCarteiraServiceLayerUploadVM
+@{
+    ViewData["Title"] = "Mudança de Carteira (Service Layer)";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="mb-2">
+    <h2 class="mb-0">Mudança de Carteira (Service Layer)</h2>
+    <div class="text-muted">Escolha uma operação: mudança de carteira por planilha ou inativação de parceiro.</div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <strong>Operações via Service Layer</strong>
+
+        <div class="d-flex gap-2">
+            <form action="@Url.Action("ServiceLayerLogout", "MudancaCarteira")" method="post" class="m-0">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-sm btn-outline-secondary" type="submit">Trocar usuário SAP</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card-body">
+
+        <ul class="nav nav-tabs" id="slTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active"
+                        id="tab-carteira-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#tab-carteira"
+                        type="button"
+                        role="tab"
+                        aria-controls="tab-carteira"
+                        aria-selected="true">
+                    Mudança de carteira
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link"
+                        id="tab-inativar-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#tab-inativar"
+                        type="button"
+                        role="tab"
+                        aria-controls="tab-inativar"
+                        aria-selected="false">
+                    Inativar parceiro
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content pt-3">
+
+            <!-- ABA 1: MUDANÇA DE CARTEIRA -->
+            <div class="tab-pane fade show active" id="tab-carteira" role="tabpanel" aria-labelledby="tab-carteira-tab">
+                <div class="card mb-3 border-0 bg-body-tertiary">
+                    <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                        <div>
+                            <strong>Modelo de planilha</strong>
+                            <div class="text-muted">
+                                Baixe o modelo com as colunas <b>CardCode</b> e <b>SlpCode</b>, preencha e faça o upload.
+                            </div>
+                        </div>
+                        <div class="text-md-end">
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="@Url.Action("DownloadTemplateCarteira", "Relatorios")">
+                                Baixar modelo
+                            </a>
+
+                            <div class="form-text mt-1">
+                                Modelo com colunas <code>CardCode</code> e <code>SlpCode</code>.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (TempData["Erro"] != null)
+                {
+                    <div class="alert alert-danger">@TempData["Erro"]</div>
+                }
+
+                <form id="formCarteira"
+                      action="@Url.Action("ServiceLayerStart", "MudancaCarteira")"
+                      method="post"
+                      enctype="multipart/form-data"
+                      class="vstack gap-3">
+                    @Html.AntiForgeryToken()
+
+                    <div>
+                        <label class="form-label d-block">Atualizar qual vendedor?</label>
+
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input"
+                                   type="radio"
+                                   name="AtualizarPrincipal"
+                                   id="optPrincipal"
+                                   value="true"
+                                   @(Model.AtualizarPrincipal ? "checked" : "") />
+                            <label class="form-check-label" for="optPrincipal">
+                                Vendedor principal <span class="text-muted small">(SalesPersonCode)</span>
+                            </label>
+                        </div>
+
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input"
+                                   type="radio"
+                                   name="AtualizarPrincipal"
+                                   id="optSecundario"
+                                   value="false"
+                                   @(!Model.AtualizarPrincipal ? "checked" : "") />
+                            <label class="form-check-label" for="optSecundario">
+                                Vendedor secundário <span class="text-muted small">(U_SegVendedor)</span>
+                            </label>
+                        </div>
+
+                        <div class="form-text">
+                            Selecione se deseja atualizar o vendedor principal (SalesPersonCode) ou o secundário (U_SegVendedor).
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Arquivo Excel</label>
+                        <input class="form-control" asp-for="Arquivo" type="file" accept=".xlsx,.xls" id="ArquivoCarteira" name="Arquivo" />
+                        <span class="text-danger small" asp-validation-for="Arquivo"></span>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" type="submit" id="btnCarteiraProcessar">Processar</button>
+                    </div>
+
+                    <!-- PROGRESSO (igual ao padrão da inativação em massa) -->
+                    <div class="mt-2" id="carteiraProgressWrap" style="display:none;">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span id="carteiraProgressText">Processando...</span>
+                            <span id="carteiraProgressPct">0%</span>
+                        </div>
+                        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar" id="carteiraProgressBar" style="width:0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- RESULTADO -->
+                    <div class="mt-3" id="carteiraResultadoWrap" style="display:none;"></div>
+                </form>
+
+            </div>
+
+            <!-- ABA 2: INATIVAR PARCEIRO -->
+            <div class="tab-pane fade" id="tab-inativar" role="tabpanel" aria-labelledby="tab-inativar-tab">
+
+                @if (TempData["ErroInativar"] != null)
+                {
+                    <div class="alert alert-danger">@TempData["ErroInativar"]</div>
+                }
+                @if (TempData["MsgInativar"] != null)
+                {
+                    <div class="alert alert-success">@TempData["MsgInativar"]</div>
+                }
+
+                <div class="alert alert-warning d-flex align-items-start gap-2">
+                    <div class="pt-1">
+                        <strong>Atenção:</strong>
+                    </div>
+                    <div>
+                        Esta ação inativa o Parceiro de Negócio no SAP
+                        <!--<code>{ "Valid": "tNO", "Frozen": "tYES" }</code>.-->
+                        <div class="small text-muted mt-1">
+                            Use a opção <b>Individual</b> para casos pontuais e <b>Em massa</b> para planilhas.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <!-- ========================= -->
+                    <!-- CARD: INATIVAÇÃO UNITÁRIA -->
+                    <!-- ========================= -->
+                    <div class="col-12 col-lg-6">
+                        <div class="card h-100 border-danger border-opacity-25">
+                            <div class="card-header bg-transparent">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong class="text-danger">Inativação individual</strong>
+                                    <span class="badge text-bg-danger-subtle border border-danger border-opacity-25">1 parceiro</span>
+                                </div>
+                                <div class="text-muted small mt-1">
+                                    Inative um único parceiro informando o <code>CardCode</code>.
+                                </div>
+                            </div>
+
+                            <form action="@Url.Action("ServiceLayerInativar", "Relatorios")"
+                                  method="post"
+                                  class="card-body vstack gap-3">
+                                @Html.AntiForgeryToken()
+
+                                <div>
+                                    <label class="form-label">CardCode</label>
+                                    <input class="form-control"
+                                           name="CardCode"
+                                           placeholder="Ex.: C000123" />
+                                    <div class="form-text">Dica: copie exatamente como está no SAP.</div>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           id="ConfirmarUnico"
+                                           name="Confirmar"
+                                           value="true" />
+                                    <label class="form-check-label" for="ConfirmarUnico">
+                                        Confirmo que desejo inativar este Parceiro de Negócio.
+                                    </label>
+                                </div>
+
+                                <div class="mt-auto"></div>
+
+                                <div class="card-footer bg-transparent border-0 px-0 pb-0">
+                                    <button type="submit"
+                                            class="btn btn-danger w-100"
+                                            id="btnInativarUnico"
+                                            disabled>
+                                        Inativar parceiro
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- ========================= -->
+                    <!-- CARD: INATIVAÇÃO EM MASSA -->
+                    <!-- ========================= -->
+                    <div class="col-12 col-lg-6">
+                        <div class="card h-100 border-danger border-opacity-25">
+                            <div class="card-header bg-transparent">
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <div>
+                                        <strong class="text-danger">Inativação em massa</strong>
+                                        <div class="text-muted small mt-1">
+                                            Upload de planilha Excel com 1 coluna: <code>CardCode</code>.
+                                        </div>
+                                    </div>
+                                    <a class="btn btn-sm btn-outline-primary"
+                                       href="@Url.Action("DownloadTemplateInativar", "Relatorios")">
+                                        Baixar modelo
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="card-body">
+                                <form id="formInativarMassa"
+                                      action="@Url.Action("ServiceLayerInativarMassaStart", "Relatorios")"
+                                      method="post"
+                                      enctype="multipart/form-data"
+                                      class="vstack gap-3">
+                                    @Html.AntiForgeryToken()
+
+                                    <div>
+                                        <label class="form-label">Arquivo Excel</label>
+                                        <input class="form-control"
+                                               type="file"
+                                               id="ArquivoMassa"
+                                               name="Arquivo"
+                                               accept=".xlsx,.xls"
+                                               required />
+                                        <div class="form-text">
+                                            Planilha simples: apenas uma coluna chamada <code>CardCode</code>.
+                                        </div>
+                                    </div>
+
+                                    <div class="form-check">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="ConfirmarMassa"
+                                               name="Confirmar"
+                                               value="true" />
+                                        <label class="form-check-label" for="ConfirmarMassa">
+                                            Confirmo que desejo inativar os parceiros listados na planilha.
+                                        </label>
+                                    </div>
+
+                                    <button type="submit"
+                                            class="btn btn-danger w-100"
+                                            id="btnInativarMassa"
+                                            disabled>
+                                        Inativar em massa
+                                    </button>
+                                </form>
+
+                                <!-- PROGRESSO -->
+                                <div class="mt-3" id="massaProgressWrap" style="display:none;">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span id="massaProgressText">Processando...</span>
+                                        <span id="massaProgressPct">0%</span>
+                                    </div>
+                                    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar" id="massaProgressBar" style="width:0%"></div>
+                                    </div>
+                                </div>
+
+                                <!-- RESULTADO -->
+                                <div class="mt-3" id="massaResultadoWrap" style="display:none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // ==============================
+        // Persistência da aba ativa
+        // ==============================
+        (function () {
+            var key = "mc_sl_active_tab";
+            var tabsEl = document.getElementById("slTabs");
+            if (!tabsEl) return;
+
+            var saved = localStorage.getItem(key);
+            if (saved) {
+                var trigger = document.querySelector('button[data-bs-target="' + saved + '"]');
+                if (trigger) {
+                    try { new bootstrap.Tab(trigger).show(); } catch (e) { }
+                }
+            }
+
+            tabsEl.addEventListener("shown.bs.tab", function (ev) {
+                var target = ev.target.getAttribute("data-bs-target");
+                if (target) localStorage.setItem(key, target);
+            });
+        })();
+
+        // ==============================
+        // Helpers (já usados na aba de inativação)
+        // ==============================
+        function extractCardCode(raw) {
+            const m =
+                raw.match(/\bPN[:\s]+([A-Za-z0-9\-_]+)/i) ||
+                raw.match(/\bCardCode[:\s]+([A-Za-z0-9\-_]+)/i) ||
+                raw.match(/\b([CF]\d{6,})\b/i);
+            return m ? m[1].trim() : null;
+        }
+
+        function extractMessageFromJson(raw) {
+            const start = raw.indexOf("{");
+            if (start < 0) return null;
+
+            const jsonText = raw.substring(start);
+            try {
+                const obj = JSON.parse(jsonText);
+                const msg =
+                    obj?.error?.message?.value ??
+                    obj?.error?.message ??
+                    obj?.message?.value ??
+                    obj?.message;
+
+                if (!msg) return null;
+                return (typeof msg === "string" ? msg : JSON.stringify(msg));
+            } catch {
+                return null;
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function toCleanErrorLine(raw) {
+            const code = extractCardCode(raw) || "—";
+            const msg = extractMessageFromJson(raw);
+
+            if (msg) return `PN: ${code} - ${msg}`;
+
+            const beforeJson = raw.split("{")[0].trim();
+            const cleaned = beforeJson
+                .replace(/\bPN[:\s]+[A-Za-z0-9\-_]+\b/i, "")
+                .replace(/[-–—]\s*$/, "")
+                .trim();
+
+            return cleaned ? `PN: ${code} - ${cleaned}` : `PN: ${code}`;
+        }
+
+        // ==============================
+        // Habilitar botões somente com confirmação / arquivo
+        // ==============================
+        (function () {
+            // Individual
+            const chkUnico = document.getElementById("ConfirmarUnico");
+            const btnUnico = document.getElementById("btnInativarUnico");
+
+            if (chkUnico && btnUnico) {
+                const syncUnico = () => btnUnico.disabled = !chkUnico.checked;
+                chkUnico.addEventListener("change", syncUnico);
+                syncUnico();
+            }
+
+            // Massa
+            const chkMassa = document.getElementById("ConfirmarMassa");
+            const fileMassa = document.getElementById("ArquivoMassa");
+            const btnMassa = document.getElementById("btnInativarMassa");
+
+            if (chkMassa && fileMassa && btnMassa) {
+                const syncMassa = () => {
+                    const hasFile = fileMassa.files && fileMassa.files.length > 0;
+                    btnMassa.disabled = !(chkMassa.checked && hasFile);
+                };
+                chkMassa.addEventListener("change", syncMassa);
+                fileMassa.addEventListener("change", syncMassa);
+                syncMassa();
+            }
+
+            // Carteira (habilitar somente com arquivo)
+            const fileCarteira = document.getElementById("ArquivoCarteira");
+            const btnCarteira = document.getElementById("btnCarteiraProcessar");
+
+            if (fileCarteira && btnCarteira) {
+                const syncCarteira = () => {
+                    const hasFile = fileCarteira.files && fileCarteira.files.length > 0;
+                    btnCarteira.disabled = !hasFile;
+                };
+                fileCarteira.addEventListener("change", syncCarteira);
+                syncCarteira();
+            }
+        })();
+
+        // ==============================
+        // Inativação em massa com progresso (como você já tinha)
+        // ==============================
+        (function () {
+            const form = document.getElementById("formInativarMassa");
+            if (!form) return;
+
+            const btn = document.getElementById("btnInativarMassa");
+            const wrap = document.getElementById("massaProgressWrap");
+            const bar = document.getElementById("massaProgressBar");
+            const txt = document.getElementById("massaProgressText");
+            const pct = document.getElementById("massaProgressPct");
+            const resultWrap = document.getElementById("massaResultadoWrap");
+
+            async function poll(jobId) {
+                const url = "/Relatorios/ServiceLayerInativarMassaStatus?jobId=" + encodeURIComponent(jobId);
+
+                while (true) {
+                    const r = await fetch(url, { credentials: "same-origin" });
+                    const data = await r.json().catch(() => ({}));
+
+                    if (!r.ok) {
+                        txt.textContent = data.error || "Erro ao consultar status.";
+                        break;
+                    }
+
+                    bar.style.width = data.percent + "%";
+                    pct.textContent = data.percent + "%";
+                    txt.textContent =
+                        `Processados: ${data.processed}/${data.total} | ` +
+                        `Inativados: ${data.inativados} | Erros: ${data.errosCount}`;
+
+                    if (data.done) {
+                        btn.disabled = false;
+                        resultWrap.style.display = "block";
+
+                        if (data.error) {
+                            resultWrap.innerHTML =
+                                `<div class="alert alert-danger"><strong>Erro:</strong> ${escapeHtml(data.error)}</div>`;
+                        } else {
+                            let html =
+                                `<div class="alert alert-success">
+                                    <strong>Concluído.</strong>
+                                    Total: ${data.total},
+                                    Inativados: ${data.inativados},
+                                    Erros: ${data.errosCount}.
+                                </div>`;
+
+                            if (data.errosCount > 0 && data.erros?.length) {
+                                const lines = data.erros.map(toCleanErrorLine);
+
+                                html +=
+                                    `<div class="alert alert-warning">
+                                        <strong>Erros (amostra):</strong>
+                                        <ul class="mb-0 ps-3">
+                                            ${lines.map(x => `<li>${escapeHtml(x)}</li>`).join("")}
+                                        </ul>
+                                    </div>`;
+                            }
+
+                            resultWrap.innerHTML = html;
+                        }
+                        break;
+                    }
+
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
+
+            form.addEventListener("submit", async function (ev) {
+                ev.preventDefault();
+
+                resultWrap.style.display = "none";
+                resultWrap.innerHTML = "";
+
+                btn.disabled = true;
+                wrap.style.display = "block";
+                bar.style.width = "0%";
+                pct.textContent = "0%";
+                txt.textContent = "Iniciando...";
+
+                const fd = new FormData(form);
+                const resp = await fetch(form.action, {
+                    method: "POST",
+                    body: fd,
+                    credentials: "same-origin"
+                });
+
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok) {
+                    btn.disabled = false;
+                    txt.textContent = data.error || "Erro ao iniciar o processamento.";
+                    return;
+                }
+
+                await poll(data.jobId);
+            });
+        })();
+
+        // ==============================
+        // Mudança de carteira com progresso
+        // ==============================
+        (function () {
+            const form = document.getElementById("formCarteira");
+            if (!form) return;
+
+            const btn = document.getElementById("btnCarteiraProcessar");
+            const wrap = document.getElementById("carteiraProgressWrap");
+            const bar = document.getElementById("carteiraProgressBar");
+            const txt = document.getElementById("carteiraProgressText");
+            const pct = document.getElementById("carteiraProgressPct");
+            const resultWrap = document.getElementById("carteiraResultadoWrap");
+
+            async function poll(jobId) {
+                const url = "/Relatorios/MudancaCarteira/Progress?jobId=" + encodeURIComponent(jobId);
+
+                while (true) {
+                    const r = await fetch(url, { credentials: "same-origin" });
+                    const data = await r.json().catch(() => ({}));
+
+                    if (!r.ok || !data.ok) {
+                        txt.textContent = data.message || "Erro ao consultar status.";
+                        btn.disabled = false;
+                        break;
+                    }
+
+                    const p = data.progress || {};
+                    const total = p.total || 0;
+                    const done = p.processados || 0;
+                    const atualizados = p.atualizados || 0;
+
+                    const percent = total > 0 ? Math.round((done * 100) / total) : 0;
+
+                    bar.style.width = percent + "%";
+                    pct.textContent = percent + "%";
+
+                    txt.textContent =
+                        (p.status ? (p.status + " | ") : "") +
+                        `Processados: ${done}/${total} | Atualizados: ${atualizados}`;
+
+                    if (p.concluido) {
+                        btn.disabled = false;
+                        window.location.href =
+                            "/Relatorios/MudancaCarteira/ResultadoJob?jobId=" + encodeURIComponent(jobId);
+                        break;
+                    }
+
+                    await new Promise(x => setTimeout(x, 1000));
+                }
+            }
+
+            form.addEventListener("submit", async function (ev) {
+                ev.preventDefault();
+
+                resultWrap.style.display = "none";
+                resultWrap.innerHTML = "";
+
+                btn.disabled = true;
+
+                wrap.style.display = "block";
+                bar.style.width = "0%";
+                pct.textContent = "0%";
+                txt.textContent = "Iniciando...";
+
+                const fd = new FormData(form);
+
+                const resp = await fetch(form.action, {
+                    method: "POST",
+                    body: fd,
+                    credentials: "same-origin"
+                });
+
+                const data = await resp.json().catch(() => ({}));
+
+                if (!resp.ok || !data.ok) {
+                    btn.disabled = false;
+                    txt.textContent = data.message || "Erro ao iniciar o processamento.";
+                    resultWrap.style.display = "block";
+                    resultWrap.innerHTML =
+                        `<div class="alert alert-danger mb-0"><strong>Erro:</strong> ${escapeHtml(data.message || "Falha ao iniciar.")}</div>`;
+                    return;
+                }
+
+                await poll(data.jobId);
+            });
+        })();
+    </script>
+}
+

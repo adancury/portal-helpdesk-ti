@@ -10,4 +10,5 @@ public class Interacao
     // Navegação
     public virtual Chamado Chamado { get; set; }
     public virtual Usuario Usuario { get; set; }
+    public List<Anexo> Anexos { get; set; } = new List<Anexo>();
 }
