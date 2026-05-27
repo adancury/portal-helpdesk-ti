@@ -1,0 +1,47 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build output
+bin/
+obj/
+Debug/
+Release/
+x64/
+x86/
+
+# .NET
+TestResults/
+*.nupkg
+*.snupkg
+*.coverage
+*.coveragexml
+artifacts/
+
+# Local settings and secrets
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+*.db
+*.sqlite
+*.sqlite3
+
+# Runtime uploads/generated files
+PortalHelpdeskTI/Anexos/
+PortalHelpdeskTI/wwwroot/uploads/
+PortalHelpdeskTI/wwwroot/relatorios/
+PortalHelpdeskTI/wwwroot/xlsx/
+PortalHelpdeskTI/Pdf/
+
+# Python/cache/temp
+__pycache__/
+*.pyc
+*.tmp
+*.log
+
+# OS/editor
+.DS_Store
+Thumbs.db
