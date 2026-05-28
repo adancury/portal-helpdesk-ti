@@ -4098,6 +4098,9 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
         if (request.NumOrdSaida <= 0)
             return (false, "NUM_ORD_SAI inválido.", null, 0, 0);
 
+        if (request.PesoTotal <= 0)
+            return (false, "PESO_TOTAL deve ser maior que zero para gerar a NF de saída.", null, 0, 0);
+
         if (string.Equals(request.OsCancelada, "S", StringComparison.OrdinalIgnoreCase))
             return (false, "Ordem de saída cancelada pelo WMS. A NF de saída não será criada.", null, 0, 0);
 
@@ -4147,6 +4150,18 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
 
         if (!order.TryGetProperty("DocumentLines", out var linesJson) || linesJson.ValueKind != JsonValueKind.Array)
             return (false, $"Pedido de venda {docEntryPedido} não retornou linhas.", pedido.body, 0, 0);
+
+        var pesoBruto = request.PesoTotal;
+        var pesoLiquido = CalcularPesoLiquidoWms(pesoBruto);
+        var atualizarPesosPedido = await AtualizarPesosPedidoVendaAsync(docEntryPedido, pesoBruto, pesoLiquido, ct);
+        if (!atualizarPesosPedido.ok)
+        {
+            return (false,
+                $"Não foi possível validar os pesos no pedido de venda {docEntryPedido}: {atualizarPesosPedido.error}",
+                atualizarPesosPedido.body ?? pedido.body,
+                0,
+                0);
+        }
 
         var orderLines = linesJson.EnumerateArray()
             .Select(l => new PedidoVendaLineInfo(
@@ -4296,15 +4311,18 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
             ["DocumentLines"] = documentLines
         };
 
-        if (totalVolumesWms > 0 || request.PesoTotal > 0)
+        if (totalVolumesWms > 0 || pesoBruto > 0)
         {
             var taxExtension = new Dictionary<string, object?>();
 
             if (totalVolumesWms > 0)
                 taxExtension["PackQuantity"] = totalVolumesWms;
 
-            if (request.PesoTotal > 0)
-                taxExtension["GrossWeight"] = request.PesoTotal;
+            if (pesoBruto > 0)
+            {
+                taxExtension["GrossWeight"] = pesoBruto;
+                taxExtension["NetWeight"] = pesoLiquido;
+            }
 
             if (taxExtension.Count > 0)
             {
@@ -4384,6 +4402,51 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
         }
 
         return (true, null, body, docEntryNota, docNumNota);
+    }
+
+    private static decimal CalcularPesoLiquidoWms(decimal pesoTotal)
+        => Math.Max(0, pesoTotal - 0.001m);
+
+    private async Task<(bool ok, string? error, string? body)> AtualizarPesosPedidoVendaAsync(
+        int docEntryPedido,
+        decimal pesoBruto,
+        decimal pesoLiquido,
+        CancellationToken ct)
+    {
+        if (docEntryPedido <= 0)
+            return (false, "DocEntry do pedido inválido.", null);
+
+        if (pesoBruto <= 0)
+            return (false, "Peso bruto deve ser maior que zero.", null);
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["TaxExtension"] = new Dictionary<string, object?>
+            {
+                ["GrossWeight"] = pesoBruto,
+                ["NetWeight"] = pesoLiquido
+            }
+        };
+
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = null,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
+
+        using var client = CreateClientWithCookies(noCache: true);
+        using var req = new HttpRequestMessage(new HttpMethod("PATCH"), $"Orders({docEntryPedido})")
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+
+        using var resp = await client.SendAsync(req, ct);
+        var body = await resp.Content.ReadAsStringAsync(ct);
+
+        if (resp.IsSuccessStatusCode)
+            return (true, null, body);
+
+        return (false, BuildSlError(body, resp), body);
     }
 
     private static int ResolverTotalVolumesWms(WmsRetornoOrdemSaidaRequest request)
