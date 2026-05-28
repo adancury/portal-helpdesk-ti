@@ -1,0 +1,244 @@
+@model PortalHelpdeskTI.Models.MeuPerfilViewModel
+
+@{
+    ViewData["Title"] = "Meu Perfil";
+    var fotoAtual = string.IsNullOrWhiteSpace(Model.FotoPerfilPath)
+        ? null
+        : Model.FotoPerfilPath;
+    var iniciais = string.Join("", (Model.Nome ?? Model.Email ?? "U")
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Take(2)
+        .Select(p => p[0])).ToUpperInvariant();
+}
+
+@section Styles {
+    <style>
+        .perfil-page {
+            max-width: 980px;
+            margin: 0 auto;
+        }
+
+        .perfil-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .perfil-title {
+            margin: 0;
+            font-size: 1.7rem;
+            font-weight: 700;
+        }
+
+        .perfil-subtitle {
+            margin: 4px 0 0;
+            color: var(--bs-secondary-color);
+        }
+
+        .perfil-grid {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        .perfil-panel {
+            border: 1px solid var(--bs-border-color);
+            border-radius: 8px;
+            background: var(--bs-body-bg);
+            padding: 18px;
+        }
+
+        .perfil-photo {
+            width: 132px;
+            height: 132px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--bs-border-color);
+            display: block;
+            margin: 0 auto 14px;
+            background: var(--bs-secondary-bg);
+        }
+
+        .perfil-photo-placeholder {
+            width: 132px;
+            height: 132px;
+            border-radius: 50%;
+            border: 3px solid var(--bs-border-color);
+            background: var(--primary);
+            color: var(--primary-contrast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin: 0 auto 14px;
+        }
+
+        .perfil-section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 0 0 14px;
+        }
+
+        .perfil-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        @@media (max-width: 768px) {
+            .perfil-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .perfil-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .perfil-actions {
+                flex-direction: column-reverse;
+            }
+
+            .perfil-actions .btn {
+                width: 100%;
+            }
+        }
+    </style>
+}
+
+<div class="perfil-page">
+    <div class="perfil-header">
+        <div>
+            <h1 class="perfil-title">Meu Perfil</h1>
+            <p class="perfil-subtitle">@Model.Email</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="/Inicio/Index">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <form asp-action="MeuPerfil" asp-controller="Account" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="FotoPerfilPath" type="hidden" />
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="All" class="alert alert-danger"></div>
+        }
+
+        <div class="perfil-grid">
+            <aside class="perfil-panel text-center">
+                <div id="perfilFotoPreviewWrap">
+                    @if (!string.IsNullOrWhiteSpace(fotoAtual))
+                    {
+                        <img id="perfilFotoPreview" class="perfil-photo" src="@fotoAtual" alt="Foto do usuário" />
+                    }
+                    else
+                    {
+                        <div id="perfilFotoPlaceholder" class="perfil-photo-placeholder">@iniciais</div>
+                        <img id="perfilFotoPreview" class="perfil-photo d-none" alt="Prévia da foto" />
+                    }
+                </div>
+
+                <label for="foto" class="form-label fw-semibold">Foto do perfil</label>
+                <input id="foto" name="foto" type="file" class="form-control" accept=".jpg,.jpeg,.png,.gif,.webp,image/*" />
+                <span class="text-danger field-validation-valid" data-valmsg-for="foto" data-valmsg-replace="true"></span>
+                <div class="form-text text-start">JPG, PNG, GIF ou WEBP. Máximo de 2 MB.</div>
+
+                @if (!string.IsNullOrWhiteSpace(fotoAtual))
+                {
+                    <div class="form-check text-start mt-3">
+                        <input asp-for="RemoverFoto" class="form-check-input" />
+                        <label asp-for="RemoverFoto" class="form-check-label"></label>
+                    </div>
+                }
+            </aside>
+
+            <section class="perfil-panel">
+                <h2 class="perfil-section-title">Dados da conta</h2>
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label asp-for="Nome" class="form-label"></label>
+                        <input asp-for="Nome" class="form-control" autocomplete="name" />
+                        <span asp-validation-for="Nome" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="Ramal" class="form-label"></label>
+                        <input asp-for="Ramal" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="Ramal" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" class="form-control" readonly />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Perfil</label>
+                        <input value="@Model.Perfil" class="form-control" readonly />
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <h2 class="perfil-section-title">Alterar senha</h2>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label asp-for="SenhaAtual" class="form-label"></label>
+                        <input asp-for="SenhaAtual" type="password" class="form-control" autocomplete="current-password" />
+                        <span asp-validation-for="SenhaAtual" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="NovaSenha" class="form-label"></label>
+                        <input asp-for="NovaSenha" type="password" class="form-control" autocomplete="new-password" />
+                        <span asp-validation-for="NovaSenha" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="ConfirmarNovaSenha" class="form-label"></label>
+                        <input asp-for="ConfirmarNovaSenha" type="password" class="form-control" autocomplete="new-password" />
+                        <span asp-validation-for="ConfirmarNovaSenha" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="perfil-actions">
+                    <a class="btn btn-outline-secondary" href="/Inicio/Index">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2-circle"></i> Salvar alterações
+                    </button>
+                </div>
+            </section>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const input = document.getElementById('foto');
+            const preview = document.getElementById('perfilFotoPreview');
+            const placeholder = document.getElementById('perfilFotoPlaceholder');
+
+            input?.addEventListener('change', function () {
+                const file = this.files && this.files[0];
+                if (!file || !preview) return;
+
+                const url = URL.createObjectURL(file);
+                preview.src = url;
+                preview.classList.remove('d-none');
+                placeholder?.classList.add('d-none');
+            });
+        });
+    </script>
+}

@@ -4256,13 +4256,14 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
         }
 
         var dataEmissao = DateTime.Today;
-        var groupCodePedido = TryGetJsonInt(order, "PaymentGroupCode");
+        var groupCodePedido = await ObterGroupNumPedidoVendaAsync(docEntryPedido, order, ct);
         var nomeCondicaoPagamento = groupCodePedido.HasValue
             ? await ObterNomeCondicaoPagamentoAsync(groupCodePedido.Value)
             : null;
         var dataVencimentoPadrao = ResolverDataVencimentoNota(order, dataEmissao);
         var parcelasPagamentoAPrazo = await CriarParcelasDaCondicaoPagamentoAsync(
             order,
+            groupCodePedido,
             dataEmissao,
             dataVencimentoPadrao,
             nomeCondicaoPagamento,
@@ -4275,6 +4276,7 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
 
         var downPaymentsToDraw = await CriarAdiantamentosParaBaixaNaNotaAsync(docEntryPedido);
         var possuiAdiantamento = downPaymentsToDraw.Count > 0;
+        var formaPagamento = ResolverFormaPagamentoNota(order, groupCodePedido, ehPagamentoAVista, possuiAdiantamento);
         var totalVolumesWms = ResolverTotalVolumesWms(request);
 
         var payload = new Dictionary<string, object?>
@@ -4287,7 +4289,7 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
             ["Comments"] = GetJsonStringOrNull(order, "Comments"),
             ["SalesPersonCode"] = TryGetJsonInt(order, "SalesPersonCode"),
             ["PaymentGroupCode"] = groupCodePedido,
-            ["PaymentMethod"] = ehPagamentoAVista || possuiAdiantamento ? null : GetJsonStringOrNull(order, "PaymentMethod"),
+            ["PaymentMethod"] = formaPagamento,
             ["Project"] = GetJsonStringOrNull(order, "Project"),
             ["BPL_IDAssignedToInvoice"] = TryGetJsonInt(order, "BPL_IDAssignedToInvoice"),
             ["Indicator"] = GetJsonStringOrNull(order, "Indicator"),
@@ -4630,6 +4632,23 @@ ORDER BY D.""DocEntry""";
         payload["BillOfExchangeReserved"] = "tNO";
     }
 
+    private static string? ResolverFormaPagamentoNota(
+        JsonElement order,
+        int? groupCode,
+        bool ehPagamentoAVista,
+        bool possuiAdiantamento)
+    {
+        if (CondicaoPagamentoExigeDeposito(groupCode))
+            return "Depósito";
+
+        return ehPagamentoAVista || possuiAdiantamento
+            ? null
+            : GetJsonStringOrNull(order, "PaymentMethod");
+    }
+
+    private static bool CondicaoPagamentoExigeDeposito(int? groupCode)
+        => groupCode is 20 or -1;
+
     private static void AplicarParcelasDaCondicaoPagamento(
         Dictionary<string, object?> payload,
         List<Dictionary<string, object?>> parcelas)
@@ -4678,26 +4697,29 @@ ORDER BY D.""DocEntry""";
 
     private async Task<List<Dictionary<string, object?>>> CriarParcelasDaCondicaoPagamentoAsync(
         JsonElement order,
+        int? groupCode,
         DateTime dataEmissao,
         DateTime dataVencimentoPadrao,
         string? nomeCondicaoPagamento,
         CancellationToken ct)
     {
+        if (groupCode.HasValue)
+        {
+            var parcelasCondicao = await CriarParcelasPelaCtg1Async(groupCode.Value, dataEmissao, ct);
+            if (parcelasCondicao.Count > 0)
+                return parcelasCondicao;
+        }
+
         var parcelasPedido = CriarParcelasProporcionaisDoPedido(order, dataVencimentoPadrao);
         if (parcelasPedido.Count > 1)
             return parcelasPedido;
 
         var textoCondicao = ObterTextoCondicaoPagamento(order, nomeCondicaoPagamento);
-        var groupCode = TryGetJsonInt(order, "PaymentGroupCode");
         if (!groupCode.HasValue)
         {
             var parcelasTexto = CriarParcelasPeloTextoCondicaoPagamento(textoCondicao, dataEmissao);
             return parcelasTexto.Count > 0 ? parcelasTexto : parcelasPedido;
         }
-
-        var parcelasCondicao = await CriarParcelasPelaCtg1Async(groupCode.Value, dataEmissao, ct);
-        if (parcelasCondicao.Count > 0)
-            return parcelasCondicao;
 
         var parcelasNomeCondicao = CriarParcelasPeloTextoCondicaoPagamento(textoCondicao, dataEmissao);
         return parcelasNomeCondicao.Count > 0 ? parcelasNomeCondicao : parcelasPedido;
@@ -4766,18 +4788,18 @@ SELECT
     IFNULL(T0.""ExtraMonth"", 0) + IFNULL(T1.""InstMonth"", 0) AS ""Meses"",
     IFNULL(T0.""ExtraDays"", 0) + IFNULL(T1.""InstDays"", 0) AS ""Dias"",
     CASE
-        WHEN T1.""InstlmntID"" IS NULL THEN 100
+        WHEN T1.""InstNo"" IS NULL THEN 100
         ELSE IFNULL(T1.""InstPrcnt"", 0)
     END AS ""Percentual"",
     CASE
-        WHEN T1.""InstlmntID"" IS NULL THEN 0
+        WHEN T1.""InstNo"" IS NULL THEN 0
         ELSE 1
     END AS ""TemParcela""
 FROM ""{schema}"".""OCTG"" T0
 LEFT JOIN ""{schema}"".""CTG1"" T1
     ON T1.""CTGCode"" = T0.""GroupNum""
 WHERE T0.""GroupNum"" = {groupCode}
-ORDER BY IFNULL(T1.""InstlmntID"", 1)";
+ORDER BY IFNULL(T1.""InstNo"", 1)";
 
             var dt = await _hana.QueryToDataTableAsync(sql, null, ct);
             if (dt.Rows.Count == 0)
@@ -4928,6 +4950,28 @@ WHERE ""GroupNum"" = {groupCode}";
         {
             return null;
         }
+    }
+
+    private async Task<int?> ObterGroupNumPedidoVendaAsync(int docEntryPedido, JsonElement order, CancellationToken ct)
+    {
+        try
+        {
+            var schema = _cfg["SapB1:CompanyDB"] ?? "SBO_BRW_PRD";
+            var sql = $@"
+SELECT TOP 1 ""GroupNum""
+FROM ""{schema}"".""ORDR""
+WHERE ""DocEntry"" = {docEntryPedido}";
+
+            var dt = await _hana.QueryToDataTableAsync(sql, null, ct);
+            if (dt.Rows.Count > 0 && dt.Rows[0]["GroupNum"] != DBNull.Value)
+                return Convert.ToInt32(dt.Rows[0]["GroupNum"]);
+        }
+        catch
+        {
+            // Mantem fallback pelo payload do Service Layer se a consulta ao HANA falhar.
+        }
+
+        return TryGetJsonInt(order, "GroupNum", "PaymentGroupCode");
     }
 
     private static bool EhTextoCondicaoAVista(string texto)

@@ -12,12 +12,14 @@ public class AccountController : Controller
 {
     private readonly AppDbContext _context;
     private readonly IEmailService _emailService;
+    private readonly IWebHostEnvironment _environment;
 
 
-    public AccountController(AppDbContext context, IEmailService emailService)
+    public AccountController(AppDbContext context, IEmailService emailService, IWebHostEnvironment environment)
     {
         _context = context;
         _emailService = emailService;
+        _environment = environment;
     }
 
     [HttpGet]
@@ -103,6 +105,65 @@ public class AccountController : Controller
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         HttpContext.Session.Clear();
         return RedirectToAction("Login", "Account");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> MeuPerfil()
+    {
+        var usuario = await ObterUsuarioLogadoAsync();
+        if (usuario == null)
+            return RedirectToAction("Login", "Account");
+
+        return View(CriarMeuPerfilViewModel(usuario));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MeuPerfil(MeuPerfilViewModel model, IFormFile? foto)
+    {
+        var usuario = await ObterUsuarioLogadoAsync();
+        if (usuario == null)
+            return RedirectToAction("Login", "Account");
+
+        model.Id = usuario.Id;
+        model.Email = usuario.Email;
+        model.Perfil = usuario.Perfil;
+        model.FotoPerfilPath = ObterFotoPerfilPath(usuario.Id);
+
+        var alterarSenha = !string.IsNullOrWhiteSpace(model.NovaSenha) ||
+                           !string.IsNullOrWhiteSpace(model.ConfirmarNovaSenha);
+
+        if (alterarSenha && string.IsNullOrWhiteSpace(model.SenhaAtual))
+            ModelState.AddModelError(nameof(model.SenhaAtual), "Informe sua senha atual para alterar a senha.");
+
+        if (alterarSenha && !Senhas.Verificar(model.SenhaAtual ?? string.Empty, usuario.SenhaHash))
+            ModelState.AddModelError(nameof(model.SenhaAtual), "Senha atual inválida.");
+
+        if (foto != null && foto.Length > 0)
+            ValidarFotoPerfil(foto);
+
+        if (!ModelState.IsValid)
+            return View(model);
+
+        usuario.Nome = model.Nome.Trim();
+        usuario.Ramal = model.Ramal?.Trim() ?? string.Empty;
+
+        if (alterarSenha)
+            usuario.SenhaHash = Senhas.GerarHash(model.NovaSenha!);
+
+        if (model.RemoverFoto)
+            RemoverFotosPerfil(usuario.Id);
+
+        if (foto != null && foto.Length > 0)
+        {
+            RemoverFotosPerfil(usuario.Id);
+            await SalvarFotoPerfilAsync(usuario.Id, foto);
+        }
+
+        await _context.SaveChangesAsync();
+
+        TempData["MensagemSucesso"] = "Perfil atualizado com sucesso.";
+        return RedirectToAction(nameof(MeuPerfil));
     }
 
     [HttpGet]
@@ -300,6 +361,83 @@ public class AccountController : Controller
         TempData["Mensagem"] = "Reenviamos o e-mail de ativação (se o cadastro existir).";
         TempData["ShowLogin"] = true; // força exibir o login ao recarregar
         return RedirectToAction("Login");
+    }
+
+    private async Task<Usuario?> ObterUsuarioLogadoAsync()
+    {
+        var usuarioId = HttpContext.Session.GetInt32("UsuarioId");
+        if (!usuarioId.HasValue)
+            return null;
+
+        return await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId.Value);
+    }
+
+    private MeuPerfilViewModel CriarMeuPerfilViewModel(Usuario usuario)
+    {
+        return new MeuPerfilViewModel
+        {
+            Id = usuario.Id,
+            Nome = usuario.Nome,
+            Email = usuario.Email,
+            Ramal = usuario.Ramal,
+            Perfil = usuario.Perfil,
+            FotoPerfilPath = ObterFotoPerfilPath(usuario.Id)
+        };
+    }
+
+    private void ValidarFotoPerfil(IFormFile foto)
+    {
+        const long maxBytes = 2 * 1024 * 1024;
+        var extensoesPermitidas = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".gif", ".webp"
+        };
+
+        if (foto.Length > maxBytes)
+            ModelState.AddModelError("foto", "A foto deve ter no máximo 2 MB.");
+
+        var extensao = Path.GetExtension(foto.FileName);
+        if (string.IsNullOrWhiteSpace(extensao) || !extensoesPermitidas.Contains(extensao))
+            ModelState.AddModelError("foto", "Envie uma imagem JPG, PNG, GIF ou WEBP.");
+    }
+
+    private async Task SalvarFotoPerfilAsync(int usuarioId, IFormFile foto)
+    {
+        var extensao = Path.GetExtension(foto.FileName).ToLowerInvariant();
+        var nomeArquivo = $"user-{usuarioId}{extensao}";
+        var pastaRelativa = Path.Combine("uploads", "perfis");
+        var pastaFisica = Path.Combine(_environment.WebRootPath, pastaRelativa);
+        Directory.CreateDirectory(pastaFisica);
+
+        var caminhoFisico = Path.Combine(pastaFisica, nomeArquivo);
+        await using var stream = System.IO.File.Create(caminhoFisico);
+        await foto.CopyToAsync(stream);
+    }
+
+    private string? ObterFotoPerfilPath(int usuarioId)
+    {
+        var pastaFisica = Path.Combine(_environment.WebRootPath, "uploads", "perfis");
+        if (!Directory.Exists(pastaFisica))
+            return null;
+
+        var arquivo = Directory
+            .EnumerateFiles(pastaFisica, $"user-{usuarioId}.*")
+            .FirstOrDefault();
+
+        if (arquivo == null)
+            return null;
+
+        return "/uploads/perfis/" + Path.GetFileName(arquivo);
+    }
+
+    private void RemoverFotosPerfil(int usuarioId)
+    {
+        var pastaFisica = Path.Combine(_environment.WebRootPath, "uploads", "perfis");
+        if (!Directory.Exists(pastaFisica))
+            return;
+
+        foreach (var arquivo in Directory.EnumerateFiles(pastaFisica, $"user-{usuarioId}.*"))
+            System.IO.File.Delete(arquivo);
     }
 
 }

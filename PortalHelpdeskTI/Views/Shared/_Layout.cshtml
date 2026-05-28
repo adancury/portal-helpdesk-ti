@@ -1,5 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Http
 @using System.Collections.Generic
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -87,6 +88,7 @@
     int? usuarioId = null;
     string perfil = null;
     string nomeUsuario = null;
+    string fotoPerfilPath = null;
 
     // -------------- AQUI: declarar antes --------------
     string primeiroUltimo = null;
@@ -105,6 +107,16 @@
             {
                 perfil = usuario.Perfil;
                 nomeUsuario = usuario.Nome;
+                var pastaFotos = System.IO.Path.Combine(Env.WebRootPath, "uploads", "perfis");
+                if (System.IO.Directory.Exists(pastaFotos))
+                {
+                    var arquivoFoto = System.IO.Directory
+                        .EnumerateFiles(pastaFotos, $"user-{usuario.Id}.*")
+                        .FirstOrDefault();
+
+                    if (!string.IsNullOrWhiteSpace(arquivoFoto))
+                        fotoPerfilPath = "/uploads/perfis/" + System.IO.Path.GetFileName(arquivoFoto);
+                }
             }
         }
 
@@ -214,14 +226,27 @@ else
                     <li class="nav-item dropdown">
                         <a class="btn btn-theme btn-sm dropdown-toggle d-flex align-items-center gap-2"
                            href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i>
+                            @if (!string.IsNullOrWhiteSpace(fotoPerfilPath))
+                            {
+                                <img src="@fotoPerfilPath" alt="Foto do usuário" class="rounded-circle object-fit-cover" style="width: 24px; height: 24px;" />
+                            }
+                            else
+                            {
+                                <i class="bi bi-person-circle"></i>
+                            }
                             <span>@primeiroUltimo</span>
                         </a>
 
                         <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="/Account/MeuPerfil">
+                                    <i class="bi bi-person-vcard"></i> Meu Perfil
+                                </a>
+                            </li>
 
                             @if (perfil == "Técnico" || perfil == "Tecnico")
                             {
+                                <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="/Configuracoes/Index">
                                         <i class="bi bi-gear"></i> Configurações
@@ -300,6 +325,12 @@ else
             }
 
             <li><hr class="dropdown-divider"></li>
+
+            <li class="nav-item">
+                <a class="nav-link d-flex gap-2" href="/Account/MeuPerfil">
+                    <i class="bi bi-person-vcard"></i> Meu Perfil
+                </a>
+            </li>
 
             <li class="nav-item">
                 <a class="nav-link d-flex gap-2" href="/Account/Logoff">
