@@ -152,17 +152,22 @@ else
             <img src="~/images/LogoBranco.png" alt="Logo BRW" style="height: 35px;" />
         </a>
 
-        <!-- BOTÃO MOBILE – abre offcanvas -->
-        <button class="navbar-toggler" type="button"
-                data-bs-toggle="offcanvas"
-                data-bs-target="#menuMobile"
-                aria-controls="menuMobile">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+        @if (usuarioId != null)
+        {
+            <!-- BOTÃO MOBILE – abre offcanvas -->
+            <button class="navbar-toggler" type="button"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#menuMobile"
+                    aria-controls="menuMobile">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        }
 
-        <!-- MENU DESKTOP -->
-        <div class="collapse navbar-collapse d-none d-lg-flex justify-content-end">
-            <ul class="navbar-nav align-items-center gap-2">
+        @if (usuarioId != null)
+        {
+            <!-- MENU DESKTOP -->
+            <div class="collapse navbar-collapse d-none d-lg-flex justify-content-end">
+                <ul class="navbar-nav align-items-center gap-2">
 
                 <li class="nav-item">
                     <a class="btn btn-theme btn-sm d-flex align-items-center gap-2 in-navbar" href="/Chamados/Index">
@@ -200,6 +205,13 @@ else
                     <a class="btn btn-theme btn-sm d-flex align-items-center gap-2 in-navbar" href="/Quizzes">
                         <i class="bi bi-ui-checks-grid"></i>
                         <span>Quiz</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="btn btn-theme btn-sm d-flex align-items-center gap-2 in-navbar" href="/Simulador">
+                        <i class="bi bi-calculator"></i>
+                        <span>Simulador</span>
                     </a>
                 </li>
 
@@ -263,20 +275,23 @@ else
                     </li>
                 }
 
-            </ul>
-        </div>
+                </ul>
+            </div>
+        }
     </div>
 </nav>
 
-<!-- OFFCANVAS MENU MOBILE -->
-<div class="offcanvas offcanvas-end text-bg-dark brw-offcanvas" tabindex="-1" id="menuMobile">
+@if (usuarioId != null)
+{
+    <!-- OFFCANVAS MENU MOBILE -->
+    <div class="offcanvas offcanvas-end text-bg-dark brw-offcanvas" tabindex="-1" id="menuMobile">
 
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title">Menu</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
-    </div>
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title">Menu</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
 
-    <div class="offcanvas-body">
+        <div class="offcanvas-body">
 
         <ul class="navbar-nav flex-column gap-2">
 
@@ -314,6 +329,12 @@ else
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a class="nav-link d-flex gap-2" href="/Simulador">
+                    <i class="bi bi-calculator"></i> Simulador
+                </a>
+            </li>
+
             @if (!string.IsNullOrEmpty(perfil) &&
                     (perfil == "Técnico" || perfil == "Tecnico"))
             {
@@ -340,8 +361,9 @@ else
 
         </ul>
 
+        </div>
     </div>
-</div>
+}
 
 }
 

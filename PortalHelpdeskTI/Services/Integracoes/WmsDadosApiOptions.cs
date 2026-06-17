@@ -10,6 +10,20 @@ namespace PortalHelpdeskTI.Services.Integracoes
         public int LookbackDays { get; set; } = 2;
         public string CodProprietario { get; set; } = "0100";
         public int TimeoutSeconds { get; set; } = 60;
-        public string[] Tipos { get; set; } = new[] { "SAIDAS", "ENTRADAS", "RESSUPRIMENTOS", "CORTES" };
+        public string[] Tipos { get; set; } = new[]
+        {
+            "SAIDAS",
+            "ENTRADAS",
+            "ESTOQUE",
+            "RESSUPRIMENTOS",
+            "CORTES",
+            "ATIVIDADES",
+            "HISTORICO_CONTAGENS",
+            "ENDERECOS",
+            "CURVA_ABC",
+            "MOVTO_PALLETS",
+            "ATIVIDADES_ENTRADA",
+            "DISTRIBUICAO"
+        };
     }
 }

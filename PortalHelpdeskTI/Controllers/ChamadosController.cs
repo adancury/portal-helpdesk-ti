@@ -677,24 +677,9 @@ public class ChamadosController : Controller
         }
     }
 
-    public async Task<IActionResult> TecnicoPainel(List<string>? statusSelecionados)
+    public async Task<IActionResult> TecnicoPainel(bool exibirConcluidos = false)
     {
-        // Default da tela (o que aparece quando nada é marcado)
-        var defaultStatusDisplay = new List<string>
-    {
-        "Aberto", "Em Atendimento", "Aguardando", "Resposta do Usuário"
-    };
-
-        // Se vier vazio/nulo, usa o default de exibição
-        if (statusSelecionados == null || statusSelecionados.Count == 0)
-            statusSelecionados = defaultStatusDisplay;
-
-        // Expande "Resposta do Usuário" para aceitar registros sem acento também
-        var statusParaFiltro = statusSelecionados
-            .SelectMany(s => s.Equals("Resposta do Usuário", StringComparison.OrdinalIgnoreCase)
-                             ? new[] { "Resposta do Usuário", "Resposta do Usuario" }
-                             : new[] { s })
-            .ToList();
+        var statusParaFiltro = ObterStatusPainelTecnico(exibirConcluidos);
 
         var perfil = GetPerfilSessao() ?? "";
         var tipoManutId = await GetTipoManutencaoIdAsync();
@@ -764,7 +749,7 @@ public class ChamadosController : Controller
             .ToList();
 
         ViewBag.NovosChamados = novosChamados;
-        ViewBag.StatusSelecionados = statusSelecionados; // mantém a seleção do usuário (com acento)
+        ViewBag.ExibirConcluidos = exibirConcluidos;
 
         //var resumoRuptura = await _previsaoRupturaService.ObterResumoAsync();
         //ViewBag.RupturaResumo = resumoRuptura;
@@ -1063,21 +1048,9 @@ public class ChamadosController : Controller
         return timeline;
     }
     [HttpGet]
-    public async Task<IActionResult> GridTecnicoParcial(List<string>? statusSelecionados = null)
+    public async Task<IActionResult> GridTecnicoParcial(bool exibirConcluidos = false)
     {
-        var defaultStatusDisplay = new List<string>
-    {
-        "Aberto", "Em Atendimento", "Aguardando", "Resposta do Usuário"
-    };
-
-        if (statusSelecionados == null || statusSelecionados.Count == 0)
-            statusSelecionados = defaultStatusDisplay;
-
-        var statusParaFiltro = statusSelecionados
-            .SelectMany(s => s.Equals("Resposta do Usuário", StringComparison.OrdinalIgnoreCase)
-                             ? new[] { "Resposta do Usuário", "Resposta do Usuario" }
-                             : new[] { s })
-            .ToList();
+        var statusParaFiltro = ObterStatusPainelTecnico(exibirConcluidos);
 
         var perfil = GetPerfilSessao() ?? "";
         var tipoManutId = await GetTipoManutencaoIdAsync();
@@ -1086,7 +1059,7 @@ public class ChamadosController : Controller
         if (perfil.Equals("Manutencao", StringComparison.OrdinalIgnoreCase) && !tipoManutId.HasValue)
         {
             ViewBag.NovosChamados = new List<int>();
-            ViewBag.StatusSelecionados = statusSelecionados;
+            ViewBag.ExibirConcluidos = exibirConcluidos;
             return PartialView("_GridTecnico", Enumerable.Empty<GridTecnicoItemVM>());
         }
 
@@ -1130,7 +1103,7 @@ public class ChamadosController : Controller
         if (ids.Count == 0)
         {
             ViewBag.NovosChamados = idsComNovaInteracao;
-            ViewBag.StatusSelecionados = statusSelecionados;
+            ViewBag.ExibirConcluidos = exibirConcluidos;
             return PartialView("_GridTecnico", Enumerable.Empty<GridTecnicoItemVM>());
         }
 
@@ -1189,8 +1162,25 @@ public class ChamadosController : Controller
         }
 
         ViewBag.NovosChamados = idsComNovaInteracao;
-        ViewBag.StatusSelecionados = statusSelecionados;
+        ViewBag.ExibirConcluidos = exibirConcluidos;
         return PartialView("_GridTecnico", ChamadoOrderingHelper.OrdenarPorPrioridadeESla(vms).ToList());
+    }
+
+    private static List<string> ObterStatusPainelTecnico(bool exibirConcluidos)
+    {
+        var status = new List<string>
+        {
+            "Aberto",
+            "Em Atendimento",
+            "Aguardando",
+            "Resposta do Usuário",
+            "Resposta do Usuario"
+        };
+
+        if (exibirConcluidos)
+            status.Add("Concluído");
+
+        return status;
     }
     [HttpGet]
     public IActionResult DownloadAnexo(int chamadoId, string nomeArquivo)

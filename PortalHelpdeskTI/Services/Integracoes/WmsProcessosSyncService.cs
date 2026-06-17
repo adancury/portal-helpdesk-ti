@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PortalHelpdeskTI.Models.IntegracoesWmsDados;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -32,19 +33,22 @@ namespace PortalHelpdeskTI.Services.Integracoes
             _logger = logger;
         }
 
-        public async Task SincronizarAsync(CancellationToken ct)
+        public async Task<List<WmsSyncExecucao>> SincronizarAsync(CancellationToken ct)
         {
             var fim = DateOnly.FromDateTime(DateTime.Today);
             var inicio = fim.AddDays(-Math.Max(0, _options.LookbackDays));
             var tipos = (_options.Tipos?.Length > 0 ? _options.Tipos : WmsDadosEndpoint.Todos.Keys).Distinct(StringComparer.OrdinalIgnoreCase);
+            var execucoes = new List<WmsSyncExecucao>();
 
             foreach (var tipo in tipos)
             {
                 if (!WmsDadosEndpoint.Todos.TryGetValue(tipo, out var endpoint))
                     continue;
 
-                await SincronizarTipoAsync(endpoint, inicio, fim, ct);
+                execucoes.Add(await SincronizarTipoAsync(endpoint, inicio, fim, ct));
             }
+
+            return execucoes;
         }
 
         public async Task<WmsSyncExecucao> SincronizarTipoAsync(string tipo, DateOnly inicio, DateOnly fim, CancellationToken ct)
@@ -109,9 +113,18 @@ namespace PortalHelpdeskTI.Services.Integracoes
             }
             catch (Exception ex)
             {
-                exec.Status = "Erro";
-                exec.Mensagem = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
-                _logger.LogError(ex, "Erro ao sincronizar processos WMS do tipo {Tipo}.", endpoint.Tipo);
+                if (ErroConhecidoConsultaCortes(endpoint.Tipo, ex.Message))
+                {
+                    exec.Status = "Ignorado";
+                    exec.Mensagem = "Endpoint /consultaCortes indisponivel na API WMS: MOTIVO_CORTE nao existe na consulta Oracle remota.";
+                    _logger.LogWarning(ex, "Sincronizacao WMS do tipo {Tipo} ignorada por erro conhecido na API externa.", endpoint.Tipo);
+                }
+                else
+                {
+                    exec.Status = "Erro";
+                    exec.Mensagem = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+                    _logger.LogError(ex, "Erro ao sincronizar processos WMS do tipo {Tipo}.", endpoint.Tipo);
+                }
             }
             finally
             {
@@ -120,6 +133,13 @@ namespace PortalHelpdeskTI.Services.Integracoes
             }
 
             return exec;
+        }
+
+        private static bool ErroConhecidoConsultaCortes(string tipo, string mensagem)
+        {
+            return tipo.Equals("CORTES", StringComparison.OrdinalIgnoreCase)
+                && mensagem.Contains("ORA-00904", StringComparison.OrdinalIgnoreCase)
+                && mensagem.Contains("MOTIVO_CORTE", StringComparison.OrdinalIgnoreCase);
         }
 
         private static WmsProcesso Parse(string tipo, JsonElement row)
@@ -150,10 +170,45 @@ namespace PortalHelpdeskTI.Services.Integracoes
                 keyProcesso = First(row, "NUM_ORD_SAIDA", "NUM_PEDIDO");
                 keyItem = JoinKey(keyProcesso, First(row, "COD_PRODUTO"), First(row, "MOTIVO_CORTE"));
             }
-            else
+            else if (tipo.Equals("ATIVIDADES", StringComparison.OrdinalIgnoreCase))
             {
                 keyProcesso = First(row, "NUM_ATIVIDADE", "COD_ATIVIDADE");
                 keyItem = JoinKey(keyProcesso, First(row, "COD_PRODUTO"), First(row, "ENDER_ORIGEM"), First(row, "ENDER_DESTINO"), First(row, "COD_UMA"));
+            }
+            else if (tipo.Equals("ESTOQUE", StringComparison.OrdinalIgnoreCase))
+            {
+                keyProcesso = First(row, "COD_ENDERECO", "APELIDO");
+                keyItem = JoinKey(keyProcesso, First(row, "COD_PRODUTO"), First(row, "NUM_LOTE"), First(row, "CODIGO_BARRAS"));
+            }
+            else if (tipo.Equals("HISTORICO_CONTAGENS", StringComparison.OrdinalIgnoreCase))
+            {
+                keyProcesso = JoinKey(First(row, "NUM_INVENTARIO"), First(row, "NUM_CONTAGEM"));
+                keyItem = JoinKey(keyProcesso, First(row, "COD_PRODUTO"), First(row, "COD_ENDERECO"), First(row, "LOTE"), First(row, "COD_UMA"));
+            }
+            else if (tipo.Equals("ENDERECOS", StringComparison.OrdinalIgnoreCase))
+            {
+                keyProcesso = First(row, "COD_ENDERECO", "APELIDO");
+                keyItem = keyProcesso;
+            }
+            else if (tipo.Equals("CURVA_ABC", StringComparison.OrdinalIgnoreCase))
+            {
+                keyProcesso = First(row, "COD_PRODUTO");
+                keyItem = JoinKey(keyProcesso, First(row, "ENDERECO_APANHA"), First(row, "NUM_POSTO"));
+            }
+            else if (tipo.Equals("MOVTO_PALLETS", StringComparison.OrdinalIgnoreCase))
+            {
+                keyProcesso = First(row, "NUM_ATIVIDADE", "COD_UMA");
+                keyItem = JoinKey(keyProcesso, First(row, "COD_UMA"), First(row, "ENDER_DESTINO"), First(row, "NUM_LOTE_RECEB"));
+            }
+            else if (tipo.Equals("ATIVIDADES_ENTRADA", StringComparison.OrdinalIgnoreCase))
+            {
+                keyProcesso = First(row, "NUM_ATIVIDADE", "NUM_LOTE_RECEB");
+                keyItem = JoinKey(keyProcesso, First(row, "NUM_LOTE_RECEB"), First(row, "COD_USUARIO"));
+            }
+            else
+            {
+                keyProcesso = First(row, "NUM_ATIVIDADE", "COD_ATIVIDADE", "NUM_LOTE_RECEB");
+                keyItem = JoinKey(keyProcesso, First(row, "COD_PRODUTO"), First(row, "NUM_LOTE"), First(row, "ENDER_DESTINO"));
             }
 
             if (string.IsNullOrWhiteSpace(keyProcesso))
@@ -167,19 +222,21 @@ namespace PortalHelpdeskTI.Services.Integracoes
                 Tipo = tipo.ToUpperInvariant(),
                 ChaveProcesso = keyProcesso,
                 ChaveItem = keyItem,
-                Status = First(row, "SITUACAO", "FLAG_SITUACAO"),
-                DataReferencia = FirstDate(row, "DT_PRODUCAO", "DATA_ENTRADA", "DT_INICIO_RESSUP", "DT_CORTE", "DT_HR_INICIO", "DATA_PEDIDO"),
+                Status = First(row, "SITUACAO", "FLAG_SITUACAO", "CURVA"),
+                DataReferencia = FirstDate(row,
+                    "DT_PRODUCAO", "DATA_ENTRADA", "DT_INICIO_RESSUP", "DT_CORTE", "DT_HR_INICIO", "DATA_PEDIDO",
+                    "DT_INCLUSAO", "DT_INICIO", "DATA_SOLUCAO"),
                 CodProprietario = First(row, "COD_PROPRIET"),
                 NomeProprietario = First(row, "NOME_PROPRIET"),
-                NumeroDocumento = First(row, "NUM_NF", "NUM_ORD_ENTR_ERP"),
-                NumeroPedido = First(row, "NUM_PEDIDO", "NUM_ORD_SAIDA", "NUM_ORD_ENTR"),
+                NumeroDocumento = First(row, "NUM_NF", "NUM_ORD_ENTR_ERP", "NUM_INVENTARIO", "NUM_LOTE_RECEB"),
+                NumeroPedido = First(row, "NUM_PEDIDO", "NUM_ORD_SAIDA", "NUM_ORD_ENTR", "NUM_ATIVIDADE", "COD_ENDERECO"),
                 CodigoProduto = First(row, "COD_PRODUTO"),
-                DescricaoProduto = First(row, "DESCR_PRODUTO"),
+                DescricaoProduto = First(row, "DESCR_PRODUTO", "NOME_ATIVIDADE", "APELIDO", "FUNCAO_ENDERECO"),
                 ClienteFornecedor = First(row, "RAZAO_SOCIAL_CLIENTE", "NOME_EMITENTE", "NOME_FORNECEDOR", "RAZAO_SOCIAL"),
-                UsuarioResponsavel = First(row, "COD_USUARIO_SEPARACAO", "COD_USUARIO_FIM_CONF", "COD_USUARIO", "USUARIO"),
-                QuantidadePrevista = FirstDecimal(row, "QTD_A_RECEBER", "QTD_PEDIDA", "QTD_SEPARACAO", "QTD_CAIXAS_RESSUP", "QUANTIDADE"),
-                QuantidadeExecutada = FirstDecimal(row, "QTD_RECEBIDA", "QTD_ATENDIDA"),
-                QuantidadeDivergente = FirstDecimal(row, "QTD_CORTE"),
+                UsuarioResponsavel = First(row, "COD_USUARIO_SEPARACAO", "COD_USUARIO_FIM_CONF", "COD_USUARIO", "USUARIO", "USUA_INCLUSAO", "USUARIO_CONTAGEM", "USUARIO_SOLUCAO"),
+                QuantidadePrevista = FirstDecimal(row, "QTD_A_RECEBER", "QTD_PEDIDA", "QTD_SEPARACAO", "QTD_CAIXAS_RESSUP", "QUANTIDADE", "QTDE_ESTOQUE", "QTDE_VENDA", "QTDE_PALLETS"),
+                QuantidadeExecutada = FirstDecimal(row, "QTD_RECEBIDA", "QTD_ATENDIDA", "QTDE_UNIDADES", "QTDE_ITENS", "QTDE_ESTOQUE_GERAL_UNID"),
+                QuantidadeDivergente = FirstDecimal(row, "QTD_CORTE", "QTDE_LCTOS_ENTRADA", "QTDE_ATIV_RESSUPR"),
                 PayloadHash = ComputeHash(raw),
                 RawJson = raw,
                 CriadoEm = now,
@@ -275,7 +332,9 @@ namespace PortalHelpdeskTI.Services.Integracoes
                 if (prop.ValueKind == JsonValueKind.Number && prop.TryGetDecimal(out var n))
                     return n;
 
-                if (decimal.TryParse(prop.ToString(), out var parsed))
+                var text = prop.ToString();
+                if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed)
+                    || decimal.TryParse(text, NumberStyles.Number, CultureInfo.CurrentCulture, out parsed))
                     return parsed;
             }
 
@@ -290,8 +349,8 @@ namespace PortalHelpdeskTI.Services.Integracoes
                 if (string.IsNullOrWhiteSpace(raw))
                     continue;
 
-                var formats = new[] { "dd/MM/yyyy HH:mm:ss", "dd/MM/yyyy", "MM/dd/yyyy HH:mm:ss", "yyyy-MM-ddTHH:mm:ss" };
-                if (DateTime.TryParseExact(raw, formats, null, System.Globalization.DateTimeStyles.AssumeLocal, out var dt))
+                var formats = new[] { "dd/MM/yyyy HH:mm:ss", "dd/MM/yyyy", "MM/dd/yyyy HH:mm:ss", "yyyy-MM-ddTHH:mm:ss", "yyyy-MM-ddTHH:mm:ss.fffZ" };
+                if (DateTime.TryParseExact(raw, formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt))
                     return dt;
 
                 if (DateTime.TryParse(raw, out dt))

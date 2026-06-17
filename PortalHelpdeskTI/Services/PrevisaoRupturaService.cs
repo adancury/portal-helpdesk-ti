@@ -488,8 +488,6 @@ SELECT
 FROM ""VW_PREVISAO_RUPTURA"" V
 INNER JOIN ""OITM"" I
     ON V.""ItemCode"" = I.""ItemCode""
-LEFT JOIN CurvaAbc ABC
-    ON ABC.""ItemCode"" = V.""ItemCode""
 WHERE 1 = 1
   AND I.""U_CbxForaLinha"" = 1
   AND I.""ItmsGrpCod"" NOT IN (101,102,136,174,144,145,167,168,169)

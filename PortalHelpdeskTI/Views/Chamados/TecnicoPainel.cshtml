@@ -5,7 +5,7 @@
     ViewData["Title"] = "Painel Técnico";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
-    var statusSelecionados = ViewBag.StatusSelecionados as List<string> ?? new List<string>();
+    var exibirConcluidos = ViewBag.ExibirConcluidos as bool? ?? false;
     var hoje = DateTime.Today;
     var de = new DateTime(hoje.Year, hoje.Month, 1);
     var ate = de.AddMonths(1).AddDays(-1);
@@ -201,7 +201,9 @@
         }
 
         .tecnico-page {
-            height: calc(100vh - 150px);
+            width: min(100%, 1680px);
+            max-width: none;
+            height: calc(100vh - 118px);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -262,7 +264,8 @@
         }
 
         #tabela-painel {
-            min-width: 1080px;
+            min-width: 1320px;
+            table-layout: auto;
         }
 
         #tabela-painel th {
@@ -274,6 +277,38 @@
             white-space: nowrap;
         }
 
+        #tabela-painel th .sort-column-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            width: 100%;
+            min-height: 30px;
+            padding: 0;
+            border: 0;
+            color: #fff;
+            font-weight: 700;
+            text-decoration: none;
+            text-align: left;
+            line-height: 1.1;
+            white-space: nowrap;
+        }
+
+        #tabela-painel th .sort-column-btn:hover,
+        #tabela-painel th .sort-column-btn:focus {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        #tabela-painel th .sort-icon {
+            flex: 0 0 auto;
+            font-size: .85rem;
+            opacity: .75;
+        }
+
+        #tabela-painel th.sort-active .sort-icon {
+            opacity: 1;
+        }
+
         [data-bs-theme="dark"] .tecnico-total {
             background: #0b213e;
             color: #e7eef7;
@@ -282,7 +317,8 @@
 
         @@media (max-width: 767.98px) {
             .tecnico-page {
-                height: calc(100vh - 126px);
+                width: 100%;
+                height: calc(100vh - 112px);
             }
         }
 
@@ -298,18 +334,43 @@
         /* Limita o tamanho da coluna Título e aplica reticências */
         #tabela-painel th.col-titulo,
         #tabela-painel td.col-titulo {
-            width: 420px;
-            max-width: 420px;
+            width: 520px;
+            max-width: 620px;
         }
 
             #tabela-painel td.col-titulo .titulo-text {
                 display: inline-block;
-                max-width: 380px; /* deixa espaço para a bolinha */
+                max-width: 560px;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 vertical-align: middle;
             }
+
+        #tabela-painel td.col-nome {
+            min-width: 180px;
+            max-width: 260px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #tabela-painel td.col-sla {
+            min-width: 220px;
+        }
+
+        .tecnico-search {
+            min-width: 260px;
+            max-width: 380px;
+        }
+
+        .tecnico-search .input-group-text {
+            background: var(--bs-body-bg);
+        }
+
+        .tecnico-grid-tools {
+            flex-wrap: nowrap;
+        }
     </style>
 
     <!-- Grid -->
@@ -317,41 +378,37 @@
         <div class="tecnico-grid-card card">
             <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <strong>Chamados</strong>
-                <span class="tecnico-total">
-                    <i class="bi bi-list-task"></i>
-                    @totalChamados chamados listados
-                </span>
+                <div class="d-flex align-items-center gap-3 tecnico-grid-tools">
+                    <div class="input-group input-group-sm tecnico-search">
+                        <span class="input-group-text" id="buscarChamadosIcon">
+                            <i class="bi bi-search" aria-hidden="true"></i>
+                        </span>
+                        <input type="search"
+                               class="form-control"
+                               id="buscarChamadosTecnico"
+                               placeholder="Buscar por numero, solicitante ou titulo"
+                               aria-label="Buscar chamados"
+                               aria-describedby="buscarChamadosIcon"
+                               autocomplete="off">
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               role="switch"
+                               id="toggleConcluidos"
+                               @(exibirConcluidos ? "checked" : "")>
+                        <label class="form-check-label" for="toggleConcluidos">Concluídos</label>
+                    </div>
+                    <span class="tecnico-total">
+                        <i class="bi bi-list-task"></i>
+                        <span id="totalChamadosListados">@totalChamados chamados</span>
+                    </span>
+                </div>
             </div>
             <div id="grid-wrapper">
                 <div class="tecnico-grid-scroll">
                     @await Html.PartialAsync("_GridTecnico", Model)
                 </div>
-            </div>
-
-            <div id="filtroStatusDropdown" class="dropdown-filtro-status d-none">
-                <form id="filtroStatusForm">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="statusSelecionados" value="Aberto" id="status-Aberto">
-                        <label class="form-check-label" for="status-Aberto">Aberto</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="statusSelecionados" value="Em Atendimento" id="status-EmAtendimento">
-                        <label class="form-check-label" for="status-EmAtendimento">Em Atendimento</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="statusSelecionados" value="Aguardando" id="status-Aguardando">
-                        <label class="form-check-label" for="status-Aguardando">Aguardando</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="statusSelecionados" value="Concluído" id="status-Concluído">
-                        <label class="form-check-label" for="status-Concluído">Concluído</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="statusSelecionados" value="Resposta do Usuário" id="status-RespostaUsuario">
-                        <label class="form-check-label" for="status-RespostaUsuario">Resposta do Usuário</label>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-primary mt-2" onclick="aplicarFiltroStatus()">Aplicar</button>
-                </form>
             </div>
         </div>
     </div>
@@ -380,6 +437,156 @@
         // ======== Grid destaque =========
         let chamadosDestacados = [];
 
+        function getExibirConcluidos() {
+            return document.getElementById('toggleConcluidos')?.checked === true;
+        }
+
+        function atualizarTotalChamadosListados() {
+            const totalEl = document.getElementById('totalChamadosListados');
+            if (!totalEl) return;
+
+            const rows = Array.from(document.querySelectorAll('#corpo-tabela-tecnico tr[data-id]'));
+            const total = rows.length;
+            const visiveis = rows.filter(row => row.style.display !== 'none').length;
+            const termo = document.getElementById('buscarChamadosTecnico')?.value?.trim() || '';
+
+            totalEl.textContent = termo
+                ? `${visiveis} de ${total} chamados`
+                : `${total} chamados`;
+        }
+
+        function normalizarBuscaChamado(valor) {
+            return (valor || '')
+                .toString()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLocaleLowerCase('pt-BR')
+                .trim();
+        }
+
+        function aplicarFiltroChamados() {
+            const termo = normalizarBuscaChamado(document.getElementById('buscarChamadosTecnico')?.value);
+            const tbody = document.getElementById('corpo-tabela-tecnico');
+            if (!tbody) return;
+
+            tbody.querySelectorAll('.linha-sem-resultado').forEach(row => row.remove());
+
+            let visiveis = 0;
+            tbody.querySelectorAll('tr[data-id]').forEach(row => {
+                const textoBusca = normalizarBuscaChamado(row.dataset.search);
+                const exibir = !termo || textoBusca.includes(termo);
+                row.style.display = exibir ? '' : 'none';
+                if (exibir) visiveis++;
+            });
+
+            if (termo && visiveis === 0) {
+                const row = document.createElement('tr');
+                row.className = 'linha-sem-resultado';
+                row.innerHTML = '<td colspan="8" class="text-center text-muted py-4">Nenhum chamado encontrado para a busca informada.</td>';
+                tbody.appendChild(row);
+            }
+
+            atualizarTotalChamadosListados();
+        }
+
+        const ordenacaoGrid = {
+            key: null,
+            direction: 'asc'
+        };
+
+        function valorOrdenacao(row, key, type) {
+            const raw = row.dataset[`sort${key.charAt(0).toUpperCase()}${key.slice(1)}`] || '';
+
+            if (type === 'number') {
+                const number = Number(raw.toString().replace(',', '.'));
+                return Number.isNaN(number) ? 0 : number;
+            }
+
+            if (type === 'priority') {
+                const prioridade = raw.trim().toLowerCase();
+                const peso = {
+                    urgente: 4,
+                    alta: 3,
+                    media: 2,
+                    média: 2,
+                    baixa: 1
+                };
+
+                return peso[prioridade] || 0;
+            }
+
+            return raw.trim().toLocaleLowerCase('pt-BR');
+        }
+
+        function atualizarIconesOrdenacao() {
+            document.querySelectorAll('#tabela-painel th[data-sort-key]').forEach(th => {
+                const icon = th.querySelector('.sort-icon');
+                th.classList.toggle('sort-active', th.dataset.sortKey === ordenacaoGrid.key);
+                if (!icon) return;
+
+                icon.classList.remove('bi-arrow-down-up', 'bi-arrow-up', 'bi-arrow-down');
+                if (th.dataset.sortKey !== ordenacaoGrid.key) {
+                    icon.classList.add('bi-arrow-down-up');
+                } else {
+                    icon.classList.add(ordenacaoGrid.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down');
+                }
+            });
+        }
+
+        function ordenarGrid(key, type, forceDirection) {
+            const tbody = document.getElementById('corpo-tabela-tecnico');
+            if (!tbody) return;
+
+            if (ordenacaoGrid.key === key && !forceDirection) {
+                ordenacaoGrid.direction = ordenacaoGrid.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                ordenacaoGrid.key = key;
+                ordenacaoGrid.direction = forceDirection || (type === 'number' || type === 'priority' ? 'desc' : 'asc');
+            }
+
+            const directionFactor = ordenacaoGrid.direction === 'asc' ? 1 : -1;
+            const rows = Array.from(tbody.querySelectorAll('tr[data-id]'));
+
+            rows.sort((a, b) => {
+                const valueA = valorOrdenacao(a, key, type);
+                const valueB = valorOrdenacao(b, key, type);
+
+                if (typeof valueA === 'number' && typeof valueB === 'number') {
+                    return (valueA - valueB) * directionFactor;
+                }
+
+                return valueA.localeCompare(valueB, 'pt-BR', { numeric: true, sensitivity: 'base' }) * directionFactor;
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+            atualizarIconesOrdenacao();
+        }
+
+        function reaplicarOrdenacaoGrid() {
+            if (!ordenacaoGrid.key) {
+                atualizarIconesOrdenacao();
+                return;
+            }
+
+            const th = document.querySelector(`#tabela-painel th[data-sort-key="${ordenacaoGrid.key}"]`);
+            if (!th) return;
+
+            ordenarGrid(ordenacaoGrid.key, th.dataset.sortType || 'text', ordenacaoGrid.direction);
+        }
+
+        document.addEventListener('click', function (e) {
+            const button = e.target.closest('#tabela-painel .sort-column-btn');
+            if (!button) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const th = button.closest('th[data-sort-key]');
+            if (!th) return;
+
+            ordenarGrid(th.dataset.sortKey, th.dataset.sortType || 'text');
+        });
+
         function destacarLinha(id) {
             const row = document.querySelector(`#tabela-painel tr[data-id="${id}"]`);
             if (row) {
@@ -395,13 +602,13 @@
         }
 
         function atualizarGridComDestaque() {
-            const selectedStatus = Array.from(document.querySelectorAll('input[name="statusSelecionados"]:checked'))
-                .map(cb => `statusSelecionados=${encodeURIComponent(cb.value)}`).join('&');
+            const params = new URLSearchParams();
+            params.set('exibirConcluidos', getExibirConcluidos().toString());
 
             const linhasDestacadasAntes = Array.from(document.querySelectorAll('#tabela-painel tr.table-warning'))
                 .map(row => parseInt(row.getAttribute('data-id')));
 
-            fetch('/Chamados/GridTecnicoParcial?' + selectedStatus)
+            fetch('/Chamados/GridTecnicoParcial?' + params.toString())
                 .then(response => response.text())
                 .then(html => {
                     const temp = document.createElement('div');
@@ -413,6 +620,8 @@
                         if (tbodyAntigo) {
                             tbodyAntigo.innerHTML = novoTbody.innerHTML;
                             document.getElementById("grid-wrapper").style.display = "block";
+                            reaplicarOrdenacaoGrid();
+                            aplicarFiltroChamados();
 
                             linhasDestacadasAntes.forEach(id => {
                                 destacarLinha(id);
@@ -445,73 +654,26 @@
             atualizarGridComDestaque();
             setInterval(atualizarGridComDestaque, 60000);
         });
+
+        document.addEventListener('input', function (e) {
+            if (e.target?.id !== 'buscarChamadosTecnico') return;
+            aplicarFiltroChamados();
+        });
     </script>
 
     <script>
-        // ======== Filtro status dropdown =========
-        function toggleFiltroStatusDropdown(event) {
-            event.stopPropagation();
-
-            const dropdown = document.getElementById('filtroStatusDropdown');
-            const botao = event.currentTarget;
-
-            if (dropdown.classList.contains('d-none')) {
-                const rect = botao.getBoundingClientRect();
-                dropdown.style.top = `${rect.bottom + window.scrollY}px`;
-                dropdown.style.left = `${rect.left + window.scrollX}px`;
-                dropdown.classList.remove('d-none');
-            } else {
-                dropdown.classList.add('d-none');
-            }
-
-            document.addEventListener('click', function fecharDropdown(e) {
-                if (!dropdown.contains(e.target) && !botao.contains(e.target)) {
-                    dropdown.classList.add('d-none');
-                    document.removeEventListener('click', fecharDropdown);
-                }
-            });
-        }
-
-        function aplicarFiltroStatus() {
-            const dropdown = document.getElementById('filtroStatusDropdown');
-
-            const params = new URLSearchParams();
-            document
-                .querySelectorAll('#filtroStatusForm input[name="statusSelecionados"]:checked')
-                .forEach(cb => params.append('statusSelecionados', cb.value));
-
-            localStorage.setItem('filtrosStatusSelecionados',
-                JSON.stringify(Array.from(params.getAll('statusSelecionados'))));
-
-            fetch('/Chamados/GridTecnicoParcial?' + params.toString(), { method: 'GET' })
-                .then(r => r.text())
-                .then(html => {
-                    const temp = document.createElement('div');
-                    temp.innerHTML = html;
-                    const novoTbody = temp.querySelector('tbody');
-                    const tbodyAntigo = document.querySelector('#corpo-tabela-tecnico');
-                    if (novoTbody && tbodyAntigo) {
-                        tbodyAntigo.innerHTML = novoTbody.innerHTML;
-                        document.getElementById('grid-wrapper').style.display = 'block';
-                    }
-                })
-                .catch(console.error)
-                .finally(() => dropdown.classList.add('d-none'));
-        }
-
+        // ======== Toggle de chamados concluídos =========
         document.addEventListener('DOMContentLoaded', function () {
-            const filtrosSalvos = localStorage.getItem('filtrosStatusSelecionados');
-            if (filtrosSalvos) {
-                const filtros = JSON.parse(filtrosSalvos);
-                filtros.forEach(status => {
-                    const checkbox = document.querySelector(`input[name="statusSelecionados"][value="${status}"]`);
-                    if (checkbox) checkbox.checked = true;
-                });
-            } else {
-                document
-                    .querySelectorAll('#filtroStatusForm input[name="statusSelecionados"]')
-                    .forEach(cb => cb.checked = cb.value !== 'Concluído');
-            }
+            const toggle = document.getElementById('toggleConcluidos');
+            if (!toggle) return;
+
+            const salvo = localStorage.getItem('exibirChamadosConcluidos');
+            if (salvo !== null) toggle.checked = salvo === '1';
+
+            toggle.addEventListener('change', function () {
+                localStorage.setItem('exibirChamadosConcluidos', toggle.checked ? '1' : '0');
+                atualizarGridComDestaque();
+            });
         });
     </script>
 

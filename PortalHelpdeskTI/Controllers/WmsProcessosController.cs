@@ -37,8 +37,25 @@ namespace PortalHelpdeskTI.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Sincronizar(string tipo = "SAIDAS", DateTime? dataIni = null, DateTime? dataFim = null, CancellationToken ct = default)
+        public async Task<IActionResult> Sincronizar(string tipo = "", DateTime? dataIni = null, DateTime? dataFim = null, CancellationToken ct = default)
         {
+            if (string.IsNullOrWhiteSpace(tipo))
+            {
+                var execucoes = await _sync.SincronizarAsync(ct);
+                var erros = execucoes.Count(x => x.Status == "Erro");
+                var recebidos = execucoes.Sum(x => x.RegistrosRecebidos);
+                var novos = execucoes.Sum(x => x.RegistrosNovos);
+                var alterados = execucoes.Sum(x => x.RegistrosAlterados);
+                var status = erros == 0 ? "Sucesso" : "Erro";
+                var mensagem = $"Tipos: {execucoes.Count}; recebidos: {recebidos}; novos: {novos}; alterados: {alterados}; erros: {erros}.";
+
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    return Json(new { ok = erros == 0, Status = status, Mensagem = mensagem });
+
+                TempData[erros == 0 ? "ToastMsg" : "Erro"] = mensagem;
+                return RedirectToAction(nameof(Index));
+            }
+
             var ini = DateOnly.FromDateTime((dataIni ?? DateTime.Today.AddDays(-2)).Date);
             var fim = DateOnly.FromDateTime((dataFim ?? DateTime.Today).Date);
             var exec = await _sync.SincronizarTipoAsync(tipo, ini, fim, ct);

@@ -36,17 +36,19 @@ namespace PortalHelpdeskTI.Filters
             // 2) LIBERA páginas públicas:
             //    - Raiz "/" (que aponta para Account/Login pelo route default)
             //    - Qualquer rota de Account (Login, Registrar, EsqueciSenha, etc.)
+            //    - Simulador de prazos
             if (path == "/" ||
-                path.StartsWithSegments("/Account", StringComparison.OrdinalIgnoreCase))
+                path.StartsWithSegments("/Account", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWithSegments("/Simulador", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
 
             // 3) Se a action/controller tiver [AllowAnonymous], não força login
             //    (útil se você usar AllowAnonymous em outros lugares)
-            var hasAllowAnonymous = context.ActionDescriptor.EndpointMetadata
-                .OfType<IAllowAnonymous>()
-                .Any();
+            var hasAllowAnonymous =
+                context.Filters.OfType<IAllowAnonymousFilter>().Any() ||
+                context.ActionDescriptor.EndpointMetadata.OfType<IAllowAnonymous>().Any();
 
             if (hasAllowAnonymous)
                 return;

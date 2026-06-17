@@ -4,7 +4,7 @@
     var p = Model.Processo;
 }
 
-<link rel="stylesheet" href="~/css/wms-processos.css" />
+<link rel="stylesheet" href="~/css/wms-processos.css" asp-append-version="true" />
 
 <div class="container-fluid py-3">
     <div class="d-flex align-items-center justify-content-between mb-3">
@@ -26,6 +26,8 @@
                         <div><span>Referência</span><strong>@(p.DataReferencia?.ToString("dd/MM/yyyy HH:mm") ?? "-")</strong></div>
                         <div><span>Pedido</span><strong>@(p.NumeroPedido ?? "-")</strong></div>
                         <div><span>Documento</span><strong>@(p.NumeroDocumento ?? "-")</strong></div>
+                        <div><span>Movimentação</span><strong>@Model.TipoMovimentacao</strong></div>
+                        <div><span>Tipo documento</span><strong>@Model.TipoDocumento</strong></div>
                         <div><span>Produto</span><strong>@(p.CodigoProduto ?? "-")</strong></div>
                         <div><span>Atualizado</span><strong>@p.AtualizadoEm.ToString("dd/MM/yyyy HH:mm:ss")</strong></div>
                     </div>

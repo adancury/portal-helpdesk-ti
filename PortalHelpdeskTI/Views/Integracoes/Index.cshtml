@@ -2,7 +2,43 @@
     ViewData["Title"] = "Integrações";
 }
 
-<div class="container mt-4">
+@section Styles {
+    <style>
+        .integracoes-page .home-card {
+            position: relative;
+        }
+
+        .integracoes-page .home-card.is-loading {
+            pointer-events: none;
+            transform: none;
+            border-color: var(--accent);
+        }
+
+        .integracoes-page .home-card-loading {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            background: rgba(255, 255, 255, .86);
+            color: var(--text);
+            font-weight: 600;
+            z-index: 2;
+        }
+
+        .integracoes-page .home-card.is-loading .home-card-loading {
+            display: flex;
+        }
+
+        [data-bs-theme="dark"] .integracoes-page .home-card-loading,
+        html.dark .integracoes-page .home-card-loading {
+            background: rgba(17, 24, 39, .88);
+        }
+    </style>
+}
+
+<div class="container mt-4 integracoes-page">
     <h3 class="mb-4">Integrações & Monitoramento</h3>
 
     <div class="row g-3">
@@ -140,5 +176,58 @@
             </a>
         </div>
 
+        <!-- Swagger WMS Draft NF Saída -->
+        <div class="col-md-4 d-flex">
+            <a class="card home-card text-decoration-none w-100 h-100" href="~/api/wms/faturamento-saida/criar-draft-nf">
+                <div class="card-body d-flex align-items-center">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="icon">
+                            <i class="bi bi-link-45deg" style="font-size:40px;"></i>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-1">Swagger WMS Draft NF</h5>
+                            <p class="card-text text-muted mb-0">
+                                Criação de esboço de NF com lotes vinculados
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.integracoes-page .home-card[href]').forEach(function (card) {
+                card.insertAdjacentHTML('beforeend',
+                    '<div class="home-card-loading" aria-hidden="true">' +
+                    '<span class="spinner-border spinner-border-sm" role="status"></span>' +
+                    '<span>Carregando...</span>' +
+                    '</div>');
+
+                card.addEventListener('click', function (event) {
+                    if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    document.querySelectorAll('.integracoes-page .home-card.is-loading').forEach(function (loadingCard) {
+                        loadingCard.classList.remove('is-loading');
+                        loadingCard.removeAttribute('aria-busy');
+                    });
+
+                    card.classList.add('is-loading');
+                    card.setAttribute('aria-busy', 'true');
+
+                    requestAnimationFrame(function () {
+                        window.location.href = card.href;
+                    });
+                });
+            });
+        });
+    </script>
+}

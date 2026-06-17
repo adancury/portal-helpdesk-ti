@@ -43,6 +43,45 @@
     text-transform: uppercase;
 }
 
+.wms-sort-button {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-transform: inherit;
+    white-space: nowrap;
+}
+
+.wms-sort-button:hover,
+.wms-sort-button:focus-visible {
+    color: var(--bs-primary);
+}
+
+.wms-sort-button .bi {
+    font-size: .68rem;
+}
+
+.wms-status-summary {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    flex-wrap: wrap;
+    min-width: 150px;
+}
+
+.wms-status-separator {
+    color: var(--bs-secondary-color);
+}
+
+.wms-badge-blocked {
+    background-color: #b86b73 !important;
+    color: #fff !important;
+}
+
 .wms-process-table tbody .wms-process-group-row > td {
     vertical-align: top;
 }

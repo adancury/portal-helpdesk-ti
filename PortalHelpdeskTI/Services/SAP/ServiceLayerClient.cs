@@ -4148,32 +4148,43 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
         if (GetJsonString(order, "DocumentStatus") == "bost_Close")
             return (false, $"Pedido de venda {docEntryPedido} está fechado.", pedido.body, 0, 0);
 
+        var orderDiscountPercent = GetJsonDecimal(order, "DiscountPercent");
+        if (orderDiscountPercent < 0 || orderDiscountPercent > 100)
+        {
+            return (false,
+                $"Pedido de venda {docEntryPedido} possui desconto de cabeçalho inválido: {orderDiscountPercent.ToString(CultureInfo.InvariantCulture)}%. A NF de saída não será criada.",
+                pedido.body,
+                0,
+                0);
+        }
+
         if (!order.TryGetProperty("DocumentLines", out var linesJson) || linesJson.ValueKind != JsonValueKind.Array)
             return (false, $"Pedido de venda {docEntryPedido} não retornou linhas.", pedido.body, 0, 0);
 
         var pesoBruto = request.PesoTotal;
         var pesoLiquido = CalcularPesoLiquidoWms(pesoBruto);
-        var atualizarPesosPedido = await AtualizarPesosPedidoVendaAsync(docEntryPedido, pesoBruto, pesoLiquido, ct);
-        if (!atualizarPesosPedido.ok)
-        {
-            return (false,
-                $"Não foi possível validar os pesos no pedido de venda {docEntryPedido}: {atualizarPesosPedido.error}",
-                atualizarPesosPedido.body ?? pedido.body,
-                0,
-                0);
-        }
 
         var orderLines = linesJson.EnumerateArray()
             .Select(l => new PedidoVendaLineInfo(
                 GetJsonInt(l, "LineNum"),
                 GetJsonString(l, "ItemCode"),
                 GetJsonDecimal(l, "RemainingOpenQuantity", "OpenQuantity", "Quantity"),
-                GetJsonDecimal(l, "UnitPrice", "Price"),
                 GetJsonDecimal(l, "DiscountPercent"),
+                TryGetJsonDecimal(l, "U_ValorDoDesconto"),
                 GetJsonString(l, "WarehouseCode"),
                 TryGetJsonInt(l, "Usage")))
             .Where(l => l.LineNum >= 0 && !string.IsNullOrWhiteSpace(l.ItemCode) && l.OpenQuantity > 0)
             .ToList();
+
+        var linhaComDescontoInvalido = orderLines.FirstOrDefault(l => l.DiscountPercent < 0 || l.DiscountPercent > 100);
+        if (linhaComDescontoInvalido is not null)
+        {
+            return (false,
+                $"Pedido de venda {docEntryPedido} possui desconto inválido na linha {linhaComDescontoInvalido.LineNum} do item {linhaComDescontoInvalido.ItemCode}: {linhaComDescontoInvalido.DiscountPercent.ToString(CultureInfo.InvariantCulture)}%. A NF de saída não será criada.",
+                pedido.body,
+                0,
+                0);
+        }
 
         var linhasUsadas = new HashSet<int>();
         var documentLines = new List<Dictionary<string, object?>>();
@@ -4240,16 +4251,15 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
                 ["BaseType"] = 17,
                 ["BaseEntry"] = docEntryPedido,
                 ["BaseLine"] = linha.LineNum,
-                ["Quantity"] = item.QtdeAtendida
+                ["Quantity"] = item.QtdeAtendida,
+                ["DiscountPercent"] = linha.DiscountPercent
             };
+
+            if (linha.ValorDoDesconto.HasValue)
+                linePayload["U_ValorDoDesconto"] = linha.ValorDoDesconto.Value;
 
             if (linha.Usage.HasValue)
                 linePayload["Usage"] = linha.Usage.Value;
-
-            if (linha.UnitPrice > 0)
-                linePayload["UnitPrice"] = linha.UnitPrice;
-
-            linePayload["DiscountPercent"] = linha.DiscountPercent;
 
             if (!string.IsNullOrWhiteSpace(linha.WarehouseCode))
                 linePayload["WarehouseCode"] = linha.WarehouseCode;
@@ -4311,6 +4321,9 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
             ["DocumentLines"] = documentLines
         };
 
+        if (orderDiscountPercent > 0)
+            payload["DiscountPercent"] = orderDiscountPercent;
+
         if (totalVolumesWms > 0 || pesoBruto > 0)
         {
             var taxExtension = new Dictionary<string, object?>();
@@ -4340,9 +4353,13 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
             AplicarDadosPagamentoAPrazo(payload);
 
             if (possuiAdiantamento)
+            {
                 AplicarDadosSemGeracaoDeBoleto(payload);
-
-            AplicarParcelasDaCondicaoPagamento(payload, parcelasPagamentoAPrazo);
+            }
+            else if (parcelasPagamentoAPrazo.Count > 0)
+            {
+                AplicarParcelasDaCondicaoPagamento(payload, parcelasPagamentoAPrazo);
+            }
         }
 
         var documentAdditionalExpenses = CriarDespesasAdicionaisParaNota(order);
@@ -4402,6 +4419,515 @@ WHERE T0.""DocEntry"" = {docEntryDraft}";
         }
 
         return (true, null, body, docEntryNota, docNumNota);
+    }
+
+    public async Task<(bool ok, string? error, string? body, int docEntryDraft, int docNumDraft)> CriarDraftNfSaidaDePedidoVendaAsync(
+        WmsRetornoOrdemSaidaRequest request,
+        CancellationToken ct = default,
+        int tentativaAjusteLote = 0)
+    {
+        if (request.NumOrdSaida <= 0)
+            return (false, "NUM_ORD_SAI inválido.", null, 0, 0);
+
+        if (request.PesoTotal <= 0)
+            return (false, "PESO_TOTAL deve ser maior que zero para gerar o esboço de NF de saída.", null, 0, 0);
+
+        if (string.Equals(request.OsCancelada, "S", StringComparison.OrdinalIgnoreCase))
+            return (false, "Ordem de saída cancelada pelo WMS. O esboço de NF de saída não será criado.", null, 0, 0);
+
+        var itensAtendidos = request.ListaItens
+            .Where(i => !string.IsNullOrWhiteSpace(i.CodProduto) && i.QtdeAtendida > 0)
+            .ToList();
+
+        if (itensAtendidos.Count == 0)
+            return (false, "Nenhum item atendido recebido do WMS.", null, 0, 0);
+
+        var login = await LoginPadraoAsync(ct);
+        if (!login.ok)
+            return (false, login.error, null, 0, 0);
+
+        var docEntryPedido = request.NumOrdSaida;
+        var pedido = await GetOrderForInvoiceAsync(docEntryPedido, ct);
+
+        if (!pedido.ok)
+        {
+            var docEntryPorDocNum = await ResolverPedidoVendaDocEntryPorDocNumAsync(request.NumOrdSaida, ct);
+            if (docEntryPorDocNum > 0 && docEntryPorDocNum != docEntryPedido)
+            {
+                docEntryPedido = docEntryPorDocNum;
+                pedido = await GetOrderForInvoiceAsync(docEntryPedido, ct);
+            }
+        }
+
+        if (!pedido.ok || string.IsNullOrWhiteSpace(pedido.body))
+            return (false, $"Pedido de venda {request.NumOrdSaida} não encontrado no SAP. {pedido.error}", pedido.body, 0, 0);
+
+        using var orderJson = JsonDocument.Parse(pedido.body);
+        var order = orderJson.RootElement;
+
+        if (GetJsonString(order, "DocumentStatus") == "bost_Close")
+            return (false, $"Pedido de venda {docEntryPedido} está fechado.", pedido.body, 0, 0);
+
+        var orderDiscountPercent = GetJsonDecimal(order, "DiscountPercent");
+        if (orderDiscountPercent < 0 || orderDiscountPercent > 100)
+        {
+            return (false,
+                $"Pedido de venda {docEntryPedido} possui desconto de cabeçalho inválido: {orderDiscountPercent.ToString(CultureInfo.InvariantCulture)}%. O esboço de NF de saída não será criado.",
+                pedido.body,
+                0,
+                0);
+        }
+
+        if (!order.TryGetProperty("DocumentLines", out var linesJson) || linesJson.ValueKind != JsonValueKind.Array)
+            return (false, $"Pedido de venda {docEntryPedido} não retornou linhas.", pedido.body, 0, 0);
+
+        var pesoBruto = request.PesoTotal;
+        var pesoLiquido = CalcularPesoLiquidoWms(pesoBruto);
+
+        var orderLines = linesJson.EnumerateArray()
+            .Select(l => new PedidoVendaLineInfo(
+                GetJsonInt(l, "LineNum"),
+                GetJsonString(l, "ItemCode"),
+                GetJsonDecimal(l, "RemainingOpenQuantity", "OpenQuantity", "Quantity"),
+                GetJsonDecimal(l, "DiscountPercent"),
+                TryGetJsonDecimal(l, "U_ValorDoDesconto"),
+                GetJsonString(l, "WarehouseCode"),
+                TryGetJsonInt(l, "Usage")))
+            .Where(l => l.LineNum >= 0 && !string.IsNullOrWhiteSpace(l.ItemCode) && l.OpenQuantity > 0)
+            .ToList();
+
+        var linhaComDescontoInvalido = orderLines.FirstOrDefault(l => l.DiscountPercent < 0 || l.DiscountPercent > 100);
+        if (linhaComDescontoInvalido is not null)
+        {
+            return (false,
+                $"Pedido de venda {docEntryPedido} possui desconto inválido na linha {linhaComDescontoInvalido.LineNum} do item {linhaComDescontoInvalido.ItemCode}: {linhaComDescontoInvalido.DiscountPercent.ToString(CultureInfo.InvariantCulture)}%. O esboço de NF de saída não será criado.",
+                pedido.body,
+                0,
+                0);
+        }
+
+        var linhasUsadas = new HashSet<int>();
+        var documentLines = new List<Dictionary<string, object?>>();
+
+        foreach (var item in itensAtendidos)
+        {
+            var codigoProduto = item.CodProduto!.Trim();
+
+            var lotesValidos = item.ListaLotes
+                .Where(l => !string.IsNullOrWhiteSpace(l.NumLote) && l.QtdeAtendida > 0)
+                .ToList();
+
+            if (lotesValidos.Count > 0)
+            {
+                var qtdLotes = lotesValidos.Sum(l => l.QtdeAtendida);
+                if (!QuantidadesIguais(qtdLotes, item.QtdeAtendida))
+                {
+                    return (false,
+                        $"Quantidade dos lotes do item {codigoProduto} ({qtdLotes}) difere da quantidade atendida ({item.QtdeAtendida}).",
+                        null,
+                        0,
+                        0);
+                }
+            }
+
+            var candidatos = orderLines
+                .Where(l => !linhasUsadas.Contains(l.LineNum) &&
+                            string.Equals(l.ItemCode, codigoProduto, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (candidatos.Count == 0)
+                return (false, $"Item {codigoProduto} recebido do WMS não foi encontrado aberto no pedido {docEntryPedido}.", pedido.body, 0, 0);
+
+            var linha = candidatos.FirstOrDefault(l => QuantidadesIguais(l.OpenQuantity, item.QtdeAtendida));
+
+            if (linha is null)
+            {
+                if (candidatos.Count != 1)
+                {
+                    return (false,
+                        $"Não foi possível identificar a linha do item {codigoProduto} no pedido {docEntryPedido}. Há múltiplas linhas abertas e nenhuma tem quantidade {item.QtdeAtendida}.",
+                        pedido.body,
+                        0,
+                        0);
+                }
+
+                linha = candidatos[0];
+            }
+
+            if (item.QtdeAtendida > linha.OpenQuantity)
+            {
+                return (false,
+                    $"Quantidade atendida do item {codigoProduto} ({item.QtdeAtendida}) é maior que o saldo aberto do pedido ({linha.OpenQuantity}).",
+                    pedido.body,
+                    0,
+                    0);
+            }
+
+            linhasUsadas.Add(linha.LineNum);
+
+            var draftLineIndex = documentLines.Count;
+            var linePayload = new Dictionary<string, object?>
+            {
+                ["BaseType"] = 17,
+                ["BaseEntry"] = docEntryPedido,
+                ["BaseLine"] = linha.LineNum,
+                ["Quantity"] = item.QtdeAtendida,
+                ["DiscountPercent"] = linha.DiscountPercent
+            };
+
+            if (linha.ValorDoDesconto.HasValue)
+                linePayload["U_ValorDoDesconto"] = linha.ValorDoDesconto.Value;
+
+            if (linha.Usage.HasValue)
+                linePayload["Usage"] = linha.Usage.Value;
+
+            if (!string.IsNullOrWhiteSpace(linha.WarehouseCode))
+                linePayload["WarehouseCode"] = linha.WarehouseCode;
+
+            if (lotesValidos.Count > 0)
+            {
+                linePayload["BatchNumbers"] = lotesValidos.Select(l => new Dictionary<string, object?>
+                {
+                    ["BatchNumber"] = l.NumLote!.Trim(),
+                    ["Quantity"] = l.QtdeAtendida,
+                    ["BaseLineNumber"] = draftLineIndex,
+                    ["ExpiryDate"] = FormatarDataSap(l.DataValidade),
+                    ["ManufacturingDate"] = FormatarDataSap(l.DataFabricacao)
+                }).ToList();
+            }
+
+            documentLines.Add(linePayload);
+        }
+
+        var dataEmissao = DateTime.Today;
+        var groupCodePedido = await ObterGroupNumPedidoVendaAsync(docEntryPedido, order, ct);
+        var nomeCondicaoPagamento = groupCodePedido.HasValue
+            ? await ObterNomeCondicaoPagamentoAsync(groupCodePedido.Value)
+            : null;
+        var dataVencimentoPadrao = ResolverDataVencimentoNota(order, dataEmissao);
+        var parcelasPagamentoAPrazo = await CriarParcelasDaCondicaoPagamentoAsync(
+            order,
+            groupCodePedido,
+            dataEmissao,
+            dataVencimentoPadrao,
+            nomeCondicaoPagamento,
+            ct);
+        var ehPagamentoAVista = EhCondicaoPagamentoAVista(order, nomeCondicaoPagamento)
+            && !CondicaoPagamentoTemPrazoFuturo(parcelasPagamentoAPrazo, dataEmissao);
+        var dataVencimento = ehPagamentoAVista
+            ? dataEmissao.Date
+            : ObterPrimeiroVencimentoDasParcelas(parcelasPagamentoAPrazo) ?? dataVencimentoPadrao;
+
+        var downPaymentsToDraw = await CriarAdiantamentosParaBaixaNaNotaAsync(docEntryPedido);
+        var possuiAdiantamento = downPaymentsToDraw.Count > 0;
+        var formaPagamento = ResolverFormaPagamentoNota(order, groupCodePedido, ehPagamentoAVista, possuiAdiantamento);
+        var totalVolumesWms = ResolverTotalVolumesWms(request);
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["DocObjectCode"] = "oInvoices",
+            ["CardCode"] = GetJsonString(order, "CardCode"),
+            ["DocDate"] = FormatarDataSap(dataEmissao),
+            ["TaxDate"] = FormatarDataSap(dataEmissao),
+            ["DocDueDate"] = FormatarDataSap(dataVencimento),
+            ["NumAtCard"] = GetJsonStringOrNull(order, "NumAtCard"),
+            ["Comments"] = GetJsonStringOrNull(order, "Comments"),
+            ["SalesPersonCode"] = TryGetJsonInt(order, "SalesPersonCode"),
+            ["PaymentGroupCode"] = groupCodePedido,
+            ["PaymentMethod"] = formaPagamento,
+            ["Project"] = GetJsonStringOrNull(order, "Project"),
+            ["BPL_IDAssignedToInvoice"] = TryGetJsonInt(order, "BPL_IDAssignedToInvoice"),
+            ["Indicator"] = GetJsonStringOrNull(order, "Indicator"),
+            ["DocumentLines"] = documentLines
+        };
+
+        if (orderDiscountPercent > 0)
+            payload["DiscountPercent"] = orderDiscountPercent;
+
+        if (totalVolumesWms > 0 || pesoBruto > 0)
+        {
+            var taxExtension = new Dictionary<string, object?>();
+
+            if (totalVolumesWms > 0)
+                taxExtension["PackQuantity"] = totalVolumesWms;
+
+            if (pesoBruto > 0)
+            {
+                taxExtension["GrossWeight"] = pesoBruto;
+                taxExtension["NetWeight"] = pesoLiquido;
+            }
+
+            if (taxExtension.Count > 0)
+                payload["TaxExtension"] = taxExtension;
+        }
+
+        if (downPaymentsToDraw.Count > 0)
+            payload["DownPaymentsToDraw"] = downPaymentsToDraw;
+
+        if (ehPagamentoAVista)
+            AplicarDadosPagamentoAVista(payload, dataVencimento);
+        else
+        {
+            AplicarDadosPagamentoAPrazo(payload);
+
+            if (possuiAdiantamento)
+            {
+                AplicarDadosSemGeracaoDeBoleto(payload);
+            }
+            else if (parcelasPagamentoAPrazo.Count > 0)
+            {
+                AplicarParcelasDaCondicaoPagamento(payload, parcelasPagamentoAPrazo);
+            }
+        }
+
+        var documentAdditionalExpenses = CriarDespesasAdicionaisParaNota(order);
+        if (documentAdditionalExpenses.Count > 0)
+            payload["DocumentAdditionalExpenses"] = documentAdditionalExpenses;
+
+        RemoverNulos(payload);
+
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = null,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
+
+        using var client = CreateClientWithCookies(noCache: true);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var resp = await client.PostAsync("Drafts", content, ct);
+        var body = await resp.Content.ReadAsStringAsync(ct);
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            var erroSl = BuildSlError(body, resp);
+
+            if (tentativaAjusteLote < 5)
+            {
+                var ajuste = await TentarAjustarLoteIndisponivelAsync(request, erroSl, ct);
+                if (ajuste.ok)
+                {
+                    return await CriarDraftNfSaidaDePedidoVendaAsync(
+                        request,
+                        ct,
+                        tentativaAjusteLote + 1);
+                }
+
+                if (ajuste.erroAplicavel)
+                    erroSl = $"{erroSl} {ajuste.mensagem}";
+            }
+
+            return (false, erroSl, body, 0, 0);
+        }
+
+        var docEntryDraft = 0;
+        var docNumDraft = 0;
+
+        try
+        {
+            using var draftJson = JsonDocument.Parse(body);
+            docEntryDraft = TryGetJsonInt(draftJson.RootElement, "DocEntry") ?? 0;
+            docNumDraft = TryGetJsonInt(draftJson.RootElement, "DocNum") ?? 0;
+        }
+        catch
+        {
+            // O retorno bruto ainda será gravado no log.
+        }
+
+        return (true, null, body, docEntryDraft, docNumDraft);
+    }
+
+    public async Task<(bool ok, string? error, string? body, int docEntryPedido)> AtualizarLotesPedidoVendaAsync(
+        WmsRetornoOrdemSaidaRequest request,
+        CancellationToken ct = default,
+        int tentativaAjusteLote = 0)
+    {
+        if (request.NumOrdSaida <= 0)
+            return (false, "NUM_ORD_SAI inválido.", null, 0);
+
+        if (string.Equals(request.OsCancelada, "S", StringComparison.OrdinalIgnoreCase))
+            return (false, "Ordem de saída cancelada pelo WMS. Os lotes não serão vinculados ao pedido.", null, 0);
+
+        var itensComLote = request.ListaItens
+            .Where(i => !string.IsNullOrWhiteSpace(i.CodProduto) &&
+                        i.QtdeAtendida > 0 &&
+                        i.ListaLotes.Any(l => !string.IsNullOrWhiteSpace(l.NumLote) && l.QtdeAtendida > 0))
+            .ToList();
+
+        if (itensComLote.Count == 0)
+            return (false, "Nenhum item com lote válido recebido do WMS.", null, 0);
+
+        var login = await LoginPadraoAsync(ct);
+        if (!login.ok)
+            return (false, login.error, null, 0);
+
+        var docEntryPedido = request.NumOrdSaida;
+        var pedido = await GetOrderForInvoiceAsync(docEntryPedido, ct);
+
+        if (!pedido.ok)
+        {
+            var docEntryPorDocNum = await ResolverPedidoVendaDocEntryPorDocNumAsync(request.NumOrdSaida, ct);
+            if (docEntryPorDocNum > 0 && docEntryPorDocNum != docEntryPedido)
+            {
+                docEntryPedido = docEntryPorDocNum;
+                pedido = await GetOrderForInvoiceAsync(docEntryPedido, ct);
+            }
+        }
+
+        if (!pedido.ok || string.IsNullOrWhiteSpace(pedido.body))
+            return (false, $"Pedido de venda {request.NumOrdSaida} não encontrado no SAP. {pedido.error}", pedido.body, docEntryPedido);
+
+        using var orderJson = JsonDocument.Parse(pedido.body);
+        var order = orderJson.RootElement;
+
+        if (GetJsonString(order, "DocumentStatus") == "bost_Close")
+            return (false, $"Pedido de venda {docEntryPedido} está fechado.", pedido.body, docEntryPedido);
+
+        if (!order.TryGetProperty("DocumentLines", out var linesJson) || linesJson.ValueKind != JsonValueKind.Array)
+            return (false, $"Pedido de venda {docEntryPedido} não retornou linhas.", pedido.body, docEntryPedido);
+
+        var orderLines = linesJson.EnumerateArray()
+            .Select(l => new PedidoVendaLineInfo(
+                GetJsonInt(l, "LineNum"),
+                GetJsonString(l, "ItemCode"),
+                GetJsonDecimal(l, "RemainingOpenQuantity", "OpenQuantity", "Quantity"),
+                GetJsonDecimal(l, "DiscountPercent"),
+                TryGetJsonDecimal(l, "U_ValorDoDesconto"),
+                GetJsonString(l, "WarehouseCode"),
+                TryGetJsonInt(l, "Usage")))
+            .Where(l => l.LineNum >= 0 && !string.IsNullOrWhiteSpace(l.ItemCode) && l.OpenQuantity > 0)
+            .ToList();
+
+        var linhasUsadas = new HashSet<int>();
+        var linhasPatch = new List<Dictionary<string, object?>>();
+
+        foreach (var item in itensComLote)
+        {
+            var codigoProduto = item.CodProduto!.Trim();
+            var lotesValidos = item.ListaLotes
+                .Where(l => !string.IsNullOrWhiteSpace(l.NumLote) && l.QtdeAtendida > 0)
+                .ToList();
+
+            var qtdLotes = lotesValidos.Sum(l => l.QtdeAtendida);
+            if (!QuantidadesIguais(qtdLotes, item.QtdeAtendida))
+            {
+                return (false,
+                    $"Quantidade dos lotes do item {codigoProduto} ({qtdLotes}) difere da quantidade atendida ({item.QtdeAtendida}).",
+                    null,
+                    docEntryPedido);
+            }
+
+            var candidatos = orderLines
+                .Where(l => !linhasUsadas.Contains(l.LineNum) &&
+                            string.Equals(l.ItemCode, codigoProduto, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (candidatos.Count == 0)
+                return (false, $"Item {codigoProduto} recebido do WMS não foi encontrado aberto no pedido {docEntryPedido}.", pedido.body, docEntryPedido);
+
+            var linha = candidatos.FirstOrDefault(l => QuantidadesIguais(l.OpenQuantity, item.QtdeAtendida));
+
+            if (linha is null)
+            {
+                if (candidatos.Count != 1)
+                {
+                    return (false,
+                        $"Não foi possível identificar a linha do item {codigoProduto} no pedido {docEntryPedido}. Há múltiplas linhas abertas e nenhuma tem quantidade {item.QtdeAtendida}.",
+                        pedido.body,
+                        docEntryPedido);
+                }
+
+                linha = candidatos[0];
+            }
+
+            if (item.QtdeAtendida > linha.OpenQuantity)
+            {
+                return (false,
+                    $"Quantidade atendida do item {codigoProduto} ({item.QtdeAtendida}) é maior que o saldo aberto do pedido ({linha.OpenQuantity}).",
+                    pedido.body,
+                    docEntryPedido);
+            }
+
+            linhasUsadas.Add(linha.LineNum);
+
+            linhasPatch.Add(new Dictionary<string, object?>
+            {
+                ["LineNum"] = linha.LineNum,
+                ["ItemCode"] = linha.ItemCode,
+                ["BatchNumbers"] = lotesValidos.Select(l => new Dictionary<string, object?>
+                {
+                    ["BatchNumber"] = l.NumLote!.Trim(),
+                    ["Quantity"] = l.QtdeAtendida,
+                    ["BaseLineNumber"] = linha.LineNum,
+                    ["ExpiryDate"] = FormatarDataSap(l.DataValidade),
+                    ["ManufacturingDate"] = FormatarDataSap(l.DataFabricacao)
+                }).ToList()
+            });
+        }
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["DocumentLines"] = linhasPatch
+        };
+
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = null,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
+
+        using var client = CreateClientWithCookies(noCache: true);
+        using var req = new HttpRequestMessage(new HttpMethod("PATCH"), $"Orders({docEntryPedido})")
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+
+        req.Headers.Add("B1S-ReplaceCollectionsOnPatch", "true");
+
+        using var resp = await client.SendAsync(req, ct);
+        var body = await resp.Content.ReadAsStringAsync(ct);
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            var erroSl = BuildSlError(body, resp);
+
+            if (tentativaAjusteLote < 5)
+            {
+                var ajuste = await TentarAjustarLoteIndisponivelAsync(request, erroSl, ct);
+                if (ajuste.ok)
+                {
+                    return await AtualizarLotesPedidoVendaAsync(
+                        request,
+                        ct,
+                        tentativaAjusteLote + 1);
+                }
+
+                if (ajuste.erroAplicavel)
+                    erroSl = $"{erroSl} {ajuste.mensagem}";
+            }
+
+            if (EhErroInternoGenericoSap(body, erroSl))
+            {
+                erroSl = $"{erroSl} O SAP Business One não aceitou gravar BatchNumbers diretamente no pedido de venda via Service Layer Orders({docEntryPedido}). " +
+                         "Aplique os lotes em um documento que movimenta estoque, como esboço, entrega ou nota fiscal de saída.";
+            }
+
+            return (false, erroSl, body, docEntryPedido);
+        }
+
+        return (true, null, body, docEntryPedido);
+    }
+
+    private static bool EhErroInternoGenericoSap(string? body, string? erro)
+    {
+        return ContemErroInternoGenericoSap(body) || ContemErroInternoGenericoSap(erro);
+    }
+
+    private static bool ContemErroInternoGenericoSap(string? valor)
+    {
+        return !string.IsNullOrWhiteSpace(valor) &&
+               valor.Contains("-5002", StringComparison.OrdinalIgnoreCase) &&
+               valor.Contains("131-183", StringComparison.OrdinalIgnoreCase);
     }
 
     private static decimal CalcularPesoLiquidoWms(decimal pesoTotal)
@@ -4851,18 +5377,18 @@ SELECT
     IFNULL(T0.""ExtraMonth"", 0) + IFNULL(T1.""InstMonth"", 0) AS ""Meses"",
     IFNULL(T0.""ExtraDays"", 0) + IFNULL(T1.""InstDays"", 0) AS ""Dias"",
     CASE
-        WHEN T1.""InstNo"" IS NULL THEN 100
+        WHEN T1.""IntsNo"" IS NULL THEN 100
         ELSE IFNULL(T1.""InstPrcnt"", 0)
     END AS ""Percentual"",
     CASE
-        WHEN T1.""InstNo"" IS NULL THEN 0
+        WHEN T1.""IntsNo"" IS NULL THEN 0
         ELSE 1
     END AS ""TemParcela""
 FROM ""{schema}"".""OCTG"" T0
 LEFT JOIN ""{schema}"".""CTG1"" T1
     ON T1.""CTGCode"" = T0.""GroupNum""
 WHERE T0.""GroupNum"" = {groupCode}
-ORDER BY IFNULL(T1.""InstNo"", 1)";
+ORDER BY IFNULL(T1.""IntsNo"", 1)";
 
             var dt = await _hana.QueryToDataTableAsync(sql, null, ct);
             if (dt.Rows.Count == 0)
@@ -5041,6 +5567,9 @@ WHERE ""DocEntry"" = {docEntryPedido}";
     {
         texto = RemoverDiacriticos(texto).ToUpperInvariant();
 
+        if (texto.Contains("FATURADO", StringComparison.OrdinalIgnoreCase))
+            return false;
+
         return texto.Contains("AVISTA", StringComparison.OrdinalIgnoreCase) ||
                texto.Contains("A VISTA", StringComparison.OrdinalIgnoreCase) ||
                texto.Contains("PAGAMENTO_ANTECIPADO", StringComparison.OrdinalIgnoreCase) ||
@@ -5118,8 +5647,8 @@ WHERE ""DocEntry"" = {docEntryPedido}";
         int LineNum,
         string ItemCode,
         decimal OpenQuantity,
-        decimal UnitPrice,
         decimal DiscountPercent,
+        decimal? ValorDoDesconto,
         string WarehouseCode,
         int? Usage);
 
@@ -5185,6 +5714,26 @@ WHERE ""DocEntry"" = {docEntryPedido}";
         }
 
         return 0;
+    }
+
+    private static decimal? TryGetJsonDecimal(JsonElement element, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (!element.TryGetProperty(name, out var value) || value.ValueKind == JsonValueKind.Null)
+                continue;
+
+            if (value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var number))
+                return number;
+
+            if (value.ValueKind == JsonValueKind.String &&
+                decimal.TryParse(value.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out number))
+            {
+                return number;
+            }
+        }
+
+        return null;
     }
 
     private static int? TryGetJsonInt(JsonElement element, string name)

@@ -3,7 +3,7 @@
     ViewData["Title"] = "Processos WMS";
 }
 
-<link rel="stylesheet" href="~/css/wms-processos.css" />
+<link rel="stylesheet" href="~/css/wms-processos.css" asp-append-version="true" />
 
 <div class="container-fluid py-3">
     <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
@@ -142,6 +142,8 @@
     <script>
         (() => {
             let page = @Model.Filtro.Page;
+            let sortBy = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Filtro.OrdenarPor));
+            let sortDirection = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Filtro.Direcao));
             let timer = null;
 
             const gridArea = document.getElementById("gridArea");
@@ -158,6 +160,8 @@
                 q.set("Page", String(page));
                 q.set("PageSize", el.pageSize.value || "50");
                 q.set("AutoRefresh", el.autoRefresh.checked ? "true" : "false");
+                q.set("OrdenarPor", sortBy);
+                q.set("Direcao", sortDirection);
                 return q.toString();
             }
 
@@ -167,15 +171,24 @@
                     cache: "no-store"
                 });
                 gridArea.innerHTML = resp.ok ? await resp.text() : `<div class="alert alert-danger">Erro ao carregar processos.</div>`;
-                bindPager();
+                bindGridActions();
             }
 
-            function bindPager() {
+            function bindGridActions() {
                 gridArea.querySelector("[data-page-prev]")?.addEventListener("click", () => {
                     if (page > 1) { page--; load(); }
                 });
                 gridArea.querySelector("[data-page-next]")?.addEventListener("click", () => {
                     page++; load();
+                });
+                gridArea.querySelectorAll("[data-sort]").forEach(button => {
+                    button.addEventListener("click", () => {
+                        const column = button.dataset.sort;
+                        sortDirection = sortBy === column && sortDirection === "asc" ? "desc" : "asc";
+                        sortBy = column;
+                        page = 1;
+                        load();
+                    });
                 });
             }
 
@@ -194,7 +207,7 @@
             document.getElementById("btnAtualizar").addEventListener("click", () => { page = 1; load(); });
             document.getElementById("btnSincronizar").addEventListener("click", async () => {
                 const fd = new FormData(document.getElementById("syncForm"));
-                fd.set("tipo", el.tipo.value || "SAIDAS");
+                fd.set("tipo", el.tipo.value || "");
                 fd.set("dataIni", el.dataIni.value || "");
                 fd.set("dataFim", el.dataFim.value || "");
                 gridArea.innerHTML = `<div class="p-3 text-muted">Sincronizando...</div>`;
@@ -207,7 +220,7 @@
                 await load();
             });
 
-            bindPager();
+            bindGridActions();
             refreshTimer();
         })();
     </script>

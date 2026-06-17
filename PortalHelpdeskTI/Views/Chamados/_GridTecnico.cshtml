@@ -4,46 +4,54 @@
 <table class="table align-middle mb-0" id="tabela-painel">
     <thead>
         <tr>
-            <th>
-                <div class="d-flex align-items-start pt-1">
+            <th data-sort-key="id" data-sort-type="number">
+                <button type="button" class="btn btn-link sort-column-btn">
                     <span>#</span>
-                </div>
+                    <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
+                    <span class="visually-hidden">Ordenar por número do chamado</span>
+                </button>
             </th>
-            <th class="col-titulo">
-                <div class="d-flex align-items-start pt-1">
+            <th class="col-titulo" data-sort-key="titulo" data-sort-type="text">
+                <button type="button" class="btn btn-link sort-column-btn">
                     <span>Título</span>
-                </div>
+                    <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
+                    <span class="visually-hidden">Ordenar por título</span>
+                </button>
             </th>
-            <th>
-                <div class="d-flex align-items-start pt-1">
+            <th data-sort-key="prioridade" data-sort-type="priority">
+                <button type="button" class="btn btn-link sort-column-btn">
                     <span>Prioridade</span>
-                </div>
+                    <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
+                    <span class="visually-hidden">Ordenar por prioridade</span>
+                </button>
             </th>
-            <th>
-                <div class="d-flex align-items-start pt-1">
+            <th data-sort-key="sla" data-sort-type="number">
+                <button type="button" class="btn btn-link sort-column-btn">
                     <span>SLA</span>
-                </div>
+                    <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
+                    <span class="visually-hidden">Ordenar por SLA</span>
+                </button>
             </th>
-            <th>
-                <div class="d-flex align-items-start pt-1">
+            <th data-sort-key="solicitante" data-sort-type="text">
+                <button type="button" class="btn btn-link sort-column-btn">
                     <span>Solicitante</span>
-                </div>
+                    <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
+                    <span class="visually-hidden">Ordenar por solicitante</span>
+                </button>
             </th>
-            <th>
-                <div class="d-flex align-items-start pt-1">
+            <th data-sort-key="tecnico" data-sort-type="text">
+                <button type="button" class="btn btn-link sort-column-btn">
                     <span>Técnico</span>
-                </div>
+                    <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
+                    <span class="visually-hidden">Ordenar por técnico</span>
+                </button>
             </th>
-            <th>
-                <div class="d-flex align-items-start pt-1">
-                    <span class="fw-bold">Status</span>
-                    <button type="button"
-                            class="btn btn-outline-secondary btn-sm ms-1 d-flex align-items-center pt-1"
-                            onclick="toggleFiltroStatusDropdown(event)"
-                            style="line-height:1;">
-                        <i class="bi bi-funnel-fill"></i>
-                    </button>
-                </div>
+            <th data-sort-key="status" data-sort-type="text">
+                <button type="button" class="btn btn-link sort-column-btn">
+                    <span>Status</span>
+                    <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
+                    <span class="visually-hidden">Ordenar por status</span>
+                </button>
             </th>
             <th class="text-center">Ações</th>
         </tr>
@@ -53,21 +61,33 @@
         @foreach (var item in Model)
         {
             var chamado = item.Chamado;
+            var solicitante = chamado.Usuario?.Nome ?? "";
+            var tecnico = chamado.Tecnico?.Nome ?? "Não atribuído";
             var destaque = ViewBag.NovosChamados != null && ((List<int>)ViewBag.NovosChamados).Contains(chamado.Id)
                 ? "table-warning"
                 : "";
 
-            <tr data-id="@chamado.Id" data-href="/Chamados/Atender/@chamado.Id" class="@destaque chamado-row-click">
+            <tr data-id="@chamado.Id"
+                data-href="/Chamados/Atender/@chamado.Id"
+                data-sort-id="@chamado.Id"
+                data-sort-titulo="@chamado.Titulo"
+                data-sort-prioridade="@chamado.Prioridade"
+                data-sort-sla="@item.SlaPercent"
+                data-sort-solicitante="@solicitante"
+                data-sort-tecnico="@tecnico"
+                data-sort-status="@chamado.Status"
+                data-search="@($"{chamado.Id} {chamado.Titulo} {solicitante}")"
+                class="@destaque chamado-row-click">
                 <td>@chamado.Id</td>
                 <td class="col-titulo">
-                    <span class="titulo-text">@chamado.Titulo</span>
+                    <span class="titulo-text" title="@chamado.Titulo">@chamado.Titulo</span>
                 </td>
                 <td>
                     <span class="badge @BadgeHelper.GetPrioridadeBadgeClass(chamado.Prioridade)">
                         @chamado.Prioridade
                     </span>
                 </td>
-                <td style="min-width: 180px;">
+                <td class="col-sla">
                     <div class="progress" style="height: 18px;" title="@item.SlaLabel">
                         <div class="progress-bar @item.SlaCss"
                              role="progressbar"
@@ -82,12 +102,12 @@
                         @item.SlaLabel
                         @if (item.SlaPaused)
                         {
-                            <span class="text-muted"> • pausado (Aguardando)</span>
+                            <span class="text-muted"> - pausado (Aguardando)</span>
                         }
                     </small>
                 </td>
-                <td>@chamado.Usuario?.Nome</td>
-                <td>@(chamado.Tecnico?.Nome ?? "Não atribuído")</td>
+                <td class="col-nome" title="@solicitante">@solicitante</td>
+                <td class="col-nome" title="@tecnico">@tecnico</td>
                 <td>
                     <span class="badge @BadgeHelper.GetStatusBadgeClass(chamado.Status)">
                         @chamado.Status
@@ -110,5 +130,3 @@
         }
     </tbody>
 </table>
-
-@* O dropdown de filtro de status fica na TecnicoPainel.cshtml *@

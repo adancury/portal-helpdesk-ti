@@ -34,6 +34,15 @@ namespace PortalHelpdeskTI.Controllers.Api
             return Content(RenderSwaggerWmsPage(), "text/html; charset=utf-8");
         }
 
+        [HttpGet("vincular-lotes-pedido")]
+        [HttpGet("~/api/wms/pedido-saida/vincular-lotes")]
+        [HttpGet("~/api/wms/faturamento-saida/vincularlotespedido")]
+        [HttpGet("~/api/wms/faturamento-saida/criar-draft-nf")]
+        public IActionResult InformacoesEndpointVincularLotes()
+        {
+            return Content(RenderSwaggerVincularLotesPage(), "text/html; charset=utf-8");
+        }
+
         [HttpPost("criar")]
         [HttpPost("~/api/wms/retorno-saida")]
         [HttpPost("~/api/wms/retornoOrdemSaida")]
@@ -104,15 +113,161 @@ namespace PortalHelpdeskTI.Controllers.Api
             }
         }
 
+        [HttpPost("vincular-lotes-pedido")]
+        [HttpPost("~/api/wms/pedido-saida/vincular-lotes")]
+        [HttpPost("~/api/wms/faturamento-saida/vincularlotespedido")]
+        [HttpPost("~/api/wms/faturamento-saida/criar-draft-nf")]
+        public async Task<IActionResult> VincularLotesPedido([FromBody] WmsRetornoOrdemSaidaRequest request, CancellationToken ct)
+        {
+            const string metodoLog = "POST /api/wms/faturamento-saida/criar-draft-nf";
+
+            if (request == null)
+            {
+                return await ResponderComLogAsync(
+                    StatusCodes.Status400BadRequest,
+                    null,
+                    new { codigo = "99", descricao = "JSON inválido." },
+                    "ERRO - JSON inválido.",
+                    null,
+                    metodoLog);
+            }
+
+            try
+            {
+                var draft = await _serviceLayerClient.CriarDraftNfSaidaDePedidoVendaAsync(request, ct);
+
+                if (!draft.ok)
+                {
+                    var erro = new
+                    {
+                        codigo = "99",
+                        descricao = string.IsNullOrWhiteSpace(draft.error)
+                            ? "Erro interno ao criar esboço de NF de saída com lotes."
+                            : draft.error,
+                        retornoSap = string.IsNullOrWhiteSpace(draft.body)
+                            ? null
+                            : draft.body
+                    };
+
+                    return await ResponderComLogAsync(
+                        StatusCodes.Status500InternalServerError,
+                        request,
+                        erro,
+                        string.IsNullOrWhiteSpace(draft.error)
+                            ? "ERRO - Erro interno ao criar esboço de NF de saída com lotes."
+                            : $"ERRO - {draft.error}",
+                        draft.docEntryDraft > 0 ? draft.docEntryDraft.ToString() : null,
+                        metodoLog);
+                }
+
+                var sucesso = new
+                {
+                    codigo = "00",
+                    descricao = "Esboço de NF de saída criado com lotes vinculados com sucesso.",
+                    docEntryDraft = draft.docEntryDraft,
+                    docNumDraft = draft.docNumDraft,
+                    retornoSap = draft.body
+                };
+
+                return await ResponderComLogAsync(
+                    StatusCodes.Status200OK,
+                    request,
+                    sucesso,
+                    "OK - Esboço de NF de saída criado com lotes vinculados com sucesso.",
+                    draft.docEntryDraft > 0 ? draft.docEntryDraft.ToString() : null,
+                    metodoLog);
+            }
+            catch (Exception ex)
+            {
+                var erro = new
+                {
+                    codigo = "99",
+                    descricao = "Erro interno ao criar esboço de NF de saída com lotes.",
+                    detalhe = ex.Message
+                };
+
+                return await ResponderComLogAsync(
+                    StatusCodes.Status500InternalServerError,
+                    request,
+                    erro,
+                    $"ERRO - Erro interno ao criar esboço de NF de saída com lotes. {ex.Message}",
+                    null,
+                    metodoLog);
+            }
+        }
+
         private static string RenderSwaggerWmsPage()
         {
-            return """
+            return RenderSwaggerWmsPage(
+                "Swagger WMS NF Saida - Portal Helpdesk TI",
+                "Swagger WMS NF Sa&iacute;da",
+                "Teste e documenta&ccedil;&atilde;o do endpoint de retorno WMS para cria&ccedil;&atilde;o de NF de sa&iacute;da.",
+                "/api/wms/nota-fiscal-saida/criar",
+                """
+{
+  "NUM_ORD_SAI": 320689,
+  "COD_PROPRIET": 100,
+  "FLAG_DIVERGENCIA": "N",
+  "VOLUMES_TOTAL": 1,
+  "OS_CANCELADA": "N",
+  "LISTA_ITENS": [],
+  "LISTA_VOLUMES": []
+}
+""",
+                "A API cria a NF de sa&iacute;da no SAP com base no pedido de venda, preservando cliente, condi&ccedil;&atilde;o de pagamento, utiliza&ccedil;&atilde;o e demais refer&ecirc;ncias do pedido.");
+        }
+
+        private static string RenderSwaggerVincularLotesPage()
+        {
+            return RenderSwaggerWmsPage(
+                "Swagger WMS Vinculo de Lotes - Portal Helpdesk TI",
+                "Swagger WMS Draft NF Sa&iacute;da",
+                "Teste e documenta&ccedil;&atilde;o do endpoint de retorno WMS para criar esbo&ccedil;o de NF de sa&iacute;da com lotes.",
+                "/api/wms/faturamento-saida/criar-draft-nf",
+                """
+{
+  "NUM_ORD_SAI": 320689,
+  "COD_PROPRIET": 100,
+  "FLAG_DIVERGENCIA": "N",
+  "PESO_TOTAL": 1,
+  "VOLUMES_TOTAL": 1,
+  "OS_CANCELADA": "N",
+  "LISTA_ITENS": [
+    {
+      "COD_PRODUTO": "CODIGO_DO_ITEM",
+      "QTDE_EMBAL": 1,
+      "QTDE_ATENDIDA": 1,
+      "LISTA_LOTES": [
+        {
+          "NUM_LOTE": "LOTE_DO_WMS",
+          "DATA_VALIDADE": "2026-12-31",
+          "DATA_FABRICACAO": "2026-01-01",
+          "QTDE_ATENDIDA": 1
+        }
+      ]
+    }
+  ],
+  "LISTA_VOLUMES": []
+}
+""",
+                "A API localiza o pedido de venda no SAP e cria um esbo&ccedil;o de NF de sa&iacute;da em <code>Drafts</code>, com os lotes informados pelo WMS nas linhas do documento.");
+        }
+
+        private static string RenderSwaggerWmsPage(
+            string pageTitle,
+            string heading,
+            string description,
+            string endpoint,
+            string samplePayload,
+            string endpointNote)
+        {
+            var html = """
 <!doctype html>
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Swagger WMS NF Saida - Portal Helpdesk TI</title>
+    <title>__PAGE_TITLE__</title>
     <link rel="icon" type="image/x-icon" href="/images/LogoHelp_512x512.png">
     <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="/css/site.css">
@@ -349,15 +504,15 @@ namespace PortalHelpdeskTI.Controllers.Api
     <main class="swagger-page">
         <div class="swagger-title">
             <div>
-                <h1>Swagger WMS NF Sa&iacute;da</h1>
-                <p>Teste e documenta&ccedil;&atilde;o do endpoint de retorno WMS para cria&ccedil;&atilde;o de NF de sa&iacute;da.</p>
+                <h1>__HEADING__</h1>
+                <p>__DESCRIPTION__</p>
             </div>
         </div>
 
         <section class="portal-card">
             <div class="endpoint-strip">
                 <span class="method">POST</span>
-                <code>/api/wms/nota-fiscal-saida/criar</code>
+                <code>__ENDPOINT__</code>
             </div>
 
             <div class="tester">
@@ -365,15 +520,7 @@ namespace PortalHelpdeskTI.Controllers.Api
                     <div class="panel-title">
                         <label for="payload">JSON da requisi&ccedil;&atilde;o</label>
                     </div>
-                    <textarea id="payload" spellcheck="false">{
-  "NUM_ORD_SAI": 320689,
-  "COD_PROPRIET": 100,
-  "FLAG_DIVERGENCIA": "N",
-  "VOLUMES_TOTAL": 1,
-  "OS_CANCELADA": "N",
-  "LISTA_ITENS": [],
-  "LISTA_VOLUMES": []
-}</textarea>
+                    <textarea id="payload" spellcheck="false">__SAMPLE_PAYLOAD__</textarea>
                     <button id="executar" class="btn-portal" type="button">Executar integra&ccedil;&atilde;o</button>
                 </div>
                 <div>
@@ -386,7 +533,7 @@ namespace PortalHelpdeskTI.Controllers.Api
             </div>
 
             <div class="endpoint-note">
-                A API cria a NF de sa&iacute;da no SAP com base no pedido de venda, preservando cliente, condi&ccedil;&atilde;o de pagamento, utiliza&ccedil;&atilde;o e demais refer&ecirc;ncias do pedido.
+                __ENDPOINT_NOTE__
             </div>
         </section>
     </main>
@@ -430,7 +577,7 @@ namespace PortalHelpdeskTI.Controllers.Api
             statusEl.textContent = 'Enviando para o endpoint...';
 
             try {
-                const response = await fetch('/api/wms/nota-fiscal-saida/criar', {
+                const response = await fetch('__ENDPOINT__', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body
@@ -461,6 +608,14 @@ namespace PortalHelpdeskTI.Controllers.Api
 </body>
 </html>
 """;
+
+            return html
+                .Replace("__PAGE_TITLE__", pageTitle)
+                .Replace("__HEADING__", heading)
+                .Replace("__DESCRIPTION__", description)
+                .Replace("__ENDPOINT__", endpoint)
+                .Replace("__SAMPLE_PAYLOAD__", samplePayload)
+                .Replace("__ENDPOINT_NOTE__", endpointNote);
         }
 
         private async Task<IActionResult> ResponderComLogAsync(
@@ -468,9 +623,10 @@ namespace PortalHelpdeskTI.Controllers.Api
             WmsRetornoOrdemSaidaRequest? request,
             object response,
             string message,
-            string? keySap)
+            string? keySap,
+            string metodo = "POST /retornoOrdemSaida")
         {
-            await RegistrarLogRetornoSapAsync(request, response, message, keySap);
+            await RegistrarLogRetornoSapAsync(request, response, message, keySap, metodo);
             return StatusCode(statusCode, response);
         }
 
@@ -478,7 +634,8 @@ namespace PortalHelpdeskTI.Controllers.Api
             WmsRetornoOrdemSaidaRequest? request,
             object response,
             string message,
-            string? keySap)
+            string? keySap,
+            string metodo)
         {
             try
             {
@@ -505,7 +662,7 @@ VALUES
 
                 using var cmd = new OdbcCommand(sql, conn);
                 cmd.CommandTimeout = 10;
-                cmd.Parameters.Add("pMethod", OdbcType.NVarChar, 300).Value = "POST /retornoOrdemSaida";
+                cmd.Parameters.Add("pMethod", OdbcType.NVarChar, 300).Value = metodo;
                 cmd.Parameters.Add("pMessage", OdbcType.NVarChar, 5000).Value = Limitar(message, 5000);
                 cmd.Parameters.Add("pKeyWms", OdbcType.NVarChar, 200).Value = request?.NumOrdSaida > 0 ? request.NumOrdSaida.ToString() : DBNull.Value;
                 cmd.Parameters.Add("pKeySap", OdbcType.NVarChar, 200).Value = !string.IsNullOrWhiteSpace(keySap) ? keySap : request?.NumOrdSaida > 0 ? request.NumOrdSaida.ToString() : DBNull.Value;

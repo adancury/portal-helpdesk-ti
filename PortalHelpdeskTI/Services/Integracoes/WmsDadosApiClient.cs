@@ -50,19 +50,25 @@ namespace PortalHelpdeskTI.Services.Integracoes
         public string Path { get; init; } = "";
         public string InicioParam { get; init; } = "dataInicio";
         public string FimParam { get; init; } = "dataFim";
+        public string CodProprietarioParam { get; init; } = "codProprietario";
+        public bool EnviarCodProprietario { get; init; } = true;
+        public bool EnviarPeriodo { get; init; } = true;
 
         public string BuildQuery(string codProprietario, DateOnly inicio, DateOnly fim)
         {
             static string D(DateOnly d) => d.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 
             var qs = new List<string>();
-            if (!string.IsNullOrWhiteSpace(codProprietario))
-                qs.Add("codProprietario=" + Uri.EscapeDataString(codProprietario));
+            if (EnviarCodProprietario && !string.IsNullOrWhiteSpace(codProprietario))
+                qs.Add(CodProprietarioParam + "=" + Uri.EscapeDataString(codProprietario));
 
-            qs.Add(InicioParam + "=" + Uri.EscapeDataString(D(inicio)));
-            qs.Add(FimParam + "=" + Uri.EscapeDataString(D(fim)));
+            if (EnviarPeriodo)
+            {
+                qs.Add(InicioParam + "=" + Uri.EscapeDataString(D(inicio)));
+                qs.Add(FimParam + "=" + Uri.EscapeDataString(D(fim)));
+            }
 
-            return "?" + string.Join("&", qs);
+            return qs.Count == 0 ? "" : "?" + string.Join("&", qs);
         }
 
         public static IReadOnlyDictionary<string, WmsDadosEndpoint> Todos { get; } =
@@ -70,9 +76,16 @@ namespace PortalHelpdeskTI.Services.Integracoes
             {
                 ["ENTRADAS"] = new() { Tipo = "ENTRADAS", Path = "/consultaEntradas" },
                 ["SAIDAS"] = new() { Tipo = "SAIDAS", Path = "/consultaSaidas", InicioParam = "dataInicioProducao", FimParam = "dataFimProducao" },
+                ["ESTOQUE"] = new() { Tipo = "ESTOQUE", Path = "/consultaEstoque", EnviarPeriodo = false },
                 ["RESSUPRIMENTOS"] = new() { Tipo = "RESSUPRIMENTOS", Path = "/consultaRessuprimento" },
                 ["CORTES"] = new() { Tipo = "CORTES", Path = "/consultaCortes" },
-                ["ATIVIDADES"] = new() { Tipo = "ATIVIDADES", Path = "/consultaAtividades" }
+                ["ATIVIDADES"] = new() { Tipo = "ATIVIDADES", Path = "/consultaAtividades" },
+                ["HISTORICO_CONTAGENS"] = new() { Tipo = "HISTORICO_CONTAGENS", Path = "/consultaHistoricoCont" },
+                ["ENDERECOS"] = new() { Tipo = "ENDERECOS", Path = "/consultaEnderecos", EnviarPeriodo = false },
+                ["CURVA_ABC"] = new() { Tipo = "CURVA_ABC", Path = "/consultaCurvaAbc", EnviarCodProprietario = false },
+                ["MOVTO_PALLETS"] = new() { Tipo = "MOVTO_PALLETS", Path = "/consultaMvtoPallets", CodProprietarioParam = "CodProprietario" },
+                ["ATIVIDADES_ENTRADA"] = new() { Tipo = "ATIVIDADES_ENTRADA", Path = "/consultaAtividadesEntrada", CodProprietarioParam = "CodProprietario" },
+                ["DISTRIBUICAO"] = new() { Tipo = "DISTRIBUICAO", Path = "/consultaDistribuicao", CodProprietarioParam = "CodProprietario" }
             };
     }
 }

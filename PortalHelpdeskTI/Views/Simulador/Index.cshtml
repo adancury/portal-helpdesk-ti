@@ -1,0 +1,670 @@
+@{
+    ViewData["Title"] = "Simulador de Prazos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Styles {
+    <style>
+        .simulador-prazos {
+            --sim-highlight: color-mix(in srgb, var(--accent) 14%, transparent);
+        }
+
+        .simulador-prazos .page-shell {
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        .simulador-prazos .tool-header {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .simulador-prazos .tool-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            color: var(--accent);
+            font-size: .78rem;
+            font-weight: 700;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            margin-bottom: .35rem;
+        }
+
+        .simulador-prazos .tool-header h2 {
+            margin: 0;
+            color: var(--heading-fg);
+            font-weight: 700;
+        }
+
+        .simulador-prazos .toolbar-card,
+        .simulador-prazos .results-card,
+        .simulador-prazos .detail-panel {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+        }
+
+        .simulador-prazos .toolbar-card {
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .simulador-prazos label {
+            color: var(--label-fg);
+            font-weight: 600;
+            font-size: .85rem;
+        }
+
+        .simulador-prazos .filter-bar {
+            display: flex;
+            gap: .5rem;
+            flex-wrap: wrap;
+        }
+
+        .simulador-prazos .filter-btn {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            border-radius: 6px;
+            padding: .35rem .75rem;
+            font-size: .85rem;
+        }
+
+        .simulador-prazos .filter-btn:hover,
+        .simulador-prazos .filter-btn.active {
+            border-color: var(--accent);
+            background: var(--sim-highlight);
+            color: var(--heading-fg);
+        }
+
+        .simulador-prazos .stat-chip {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface-alt);
+            color: var(--muted);
+            padding: .55rem .75rem;
+            font-size: .85rem;
+        }
+
+        .simulador-prazos .stat-chip strong {
+            color: var(--heading-fg);
+        }
+
+        .simulador-prazos .detail-panel {
+            display: none;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+        }
+
+        .simulador-prazos .detail-panel.visible {
+            display: block;
+        }
+
+        .simulador-prazos .detail-title {
+            color: var(--heading-fg);
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .simulador-prazos .detail-meta {
+            color: var(--muted);
+            font-size: .9rem;
+        }
+
+        .simulador-prazos .detail-timeline {
+            display: flex;
+            gap: 0;
+            overflow-x: auto;
+            padding: 1rem .25rem .25rem;
+        }
+
+        .simulador-prazos .timeline-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            min-width: 92px;
+        }
+
+        .simulador-prazos .timeline-item:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            right: -50%;
+            height: 2px;
+            background: var(--border);
+        }
+
+        .simulador-prazos .timeline-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: var(--primary-contrast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+            margin-bottom: .45rem;
+        }
+
+        .simulador-prazos .timeline-days {
+            color: var(--heading-fg);
+            font-size: .78rem;
+            font-weight: 700;
+        }
+
+        .simulador-prazos .timeline-date {
+            color: var(--muted);
+            font-size: .78rem;
+            text-align: center;
+        }
+
+        .simulador-prazos .table-responsive {
+            border-radius: 8px;
+        }
+
+        .simulador-prazos table {
+            margin-bottom: 0;
+        }
+
+        .simulador-prazos tbody tr {
+            cursor: pointer;
+        }
+
+        .simulador-prazos tbody tr:hover {
+            background: var(--sim-highlight);
+        }
+
+        .simulador-prazos .td-code,
+        .simulador-prazos .td-avg {
+            font-weight: 700;
+            color: var(--heading-fg);
+            white-space: nowrap;
+        }
+
+        .simulador-prazos .td-name {
+            min-width: 190px;
+        }
+
+        .simulador-prazos .dates-cell {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .35rem;
+            min-width: 300px;
+        }
+
+        .simulador-prazos .date-tag {
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: var(--surface-alt);
+            color: var(--text);
+            padding: .15rem .5rem;
+            font-size: .78rem;
+            white-space: nowrap;
+        }
+
+        .simulador-prazos .parcelas-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 42px;
+            border-radius: 999px;
+            padding: .2rem .55rem;
+            font-size: .78rem;
+            font-weight: 700;
+            border: 1px solid transparent;
+        }
+
+        .simulador-prazos .p-1x { background: rgba(25, 135, 84, .12); color: #198754; border-color: rgba(25, 135, 84, .25); }
+        .simulador-prazos .p-2x { background: rgba(13, 110, 253, .12); color: #0d6efd; border-color: rgba(13, 110, 253, .25); }
+        .simulador-prazos .p-3x { background: rgba(255, 193, 7, .16); color: #9a6a00; border-color: rgba(255, 193, 7, .32); }
+        .simulador-prazos .p-4x { background: rgba(243, 112, 33, .14); color: var(--accent); border-color: rgba(243, 112, 33, .28); }
+        .simulador-prazos .p-5x { background: rgba(220, 53, 69, .12); color: #dc3545; border-color: rgba(220, 53, 69, .25); }
+        .simulador-prazos .p-6x,
+        .simulador-prazos .p-7x { background: rgba(111, 66, 193, .12); color: #6f42c1; border-color: rgba(111, 66, 193, .25); }
+
+        .simulador-prazos .empty-state {
+            display: none;
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+    </style>
+}
+
+<div class="simulador-prazos">
+    <div class="page-shell">
+        <div class="tool-header">
+            <div class="tool-kicker">
+                <i class="bi bi-calculator"></i>
+                Ferramenta Comercial
+            </div>
+            <div class="d-flex flex-wrap align-items-end justify-content-between gap-2">
+                <div>
+                    <h2>Simulador de Prazos</h2>
+                    <div class="text-muted">Condições de pagamento por data de faturamento e vencimentos.</div>
+                </div>
+                <a class="btn btn-outline-secondary btn-sm" asp-controller="Inicio" asp-action="Index">
+                    <i class="bi bi-arrow-left"></i> Voltar
+                </a>
+            </div>
+        </div>
+
+        <div class="toolbar-card">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label for="dateFat" class="form-label">Data de Faturamento</label>
+                    <input type="date" id="dateFat" class="form-control" />
+                </div>
+                <div class="col-12 col-md-5">
+                    <label for="searchInput" class="form-label">Buscar condição</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Ex.: 30 dias, 28/56 ou código" />
+                    </div>
+                </div>
+                <div class="col-12 col-md-3">
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-outline-secondary" id="clearSearch">
+                            <i class="bi bi-eraser"></i> Limpar filtros
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-bar mt-3" id="filterBar" aria-label="Filtro por quantidade de parcelas">
+                <button type="button" class="filter-btn active" data-filter="all">Todas</button>
+                <button type="button" class="filter-btn" data-filter="1x">1x</button>
+                <button type="button" class="filter-btn" data-filter="2x">2x</button>
+                <button type="button" class="filter-btn" data-filter="3x">3x</button>
+                <button type="button" class="filter-btn" data-filter="4x">4x</button>
+                <button type="button" class="filter-btn" data-filter="5x">5x</button>
+                <button type="button" class="filter-btn" data-filter="6x">6x</button>
+                <button type="button" class="filter-btn" data-filter="7x+">7x+</button>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mt-3" id="statsRow">
+                <div class="stat-chip">Total: <strong id="statTotal">0</strong> condições</div>
+                <div class="stat-chip">Exibindo: <strong id="statVisible">0</strong></div>
+                <div class="stat-chip">Prazo médio: <strong id="statAvg">-</strong> dias</div>
+            </div>
+        </div>
+
+        <div id="detailPanel" class="detail-panel">
+            <div class="d-flex justify-content-between gap-3">
+                <div>
+                    <div class="detail-title" id="detailTitle"></div>
+                    <div class="detail-meta" id="detailMeta"></div>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm align-self-start" onclick="closeDetail()" aria-label="Fechar detalhe">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="detail-timeline" id="detailTimeline"></div>
+        </div>
+
+        <div class="results-card">
+            <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                <h5 class="mb-0">Condições disponíveis</h5>
+                <span class="text-muted small" id="resultsCount"></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Cód.</th>
+                            <th>Condição de Pagamento</th>
+                            <th>Parcelas</th>
+                            <th>Prazo Médio</th>
+                            <th>Datas de Vencimento</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+            <div id="emptyState" class="empty-state">
+                <i class="bi bi-search fs-1 d-block mb-2"></i>
+                Nenhuma condição encontrada.
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const rawData = [
+          [306,"7 dias",7,"1x",[7]],
+          [37,"10 DIAS",10,"1x",[10]],
+          [174,"14 DIAS",14,"1x",[14]],
+          [38,"21 DIAS",21,"1x",[21]],
+          [40,"28 DIAS",28,"1x",[28]],
+          [242,"30 DIAS",30,"1x",[30]],
+          [114,"35 DIAS",35,"1x",[35]],
+          [243,"42 DIAS",42,"1x",[42]],
+          [244,"45 DIAS",45,"1x",[45]],
+          [245,"50 DIAS",50,"1x",[50]],
+          [41,"56 DIAS",56,"1x",[56]],
+          [246,"60 DIAS",60,"1x",[60]],
+          [113,"70 DIAS",70,"1x",[70]],
+          [158,"80 DIAS",80,"1x",[80]],
+          [214,"84 DIAS",84,"1x",[84]],
+          [42,"90 DIAS",90,"1x",[90]],
+          [240,"100 DIAS",100,"1x",[100]],
+          [365,"120 DIAS",120,"1x",[120]],
+          [477,"129 dias",129,"1x",[129]],
+          [405,"150 dias",150,"1x",[150]],
+          [33,"07, 14 DIAS",10.5,"2x",[7,14]],
+          [308,"10,20 dias",15,"2x",[10,20]],
+          [47,"14, 21 DIAS",17.5,"2x",[14,21]],
+          [55,"14, 28 DIAS",21,"2x",[14,28]],
+          [63,"21, 28 DIAS",24.5,"2x",[21,28]],
+          [62,"14, 42 DIAS",28,"2x",[14,42]],
+          [76,"21, 35 DIAS",28,"2x",[21,35]],
+          [237,"28, 35 DIAS",31.5,"2x",[28,35]],
+          [90,"28, 42 DIAS",35,"2x",[28,42]],
+          [104,"30, 45 DIAS",37.5,"2x",[30,45]],
+          [98,"28, 56 DIAS",42,"2x",[28,56]],
+          [250,"30, 60 DIAS",45,"2x",[30,60]],
+          [294,"60, 75 DIAS",67.5,"2x",[60,75]],
+          [176,"60, 90",75,"2x",[60,90]],
+          [34,"07, 14, 21 DIAS",14,"3x",[7,14,21]],
+          [48,"14, 21, 28 DIAS",21,"3x",[14,21,28]],
+          [56,"14, 28, 42 DIAS",28,"3x",[14,28,42]],
+          [64,"21, 28, 35 DIAS",28,"3x",[21,28,35]],
+          [77,"21, 35, 49 DIAS",35,"3x",[21,35,49]],
+          [88,"28, 35, 42 DIAS",35,"3x",[28,35,42]],
+          [91,"28, 42, 56 DIAS",42,"3x",[28,42,56]],
+          [183,"21, 42, 63 DIAS",42,"3x",[21,42,63]],
+          [175,"30, 45, 60 DIAS",45,"3x",[30,45,60]],
+          [97,"28, 49, 70 DIAS",49,"3x",[28,49,70]],
+          [192,"35, 49, 63 DIAS",49,"3x",[35,49,63]],
+          [99,"28, 56, 70 DIAS",51.33,"3x",[28,56,70]],
+          [105,"35, 56, 70 DIAS",53.67,"3x",[35,56,70]],
+          [100,"28, 56, 84 DIAS",56,"3x",[28,56,84]],
+          [106,"42, 56, 70 DIAS",56,"3x",[42,56,70]],
+          [182,"35, 56, 84 DIAS",58.33,"3x",[35,56,84]],
+          [164,"30, 60, 90 DIAS",60,"3x",[30,60,90]],
+          [86,"42, 63, 84 DIAS",63,"3x",[42,63,84]],
+          [103,"28, 63, 98 DIAS",63,"3x",[28,63,98]],
+          [384,"35, 65, 95 dias",65,"3x",[35,65,95]],
+          [159,"56, 70, 84 DIAS",70,"3x",[56,70,84]],
+          [84,"56, 70, 98 DIAS",74.67,"3x",[56,70,98]],
+          [297,"60, 75, 90 DIAS",75,"3x",[60,75,90]],
+          [193,"60, 90, 120 dias",90,"3x",[60,90,120]],
+          [367,"66 - 92 - 122 dias",93.33,"3x",[66,92,122]],
+          [397,"90, 120, 150 dias",120,"3x",[90,120,150]],
+          [302,"120, 150, 180 dias",150,"3x",[120,150,180]],
+          [416,"150, 180, 210 dias",180,"3x",[150,180,210]],
+          [421,"160, 190, 220 dias",190,"3x",[160,190,220]],
+          [437,"180, 210, 240 dias",210,"3x",[180,210,240]],
+          [436,"200, 230, 260 dias",230,"3x",[200,230,260]],
+          [435,"200, 235, 260 dias",231.67,"3x",[200,235,260]],
+          [434,"230, 260, 290 dias",260,"3x",[230,260,290]],
+          [35,"07, 14, 21, 28 DIAS",17.5,"4x",[7,14,21,28]],
+          [49,"14, 21, 28, 35 DIAS",24.5,"4x",[14,21,28,35]],
+          [65,"21, 28, 35, 42 DIAS",31.5,"4x",[21,28,35,42]],
+          [57,"14, 28, 42, 56 DIAS",35,"4x",[14,28,42,56]],
+          [78,"21, 35, 49, 63 DIAS",42,"4x",[21,35,49,63]],
+          [92,"28, 42, 56, 70 DIAS",49,"4x",[28,42,56,70]],
+          [179,"28, 56, 70, 84 DIAS",59.5,"4x",[28,56,70,84]],
+          [83,"21, 49, 77, 105 DIAS",63,"4x",[21,49,77,105]],
+          [107,"42, 56, 70, 84 DIAS",63,"4x",[42,56,70,84]],
+          [309,"30,60,75,90 DIAS",63.75,"4x",[30,60,75,90]],
+          [102,"28, 56, 84, 98 DIAS",66.5,"4x",[28,56,84,98]],
+          [101,"28, 56, 84, 112 DIAS",70,"4x",[28,56,84,112]],
+          [85,"42, 63, 84, 105 DIAS",73.5,"4x",[42,63,84,105]],
+          [186,"30, 60, 90, 120 DIAS",75,"4x",[30,60,90,120]],
+          [209,"56, 70, 84, 98 DIAS",77,"4x",[56,70,84,98]],
+          [191,"60, 90, 120, 150 DIAS",105,"4x",[60,90,120,150]],
+          [451,"60, 90, 120, 150 dias",105,"4x",[60,90,120,150]],
+          [450,"90, 120, 150, 180 dias",135,"4x",[90,120,150,180]],
+          [449,"120, 150, 180, 210 dias",165,"4x",[120,150,180,210]],
+          [448,"150, 180, 210, 240 dias",195,"4x",[150,180,210,240]],
+          [447,"180, 210, 240, 270 dias",225,"4x",[180,210,240,270]],
+          [446,"180, 210, 240, 280 dias",227.5,"4x",[180,210,240,280]],
+          [438,"200, 230, 260, 290 dias",245,"4x",[200,230,260,290]],
+          [445,"200, 230, 260, 290 dias",245,"4x",[200,230,260,290]],
+          [444,"200, 235, 260, 290 dias",246.25,"4x",[200,235,260,290]],
+          [443,"230, 260, 290, 320 dias",275,"4x",[230,260,290,320]],
+          [36,"07, 14, 21, 28, 35 DIAS",21,"5x",[7,14,21,28,35]],
+          [50,"14, 21, 28, 35, 42 DIAS",28,"5x",[14,21,28,35,42]],
+          [66,"21, 28, 35, 42, 49 DIAS",35,"5x",[21,28,35,42,49]],
+          [58,"14, 28, 42, 56, 70 DIAS",42,"5x",[14,28,42,56,70]],
+          [238,"28, 35, 42, 49, 56 DIAS",42,"5x",[28,35,42,49,56]],
+          [79,"21, 35, 49, 63, 77 DIAS",49,"5x",[21,35,49,63,77]],
+          [93,"28, 42, 56, 70, 84 DIAS",56,"5x",[28,42,56,70,84]],
+          [194,"35, 49, 63, 77, 91 DIAS",63,"5x",[35,49,63,77,91]],
+          [96,"28, 42, 56, 84, 112 DIAS",64.4,"5x",[28,42,56,84,112]],
+          [111,"42, 56, 70, 84, 98 DIAS",70,"5x",[42,56,70,84,98]],
+          [108,"42, 56, 70, 84, 100 DIAS",70.4,"5x",[42,56,70,84,100]],
+          [109,"42, 56, 70, 84, 112 DIAS",72.8,"5x",[42,56,70,84,112]],
+          [292,"45, 60, 75, 90, 105 DIAS",75,"5x",[45,60,75,90,105]],
+          [195,"28, 56, 84, 112, 126 DIAS",81.2,"5x",[28,56,84,112,126]],
+          [383,"30, 60, 90, 120, 150 dias",90,"5x",[30,60,90,120,150]],
+          [396,"60, 75, 90, 105, 120 dias",90,"5x",[60,75,90,105,120]],
+          [303,"70, 84, 98, 112, 126 dias",98,"5x",[70,84,98,112,126]],
+          [304,"84, 98, 112, 126, 140 dias",112,"5x",[84,98,112,126,140]],
+          [190,"60, 90, 120, 150, 180 dias",120,"5x",[60,90,120,150,180]],
+          [395,"90, 105, 120, 135, 150 dias",120,"5x",[90,105,120,135,150]],
+          [305,"98, 112, 126, 140, 154 dias",126,"5x",[98,112,126,140,154]],
+          [394,"120, 135, 150, 165, 180 dias",150,"5x",[120,135,150,165,180]],
+          [442,"130, 145, 160, 175, 190 dias",160,"5x",[130,145,160,175,190]],
+          [43,"07, 14, 21, 28, 35, 42 DIAS",24.5,"6x",[7,14,21,28,35,42]],
+          [51,"14, 21, 28, 35, 42, 49 DIAS",31.5,"6x",[14,21,28,35,42,49]],
+          [181,"14, 28, 35, 42, 49, 56 DIAS",37.33,"6x",[14,28,35,42,49,56]],
+          [67,"21, 28, 35, 42, 49, 56 DIAS",38.5,"6x",[21,28,35,42,49,56]],
+          [180,"28, 35, 42, 49, 56, 63 DIAS",45.5,"6x",[28,35,42,49,56,63]],
+          [59,"14, 28, 42, 56, 70, 84 DIAS",49,"6x",[14,28,42,56,70,84]],
+          [89,"28, 35, 42, 56, 63, 70 DIAS",49,"6x",[28,35,42,56,63,70]],
+          [80,"21, 35, 49, 63, 77, 91 DIAS",56,"6x",[21,35,49,63,77,91]],
+          [94,"28, 42, 56, 70, 84, 98 DIAS",63,"6x",[28,42,56,70,84,98]],
+          [110,"42, 56, 70, 84, 98, 102 DIAS",75.33,"6x",[42,56,70,84,98,102]],
+          [112,"42, 56, 70, 84, 98, 112 DIAS",77,"6x",[42,56,70,84,98,112]],
+          [433,"40, 55, 70, 85, 100, 115 dias",77.5,"6x",[40,55,70,85,100,115]],
+          [432,"55, 70, 85, 100, 115, 130 dias",92.5,"6x",[55,70,85,100,115,130]],
+          [464,"60, 75, 90, 105, 120, 135 dias",97.5,"6x",[60,75,90,105,120,135]],
+          [431,"70, 85, 100, 115, 130, 145 dias",107.5,"6x",[70,85,100,115,130,145]],
+          [430,"85, 100, 115, 130, 145, 160 dias",122.5,"6x",[85,100,115,130,145,160]],
+          [463,"90, 105, 120, 135, 150, 165 dias",127.5,"6x",[90,105,120,135,150,165]],
+          [429,"100, 115, 130, 145, 160, 175 dias",137.5,"6x",[100,115,130,145,160,175]],
+          [470,"105, 120, 135, 150, 165, 180 dias",142.5,"6x",[105,120,135,150,165,180]],
+          [428,"115, 130, 145, 160, 175, 190 dias",152.5,"6x",[115,130,145,160,175,190]],
+          [476,"120, 135, 150, 165, 180, 195 dias",157.5,"6x",[120,135,150,165,180,195]],
+          [427,"130, 145, 160, 175, 190, 205 dias",167.5,"6x",[130,145,160,175,190,205]],
+          [426,"145, 160, 175, 190, 205, 220 dias",182.5,"6x",[145,160,175,190,205,220]],
+          [415,"150, 165, 180, 195, 210, 225 DIAS",187.5,"6x",[150,165,180,195,210,225]],
+          [425,"160, 175, 190, 205, 220, 235 dias",197.5,"6x",[160,175,190,205,220,235]],
+          [424,"175, 190, 205, 220, 235, 250 dias",212.5,"6x",[175,190,205,220,235,250]],
+          [241,"190, 205, 220, 235, 250, 265 dias",227.5,"6x",[190,205,220,235,250,265]],
+          [422,"205, 220, 235, 250, 265, 280 dias",242.5,"6x",[205,220,235,250,265,280]],
+          [423,"220, 235, 250, 265, 280, 295 dias",257.5,"6x",[220,235,250,265,280,295]],
+          [44,"07, 14, 21, 28, 35, 42, 49 DIAS",28,"7x",[7,14,21,28,35,42,49]],
+          [52,"14, 21, 28, 35, 42, 49, 56 DIAS",35,"7x",[14,21,28,35,42,49,56]],
+          [68,"21, 28, 35, 42, 49, 56, 63 DIAS",42,"7x",[21,28,35,42,49,56,63]],
+          [239,"28, 35, 42, 49, 56, 63, 70 DIAS",49,"7x",[28,35,42,49,56,63,70]],
+          [60,"14, 28, 42, 56, 70, 84, 98 DIAS",56,"7x",[14,28,42,56,70,84,98]],
+          [81,"21, 35, 49, 63, 77, 91, 105 DIAS",63,"7x",[21,35,49,63,77,91,105]],
+          [95,"28, 42, 56, 70, 84, 98, 112 DIAS",70,"7x",[28,42,56,70,84,98,112]],
+          [251,"42, 56, 70, 84, 98, 112, 126 DIAS",84,"7x",[42,56,70,84,98,112,126]],
+          [87,"42, 56, 84, 112, 140, 168, 196 DIAS",114,"7x",[42,56,84,112,140,168,196]],
+          [45,"07, 14, 21, 28, 35, 42, 49, 56 DIAS",31.5,"8x",[7,14,21,28,35,42,49,56]],
+          [53,"14, 21, 28, 35, 42, 49, 56, 63 DIAS",38.5,"8x",[14,21,28,35,42,49,56,63]],
+          [69,"21, 28, 35, 42, 49, 56, 63, 70 DIAS",45.5,"8x",[21,28,35,42,49,56,63,70]],
+          [61,"14, 28, 42, 56, 70, 84, 98, 112 DIAS",63,"8x",[14,28,42,56,70,84,98,112]],
+          [82,"21, 35, 49, 63, 77, 91, 105, 112 DIAS",69.13,"8x",[21,35,49,63,77,91,105,112]],
+          [116,"49, 56, 63, 70, 77, 84, 91, 98 DIAS",73.5,"8x",[49,56,63,70,77,84,91,98]],
+          [410,"28, 42, 56, 70, 84, 98, 112, 126 DIAS",77,"8x",[28,42,56,70,84,98,112,126]],
+          [465,"70, 77, 84, 91, 105, 112, 119, 126 dias",98,"8x",[70,77,84,91,105,112,119,126]],
+          [453,"130, 145, 160, 175, 190, 205, 220, 235 dias",182.5,"8x",[130,145,160,175,190,205,220,235]],
+          [46,"07, 14, 21, 28, 35, 42, 49, 56, 63 DIAS",35,"9x",[7,14,21,28,35,42,49,56,63]],
+          [54,"14, 21, 28, 35, 42, 49, 56, 63, 70 DIAS",42,"9x",[14,21,28,35,42,49,56,63,70]],
+          [70,"21, 28, 35, 42, 49, 56, 63, 70, 77 DIAS",49,"9x",[21,28,35,42,49,56,63,70,77]],
+          [411,"28, 35, 42, 49, 56, 63, 70, 77, 84 DIAS",56,"9x",[28,35,42,49,56,63,70,77,84]],
+          [409,"14, 28, 42, 56, 70, 84, 98, 112, 126 DIAS",70,"9x",[14,28,42,56,70,84,98,112,126]],
+          [187,"49, 56, 63, 70, 77, 84, 91, 98, 105 DIAS",77,"9x",[49,56,63,70,77,84,91,98,105]],
+          [252,"28, 42, 56, 70, 84, 98, 112, 126, 140",84,"9x",[28,42,56,70,84,98,112,126,140]],
+          [472,"95, 100, 105, 110, 115, 120, 125, 130, 135 dias",115,"9x",[95,100,105,110,115,120,125,130,135]],
+          [301,"60, 75, 90, 105, 120, 135, 150, 172, 180",120.78,"9x",[60,75,90,105,120,135,150,172,180]],
+          [468,"95, 105, 115, 125, 135, 145, 155, 165, 175 dias",135,"9x",[95,105,115,125,135,145,155,165,175]],
+          [471,"110, 115, 120, 125, 130, 135, 140, 145, 150 dias",130,"9x",[110,115,120,125,130,135,140,145,150]],
+          [466,"110, 120, 130, 140, 150, 160, 170, 180, 190 dias",150,"9x",[110,120,130,140,150,160,170,180,190]],
+          [473,"125, 130, 135, 140, 145, 150, 155, 160, 165 dias",145,"9x",[125,130,135,140,145,150,155,160,165]],
+          [467,"125, 135, 145, 155, 165, 175, 185, 195, 205 dias",165,"9x",[125,135,145,155,165,175,185,195,205]],
+          [475,"140, 145, 150, 155, 160, 165, 170, 175, 180 dias",160,"9x",[140,145,150,155,160,165,170,175,180]],
+          [474,"155, 160, 165, 170, 175, 180, 185, 190, 195 dias",175,"9x",[155,160,165,170,175,180,185,190,195]],
+          [462,"160, 170, 180, 190, 200, 210, 220, 230, 240 dias",205.56,"9x",[160,170,180,190,200,210,220,230,240]],
+          [480,"90, 100, 110, 120, 130, 140, 150, 160, 170 dias",130,"9x",[90,100,110,120,130,140,150,160,170]],
+          [481,"70, 80, 90, 100, 110, 120, 130, 140, 150 dias",110,"9x",[70,80,90,100,110,120,130,140,150]],
+          [482,"80, 90, 100, 110, 120, 130, 140, 150, 160 dias",120,"9x",[80,90,100,110,120,130,140,150,160]]
+        ];
+
+        function addDays(date, days) {
+            const d = new Date(date);
+            d.setDate(d.getDate() + days);
+            return d;
+        }
+
+        function formatDate(d) {
+            return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function getTodayStr() {
+            const now = new Date();
+            return now.toISOString().split('T')[0];
+        }
+
+        let currentFilter = 'all';
+        let currentSearch = '';
+        let baseDate = null;
+
+        const dateInput = document.getElementById('dateFat');
+        dateInput.value = getTodayStr();
+        baseDate = new Date(dateInput.value + 'T12:00:00');
+        document.getElementById('statTotal').textContent = rawData.length;
+
+        function getFilteredData() {
+            return rawData.filter(row => {
+                const [cod, nome, , parcelas] = row;
+                const pMatch = currentFilter === 'all'
+                    ? true
+                    : currentFilter === '7x+'
+                        ? parseInt(parcelas, 10) >= 7
+                        : parcelas === currentFilter;
+
+                const search = currentSearch.toLowerCase();
+                const searchOk = !search
+                    || nome.toLowerCase().includes(search)
+                    || String(cod).includes(search)
+                    || parcelas.includes(search);
+
+                return pMatch && searchOk;
+            });
+        }
+
+        function render() {
+            const data = getFilteredData();
+            const tbody = document.getElementById('tableBody');
+            const empty = document.getElementById('emptyState');
+            document.getElementById('resultsCount').textContent = `${data.length} resultado(s)`;
+            document.getElementById('statVisible').textContent = data.length;
+
+            if (data.length > 0) {
+                const avgAll = data.reduce((s, r) => s + r[2], 0) / data.length;
+                document.getElementById('statAvg').textContent = avgAll.toFixed(1);
+            } else {
+                document.getElementById('statAvg').textContent = '-';
+            }
+
+            if (data.length === 0) {
+                tbody.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            tbody.innerHTML = data.map(row => {
+                const [cod, nome, avg, parcelas, prazos] = row;
+                const px = parseInt(parcelas, 10);
+                const pClass = px >= 7 ? 'p-7x' : `p-${px}x`;
+                const datesHtml = prazos.map((d, i) => {
+                    const venc = baseDate ? formatDate(addDays(baseDate, d)) : `+${d}d`;
+                    return `<span class="date-tag">${i + 1}º ${venc}</span>`;
+                }).join('');
+
+                return `<tr onclick="showDetail(${cod})">
+                    <td class="td-code">${cod}</td>
+                    <td class="td-name">${nome}</td>
+                    <td><span class="parcelas-badge ${pClass}">${parcelas}</span></td>
+                    <td class="td-avg">${avg.toFixed(1)}d</td>
+                    <td><div class="dates-cell">${datesHtml}</div></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function showDetail(cod) {
+            const row = rawData.find(r => r[0] === cod);
+            if (!row) return;
+
+            const [c, nome, avg, parcelas, prazos] = row;
+            document.getElementById('detailTitle').textContent = `Cód. ${c} - ${nome}`;
+            document.getElementById('detailMeta').textContent = `${parcelas} | Prazo médio: ${avg.toFixed(1)} dias`;
+
+            document.getElementById('detailTimeline').innerHTML = prazos.map((d, i) => {
+                const venc = baseDate ? formatDate(addDays(baseDate, d)) : `+${d}d`;
+                return `<div class="timeline-item">
+                    <div class="timeline-dot">${i + 1}</div>
+                    <div class="timeline-days">+${d}d</div>
+                    <div class="timeline-date">${venc}</div>
+                </div>`;
+            }).join('');
+
+            const panel = document.getElementById('detailPanel');
+            panel.classList.add('visible');
+            panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function closeDetail() {
+            document.getElementById('detailPanel').classList.remove('visible');
+        }
+
+        dateInput.addEventListener('change', () => {
+            baseDate = dateInput.value ? new Date(dateInput.value + 'T12:00:00') : null;
+            render();
+        });
+
+        document.getElementById('searchInput').addEventListener('input', e => {
+            currentSearch = e.target.value;
+            render();
+        });
+
+        document.getElementById('filterBar').addEventListener('click', e => {
+            const btn = e.target.closest('.filter-btn');
+            if (!btn) return;
+            document.querySelectorAll('.simulador-prazos .filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = btn.dataset.filter;
+            render();
+        });
+
+        document.getElementById('clearSearch').addEventListener('click', () => {
+            currentFilter = 'all';
+            currentSearch = '';
+            document.getElementById('searchInput').value = '';
+            document.querySelectorAll('.simulador-prazos .filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.simulador-prazos .filter-btn[data-filter="all"]').classList.add('active');
+            closeDetail();
+            render();
+        });
+
+        render();
+    </script>
+}
